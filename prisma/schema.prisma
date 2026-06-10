@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Case {
+  id                   String              @id @default(cuid())
+  caseNumber           String              @unique @map("case_number")
+  applicationDate      DateTime            @map("application_date")
+  department           String
+  applicantName        String              @map("applicant_name")
+  contact              String?
+  useType              String              @map("use_type")
+  projectTitle         String              @map("project_title")
+  description          String?
+  clinicalPurpose      String?             @map("clinical_purpose")
+  priority             String              @default("Routine")
+  requiredDate         DateTime?           @map("required_date")
+  currentStatus        String              @default("Draft") @map("current_status")
+  currentProgressStep  String?             @map("current_progress_step")
+  modelImageUrl        String?             @map("model_image_url")
+  photoFolderUrl       String?             @map("photo_folder_url")
+  remarks              String?
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @updatedAt @map("updated_at")
+  progressSteps        CaseProgressStep[]
+  materialUsage        CaseMaterialUsage[]
+  stockTransactions    StockTransaction[]
+
+  @@map("cases")
+}
+
+model CaseProgressStep {
+  id            String    @id @default(cuid())
+  caseId        String    @map("case_id")
+  stepName      String    @map("step_name")
+  stepOrder     Int       @map("step_order")
+  status        String    @default("Not started")
+  completedDate DateTime? @map("completed_date")
+  staffName     String?   @map("staff_name")
+  notes         String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  case          Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@map("case_progress_steps")
+}
+
+model Material {
+  id               String               @id @default(cuid())
+  category         String
+  materialName     String               @map("material_name")
+  brand            String?
+  materialType     String?              @map("material_type")
+  colour           String?
+  batchNumber      String               @unique @map("batch_number")
+  supplier         String?
+  purchaseDate     DateTime?            @map("purchase_date")
+  receivedDate     DateTime?            @map("received_date")
+  openDate         DateTime?            @map("open_date")
+  expiryDate       DateTime?            @map("expiry_date")
+  disposalDate     DateTime?            @map("disposal_date")
+  initialQuantity  Float                @map("initial_quantity")
+  currentQuantity  Float                @map("current_quantity")
+  unit             String               @default("unit")
+  reorderThreshold Float                @default(0) @map("reorder_threshold")
+  storageLocation  String?              @map("storage_location")
+  status           String               @default("In stock")
+  remarks          String?
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+  materialUsage    CaseMaterialUsage[]
+  stockTransactions StockTransaction[]
+
+  @@map("materials")
+}
+
+model CaseMaterialUsage {
+  id            String            @id @default(cuid())
+  caseId        String            @map("case_id")
+  materialId    String            @map("material_id")
+  usageDate     DateTime          @map("usage_date")
+  quantityUsed  Float             @map("quantity_used")
+  unit          String            @default("unit")
+  staffName     String?           @map("staff_name")
+  printerOrTank String?           @map("printer_or_tank")
+  notes         String?
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+  case          Case              @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  material      Material          @relation(fields: [materialId], references: [id])
+
+  @@map("case_material_usage")
+}
+
+model StockTransaction {
+  id              String            @id @default(cuid())
+  materialId      String            @map("material_id")
+  transactionType String            @map("transaction_type")
+  quantityChange  Float             @map("quantity_change")
+  quantityAfter   Float             @map("quantity_after")
+  relatedCaseId   String?           @map("related_case_id")
+  transactionDate DateTime          @map("transaction_date")
+  staffName       String?           @map("staff_name")
+  notes           String?
+  createdAt       DateTime          @default(now()) @map("created_at")
+  material        Material          @relation(fields: [materialId], references: [id])
+  relatedCase     Case?             @relation(fields: [relatedCaseId], references: [id], onDelete: SetNull)
+
+  @@map("stock_transactions")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  action     String
+  details    String?
+  staffName  String   @map("staff_name")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("audit_logs")
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  type      String
+  value     String
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}

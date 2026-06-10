@@ -1,0 +1,113 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { createAuditLog } from "@/lib/audit";
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get("search") || "";
+    const category = searchParams.get("category") || "";
+    const status = searchParams.get("status") || "";
+    const lowStock = searchParams.get("lowStock") || "";
+    const expiring = searchParams.get("expiring") || "";
+
+    const where: Record<string, unknown> = {};
+
+    if (search) {
+      where.OR = [
+        { materialName: { contains: search } },
+        { batchNumber: { contains: search } },
+        { brand: { contains: search } },
+      ];
+    }
+    if (category) where.category = category;
+    if (status) where.status = status;
+
+    if (lowStock === "true") {
+      where.status = "Low stock";
+    }
+
+    if (expiring === "true") {
+      const thirtyDaysFromNow = new Date();
+      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+      where.expiryDate = { lte: thirtyDaysFromNow };
+    }
+
+    const materials = await prisma.material.findMany({
+      where,
+      include: {
+        _count: {
+          select: { materialUsage: true, stockTransactions: true },
+        },
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    return NextResponse.json({ success: true, data: materials });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { success: false, error: "Failed to fetch materials" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+
+    const material = await prisma.material.create({
+      data: {
+        category: body.category,
+        materialName: body.materialName,
+        brand: body.brand || null,
+        materialType: body.materialType || null,
+        colour: body.colour || null,
+        batchNumber: body.batchNumber,
+        supplier: body.supplier || null,
+        purchaseDate: body.purchaseDate ? new Date(body.purchaseDate) : null,
+        receivedDate: body.receivedDate ? new Date(body.receivedDate) : null,
+        openDate: body.openDate ? new Date(body.openDate) : null,
+        expiryDate: body.expiryDate ? new Date(body.expiryDate) : null,
+        disposalDate: body.disposalDate ? new Date(body.disposalDate) : null,
+        initialQuantity: body.initialQuantity,
+        currentQuantity: body.currentQuantity ?? body.initialQuantity,
+        unit: body.unit || "unit",
+        reorderThreshold: body.reorderThreshold ?? 0,
+        storageLocation: body.storageLocation || null,
+        status: body.status || "In stock",
+        remarks: body.remarks || null,
+      },
+    });
+
+    // Create initial stock transaction
+    await prisma.stockTransaction.create({
+      data: {
+        materialId: material.id,
+        transactionType: "Refill",
+        quantityChange: material.currentQuantity,
+        quantityAfter: material.currentQuantity,
+        transactionDate: new Date(),
+        staffName: body.staffName || "System",
+        notes: "Initial stock added",
+      },
+    });
+
+    await createAuditLog({
+      entityType: "Material",
+      entityId: material.id,
+      action: "material_created",
+      staffName: body.staffName || "System",
+      details: `Material ${body.materialName} (${body.batchNumber}) created`,
+    });
+
+    return NextResponse.json({ success: true, data: material }, { status: 201 });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { success: false, error: "Failed to create material" },
+      { status: 500 }
+    );
+  }
+}
