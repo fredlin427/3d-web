@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
-import { Shell } from "@/components/layout/shell";
+import { RootWrapper } from "@/components/layout/root-wrapper";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -32,7 +32,7 @@ export default function RootLayout({
     >
       <body className="h-full">
         <TooltipProvider>
-          <Shell>{children}</Shell>
+          <RootWrapper>{children}</RootWrapper>
           <Toaster position="bottom-right" richColors />
         </TooltipProvider>
       </body>

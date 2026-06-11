@@ -1,182 +1,153 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { DataTable, Column } from "@/components/shared/data-table";
 import { toast } from "sonner";
-import { Download, Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
+import { Download, Upload, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { cn, formatDate, getStockStatusColor } from "@/lib/utils";
+
+const CATEGORIES = [
+  { key: "FDM Filaments", label: "FDM Filaments" },
+  { key: "SLA Resins", label: "SLA Resins" },
+  { key: "Resin Tanks", label: "Resin Tanks" },
+  { key: "IPA", label: "IPA" },
+];
 
 export default function StockTakePage() {
+  const [activeCat, setActiveCat] = useState("FDM Filaments");
+  const [materials, setMaterials] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
   const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{
-    totalRows: number;
-    updatedItems: number;
-    errors: { row: number; message: string }[];
-    importedAt: string;
-  } | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [result, setResult] = useState<any>(null);
+
+  const fetchMaterials = () => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    params.set("category", activeCat);
+    if (search) params.set("search", search);
+    fetch(`/api/materials?${params}`)
+      .then((r) => r.json())
+      .then((j) => { if (j.success) setMaterials(j.data); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { fetchMaterials(); }, [activeCat, search]);
 
   const handleExport = () => {
-    window.open("/api/stock-take/export", "_blank");
-    toast.success("Stock take list downloaded");
+    window.open(`/api/stock-take/export?category=${encodeURIComponent(activeCat)}`, "_blank");
+    toast.success(`${activeCat} exported`);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setSelectedFile(file);
+    if (!file) return;
+    setImporting(true); setResult(null);
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        const text = ev.target?.result as string;
+        const lines = text.trim().split("\n");
+        const headers = lines[0].split(",").map((h: string) => h.trim().replace(/"/g, ""));
+        const rows = [];
+        for (let i = 1; i < lines.length; i++) {
+          const vals = lines[i].split(",").map((v: string) => v.trim().replace(/"/g, ""));
+          const row: Record<string, string> = {};
+          headers.forEach((h: string, idx: number) => { row[h] = vals[idx] || ""; });
+          rows.push({
+            materialId: row["Material ID"] || undefined,
+            batchNumber: row["Batch Number"] || row["Batch"] || row["batchNumber"] || undefined,
+            countedQuantity: parseFloat(row["Remain"] || row["Counted QTY"] || row["Counted Quantity"] || row["QTY"] || "0"),
+            staffName: row["Staff Name"] || undefined,
+            notes: row["Notes"] || row["Remarks"] || undefined,
+          });
+        }
+        const res = await fetch("/api/stock-take/import", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rows }) });
+        const json = await res.json();
+        if (json.success) { setResult(json.data); toast.success(`${json.data.updatedItems} items updated`); fetchMaterials(); }
+        else toast.error(json.error || "Import failed");
+      } catch { toast.error("Failed to parse CSV"); }
+      finally { setImporting(false); }
+    };
+    reader.readAsText(file);
   };
 
-  const handleImport = async () => {
-    if (!selectedFile) return;
-    setImporting(true);
-    setImportResult(null);
-
-    try {
-      const text = await selectedFile.text();
-      const lines = text.trim().split("\n");
-      const headers = lines[0].split(",").map((h) => h.trim().replace(/"/g, ""));
-
-      // Parse CSV rows
-      const rows = [];
-      for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(",").map((v) => v.trim().replace(/"/g, ""));
-        const row: Record<string, string> = {};
-        headers.forEach((h, idx) => {
-          row[h] = values[idx] || "";
-        });
-
-        rows.push({
-          materialId: row["Material ID"] || row["materialId"] || row["MaterialID"] || undefined,
-          batchNumber: row["Batch Number"] || row["batchNumber"] || row["BatchNumber"] || undefined,
-          countedQuantity: parseFloat(
-            row["Counted Quantity"] || row["countedQuantity"] || row["CountedQuantity"] || "0"
-          ),
-          staffName: row["Staff Name"] || row["staffName"] || row["StaffName"] || undefined,
-          notes: row["Notes"] || row["notes"] || undefined,
-        });
-      }
-
-      const res = await fetch("/api/stock-take/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rows }),
-      });
-
-      const json = await res.json();
-      if (json.success) {
-        setImportResult(json.data);
-        toast.success(`Stock take imported: ${json.data.updatedItems} items updated`);
-      } else {
-        toast.error(json.error || "Import failed");
-      }
-    } catch {
-      toast.error("Failed to parse CSV file");
-    } finally {
-      setImporting(false);
-    }
-  };
+  const columns: Column<any>[] = [
+    { key: "materialName", header: "Material", sortable: true, render: (m) => <span className="font-medium text-sm">{m.materialName}</span> },
+    { key: "brand", header: "Brand", render: (m) => <span className="text-xs">{m.brand || "—"}</span> },
+    { key: "batchNumber", header: "Batch #", render: (m) => <span className="text-xs font-mono">{m.batchNumber}</span> },
+    { key: "currentQuantity", header: "Counted QTY", render: (m) => <span className="text-sm font-bold tabular-nums">{m.currentQuantity} <span className="text-slate-400 font-normal text-xs">{m.unit}</span></span> },
+    { key: "storageLocation", header: "Location", render: (m) => <span className="text-xs">{m.storageLocation || "—"}</span> },
+    { key: "status", header: "Status", render: (m) => <Badge className={cn(getStockStatusColor(m.status), "border")} variant="outline">{m.status}</Badge> },
+    { key: "expiryDate", header: "Expiry", render: (m) => <span className="text-xs">{formatDate(m.expiryDate)}</span> },
+  ];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-slate-900">Stock Take</h2>
-        <p className="text-sm text-slate-500 mt-1">Export stock list and import counted quantities</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900">Stock Take</h2>
+          <p className="text-sm text-slate-500 mt-1">Physical inventory count — export, count, import</p>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={handleExport} variant="outline" className="gap-2"><Download className="h-4 w-4" />Export {activeCat}</Button>
+          <label className={cn("inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors", importing ? "bg-slate-100 text-slate-400" : "bg-indigo-600 text-white hover:bg-indigo-700")}>
+            {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            {importing ? "Importing..." : "Import CSV"}
+            <input type="file" accept=".csv" className="hidden" onChange={handleImport} disabled={importing} />
+          </label>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Export */}
-        <Card>
-          <CardHeader><CardTitle className="text-sm font-semibold">Export Stock-Taking List</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-slate-500">
-              Download a CSV file with all materials and their current quantities. Use this for physical stock counting.
-            </p>
-            <p className="text-xs text-slate-400">
-              Columns: Material ID, Category, Material Name, Brand, Type, Colour, Batch Number,
-              Current Quantity, Unit, Storage Location, Status, Expiry Date, Remarks
-            </p>
-            <Button onClick={handleExport} className="bg-teal-600 hover:bg-teal-700">
-              <Download className="mr-2 h-4 w-4" /> Export Stock List (CSV)
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Import */}
-        <Card>
-          <CardHeader><CardTitle className="text-sm font-semibold">Import Stock Take Record</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-slate-500">
-              Upload the completed CSV with counted quantities. Expected columns:
-            </p>
-            <div className="text-xs text-slate-400 space-y-1">
-              <p>• <strong>Material ID</strong> or <strong>Batch Number</strong> (required for matching)</p>
-              <p>• <strong>Counted Quantity</strong> (required, must be numeric)</p>
-              <p>• <strong>Staff Name</strong> (optional)</p>
-              <p>• <strong>Notes</strong> (optional)</p>
-            </div>
-            <Separator />
-            <div className="space-y-3">
-              <Input type="file" accept=".csv" onChange={handleFileChange} />
-              <Button
-                onClick={handleImport}
-                disabled={!selectedFile || importing}
-                className="bg-teal-600 hover:bg-teal-700"
-              >
-                {importing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                Import Stock Take
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Import Result */}
-      {importResult && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <FileSpreadsheet className="h-4 w-4" /> Import Summary
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-6 text-center">
-              <div>
-                <p className="text-2xl font-bold text-slate-700">{importResult.totalRows}</p>
-                <p className="text-xs text-slate-500">Total Rows</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-green-600">{importResult.updatedItems}</p>
-                <p className="text-xs text-slate-500">Updated Items</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-red-500">{importResult.errors.length}</p>
-                <p className="text-xs text-slate-500">Errors</p>
-              </div>
-            </div>
-
-            {importResult.errors.length > 0 && (
-              <div className="mt-4 p-3 bg-red-50 rounded-lg">
-                <p className="text-sm font-medium text-red-700 mb-2">Row Errors:</p>
-                <div className="space-y-1 max-h-48 overflow-y-auto">
-                  {importResult.errors.map((err, i) => (
-                    <div key={i} className="text-xs text-red-600 flex gap-2">
-                      <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
-                      <span>Row {err.row}: {err.message}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+      {/* Category tabs */}
+      <div className="flex gap-1 bg-slate-100 rounded-xl p-1 w-fit">
+        {CATEGORIES.map((c) => (
+          <button
+            key={c.key}
+            onClick={() => { setActiveCat(c.key); setResult(null); }}
+            className={cn(
+              "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150",
+              activeCat === c.key ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
             )}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
 
-            <p className="text-xs text-slate-400 mt-4">
-              Imported at: {new Date(importResult.importedAt).toLocaleString("en-GB")}
-            </p>
-          </CardContent>
-        </Card>
+      {/* Result banner */}
+      {result && (
+        <div className={cn("rounded-xl p-4 flex items-center gap-4", result.errors.length > 0 ? "bg-amber-50 border border-amber-200" : "bg-emerald-50 border border-emerald-200")}>
+          <CheckCircle2 className={cn("h-6 w-6", result.errors.length > 0 ? "text-amber-500" : "text-emerald-500")} />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-slate-700">Import complete — {result.updatedItems} of {result.totalRows} rows updated</p>
+            {result.errors.length > 0 && <p className="text-xs text-amber-600 mt-0.5">{result.errors.length} errors found</p>}
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setResult(null)}>Dismiss</Button>
+        </div>
       )}
+
+      {/* Main table — this IS the stock take */}
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-0">
+          <DataTable
+            data={materials}
+            columns={columns}
+            keyField="id"
+            isLoading={loading}
+            emptyTitle={`No ${activeCat} materials`}
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Search materials..."
+            pageSize={25}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }

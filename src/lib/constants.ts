@@ -1,24 +1,84 @@
+// Dropdown options matching QEH 3D Printing Office templates
 export const DEPARTMENTS = [
-  "Surgery",
-  "Orthopaedics",
-  "Neurosurgery",
+  "SURG", // Surgery
+  "ANA", // Anaesthesia
+  "ONC", // Oncology
+  "COS", // Consultant
+  "ORT", // Orthopaedics
+  "NS", // Neurosurgery
   "ENT",
-  "Dental",
-  "Radiology",
-  "Oncology",
-  "Cardiology",
+  "DENTAL",
+  "RAD",
+  "PAED", // Paediatrics
   "Other",
 ] as const;
 
-export const USE_TYPES = [
-  "Surgical planning",
-  "Patient-specific model",
-  "Education",
-  "Training",
-  "Research",
-  "Device / jig / guide",
-  "Other",
+export const DEPARTMENT_LABELS: Record<string, string> = {
+  SURG: "Surgery",
+  ANA: "Anaesthesia",
+  ONC: "Oncology",
+  COS: "Consultant",
+  ORT: "Orthopaedics",
+  NS: "Neurosurgery",
+  ENT: "ENT",
+  DENTAL: "Dental",
+  RAD: "Radiology",
+  PAED: "Paediatrics",
+  Other: "Other",
+};
+
+export const CATEGORIES = [
+  "Clinical Use",
+  "Rehabilitation",
+  "Training/ Education",
 ] as const;
+
+export const PURPOSES: Record<string, string[]> = {
+  "Clinical Use": [
+    "Pre-op planning",
+    "Intra-operative guide",
+    "Patient education",
+    "Device adaptation and modification",
+    "OSH device",
+    "Prosthesis and Orthosis",
+    "Others",
+  ],
+  Rehabilitation: [
+    "Patient device for activity of daily living",
+    "Patient device for training",
+    "Device adaptation and modification",
+    "OSH device",
+  ],
+  "Training/ Education": [
+    "Medical training / education",
+    "Research use",
+  ],
+};
+
+export const MODEL_TYPES = [
+  "Anatomical Model",
+  "Device / Tool",
+  "Anatomical + Device",
+] as const;
+
+export const OWNERSHIP_TYPES = [
+  "3DPO",
+  "Co-owned",
+  "Applicant",
+  "External",
+] as const;
+
+export const SERVICE_OPTIONS = [
+  "Segmentation",
+  "Design",
+  "Printing",
+  "Segmentation, Design",
+  "Segmentation, Printing",
+  "Design, Printing",
+  "Segmentation, Design, Printing",
+] as const;
+
+export const STERILIZATION_OPTIONS = ["Yes", "No"] as const;
 
 export const PRIORITIES = ["Routine", "Urgent", "High priority"] as const;
 
@@ -30,6 +90,15 @@ export const CASE_STATUSES = [
   "Cancelled",
 ] as const;
 
+export const TECHNICIANS = ["Madeleine", "Tiffany", "Other"] as const;
+
+export const PRINTING_PARTIES = ["3DPO", "AMMA", "Printrite", "Other"] as const;
+
+export const RANKS = ["CON", "COS", "Physicist", "MO", "Other"] as const;
+
+export const HOSPITALS = ["QEH", "Other"] as const;
+
+// Material categories (unchanged)
 export const MATERIAL_CATEGORIES = [
   "FDM Filaments",
   "SLA Resins",

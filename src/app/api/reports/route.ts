@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import * as XLSX from "xlsx";
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,7 +9,7 @@ export async function GET(request: NextRequest) {
     const dateFrom = searchParams.get("dateFrom") || "";
     const dateTo = searchParams.get("dateTo") || "";
     const department = searchParams.get("department") || "";
-    const useType = searchParams.get("useType") || "";
+    const category = searchParams.get("category") || "";
     const materialCategory = searchParams.get("materialCategory") || "";
     const status = searchParams.get("status") || "";
 
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
         const where: Record<string, unknown> = {};
         if (dateFrom || dateTo) where.applicationDate = dateFilter;
         if (department) where.department = department;
-        if (useType) where.useType = useType;
+        if (category) where.category = category;
         if (status) where.currentStatus = status;
 
         const cases = await prisma.case.findMany({
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
           "Application Date",
           "Department",
           "Applicant Name",
-          "Use Type",
+          "Category",
           "Project Title",
           "Priority",
           "Current Status",
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
           "Application Date": c.applicationDate.toISOString().split("T")[0],
           Department: c.department,
           "Applicant Name": c.applicantName,
-          "Use Type": c.useType,
+          "Category": c.category,
           "Project Title": c.projectTitle,
           Priority: c.priority,
           "Current Status": c.currentStatus,
@@ -141,19 +142,19 @@ export async function GET(request: NextRequest) {
       }
 
       case "departments":
-      case "use-types": {
-        const groupField = reportType === "departments" ? "department" : "useType";
+      case "categories": {
+        const groupField = reportType === "departments" ? "department" : "category";
         const caseWhere2: Record<string, unknown> = {};
         if (dateFrom || dateTo) caseWhere2.applicationDate = dateFilter;
 
         const groups = await prisma.case.groupBy({
-          by: [groupField as "department" | "useType"],
+          by: [groupField as "department" | "category"],
           where: caseWhere2,
           _count: { id: true },
           orderBy: { _count: { id: "desc" } },
         });
 
-        const label = reportType === "departments" ? "Department" : "Use Type";
+        const label = reportType === "departments" ? "Department" : "Category";
         columns = [label, "Count"];
 
         data = groups.map((g) => ({
@@ -164,25 +165,18 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Generate CSV
-    const header = columns.join(",");
-    const rows = data.map((row) =>
-      columns
-        .map((col) => {
-          const val = String(row[col] ?? "");
-          if (val.includes(",") || val.includes('"') || val.includes("\n")) {
-            return `"${val.replace(/"/g, '""')}"`;
-          }
-          return val;
-        })
-        .join(",")
-    );
-    const csv = [header, ...rows].join("\n");
+    // Generate XLSX
+    const sheetData = [columns, ...data.map((row) => columns.map((col) => row[col] ?? ""))];
+    const ws = XLSX.utils.aoa_to_sheet(sheetData);
+    ws["!cols"] = columns.map(() => ({ wch: 20 }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, reportType);
+    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
 
-    return new NextResponse(csv, {
+    return new NextResponse(buf, {
       headers: {
-        "Content-Type": "text/csv",
-        "Content-Disposition": `attachment; filename="${reportType}-report-${new Date().toISOString().split("T")[0]}.csv"`,
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="${reportType}-report-${new Date().toISOString().split("T")[0]}.xlsx"`,
       },
     });
   } catch (error) {

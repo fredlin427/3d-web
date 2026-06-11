@@ -12,7 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, Check, X, Loader2 } from "lucide-react";
+import { Plus, Trash2, Loader2, X } from "lucide-react";
+import { MaterialInfoPopover } from "@/components/materials/material-info-popover";
 import { formatDate } from "@/lib/utils";
 import { DataTable, Column } from "@/components/shared/data-table";
 
@@ -128,7 +129,7 @@ export function MaterialUsageTable({ caseId, usageRecords, onRefresh }: Material
   };
 
   const columns: Column<MaterialUsage>[] = [
-    { key: "material", header: "Material", render: (u) => <span className="text-sm">{u.material?.materialName || "—"}</span> },
+    { key: "material", header: "Material", render: (u) => u.material ? <MaterialInfoPopover materialId={u.material.id} name={u.material.materialName} /> : <span className="text-sm">—</span> },
     { key: "category", header: "Category", render: (u) => <Badge variant="secondary" className="text-xs">{u.material?.category || "—"}</Badge> },
     { key: "batch", header: "Batch", render: (u) => <span className="text-xs font-mono">{u.material?.batchNumber || "—"}</span> },
     {

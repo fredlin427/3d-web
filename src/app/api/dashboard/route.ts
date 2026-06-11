@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const dateFrom = searchParams.get("dateFrom") || "";
     const dateTo = searchParams.get("dateTo") || "";
     const department = searchParams.get("department") || "";
-    const useType = searchParams.get("useType") || "";
+    const category = searchParams.get("category") || "";
     const caseStatus = searchParams.get("caseStatus") || "";
 
     // Build date filter
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const caseWhere: Record<string, unknown> = {};
     if (dateFrom || dateTo) caseWhere.applicationDate = dateFilter;
     if (department) caseWhere.department = department;
-    if (useType) caseWhere.useType = useType;
+    if (category) caseWhere.category = category;
     if (caseStatus) caseWhere.currentStatus = caseStatus;
 
     // Stat cards
@@ -93,15 +93,15 @@ export async function GET(request: NextRequest) {
     }));
 
     // Case by use type
-    const useTypeGroups = await prisma.case.groupBy({
-      by: ["useType"],
+    const categoryGroups = await prisma.case.groupBy({
+      by: ["category"],
       where: caseWhere,
       _count: { id: true },
       orderBy: { _count: { id: "desc" } },
     });
 
-    const caseByUseType = useTypeGroups.map((u) => ({
-      useType: u.useType,
+    const caseByUseType = categoryGroups.map((u) => ({
+      category: u.category,
       count: u._count.id,
     }));
 

@@ -13,7 +13,7 @@ export interface CaseWithRelations {
   department: string;
   applicantName: string;
   contact: string | null;
-  useType: string;
+  category: string;
   projectTitle: string;
   description: string | null;
   clinicalPurpose: string | null;
@@ -148,7 +148,7 @@ export interface CaseByDepartment {
 }
 
 export interface CaseByUseType {
-  useType: string;
+  category: string;
   count: number;
 }
 

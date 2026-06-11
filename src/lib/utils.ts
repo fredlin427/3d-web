@@ -70,38 +70,64 @@ export function getStockAlertStatus(material: {
   return null;
 }
 
+// QEH3D format: QEH3D-[FY]-[3-digit-number]
 export function generateCaseNumber(): string {
-  const year = new Date().getFullYear();
-  const random = Math.floor(Math.random() * 10000)
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  // Financial year: April to March
+  const fyEnd = month >= 4 ? (year + 1) % 100 : year % 100;
+  const fyStart = fyEnd - 1;
+  const fy = `${String(fyStart).padStart(2, "0")}${String(fyEnd).padStart(2, "0")}`;
+  const random = Math.floor(Math.random() * 1000)
     .toString()
-    .padStart(4, "0");
-  return `3DP-${year}-${random}`;
+    .padStart(3, "0");
+  return `QEH3D-${fy}-${random}`;
 }
 
 export function getStatusBadgeVariant(
   status: string
 ): "default" | "secondary" | "destructive" | "outline" | null {
+  // Stock statuses — color-coded for inventory visibility
+  switch (status) {
+    case "In stock": return "default";       // green/success — good
+    case "Opened": return "secondary";       // blue/gray — in use
+    case "Low stock": return "destructive";  // red — needs attention
+    case "Expired": return "destructive";    // red — expired
+    case "Disposed": return "outline";       // neutral — gone
+  }
+  // Case statuses
   switch (status) {
     case "Completed":
-    case "In stock":
     case "Routine":
+    case "Approved":
       return "default";
     case "In progress":
-    case "Opened":
     case "Urgent":
       return "secondary";
     case "Draft":
     case "On hold":
     case "Not started":
+    case "N/A":
       return "outline";
     case "Cancelled":
-    case "Expired":
-    case "Disposed":
+    case "Rejected":
       return "destructive";
-    case "Low stock":
     case "High priority":
       return "destructive";
     default:
       return null;
+  }
+}
+
+/** Custom color classes for stock status badges */
+export function getStockStatusColor(status: string): string {
+  switch (status) {
+    case "In stock": return "bg-emerald-100 text-emerald-700 border-emerald-200";
+    case "Opened": return "bg-blue-100 text-blue-700 border-blue-200";
+    case "Low stock": return "bg-amber-100 text-amber-700 border-amber-200";
+    case "Expired": return "bg-red-100 text-red-700 border-red-200";
+    case "Disposed": return "bg-slate-100 text-slate-500 border-slate-200";
+    default: return "";
   }
 }

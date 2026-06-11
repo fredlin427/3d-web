@@ -11,17 +11,31 @@ model Case {
   id                   String              @id @default(cuid())
   caseNumber           String              @unique @map("case_number")
   applicationDate      DateTime            @map("application_date")
+  expectedCompletionDate DateTime?         @map("expected_completion_date")
+  approvalDate         DateTime?           @map("approval_date")
+  completionDate       DateTime?           @map("completion_date")
+  ownership            String?
   department           String
+  hospital             String              @default("QEH")
   applicantName        String              @map("applicant_name")
   contact              String?
-  useType              String              @map("use_type")
+  rank                 String?
+  category             String              @map("category")
+  purpose              String              @map("purpose")
+  specification        String?
   projectTitle         String              @map("project_title")
   description          String?
-  clinicalPurpose      String?             @map("clinical_purpose")
+  modelType            String?             @map("model_type")
+  requiredService      String?             @map("required_service")
+  serviceRequirements  String?             @map("service_requirements")
+  requiresSterilization String?            @map("requires_sterilization")
+  quantity             Int                 @default(1)
+  totalComponents      Int                 @default(1) @map("total_components")
   priority             String              @default("Routine")
-  requiredDate         DateTime?           @map("required_date")
   currentStatus        String              @default("Draft") @map("current_status")
   currentProgressStep  String?             @map("current_progress_step")
+  technician           String?
+  printingParty        String?             @map("printing_party")
   modelImageUrl        String?             @map("model_image_url")
   photoFolderUrl       String?             @map("photo_folder_url")
   remarks              String?
@@ -56,16 +70,23 @@ model Material {
   materialName     String               @map("material_name")
   brand            String?
   materialType     String?              @map("material_type")
+  compatiblePrinter String?             @map("compatible_printer")
   colour           String?
-  batchNumber      String               @unique @map("batch_number")
+  diameter         Float?               @map("diameter")
+  productCode      String?              @map("product_code")
+  batchNumber      String               @map("batch_number")
   supplier         String?
   purchaseDate     DateTime?            @map("purchase_date")
   receivedDate     DateTime?            @map("received_date")
   openDate         DateTime?            @map("open_date")
+  manufacturingDate DateTime?           @map("manufacturing_date")
   expiryDate       DateTime?            @map("expiry_date")
   disposalDate     DateTime?            @map("disposal_date")
   initialQuantity  Float                @map("initial_quantity")
   currentQuantity  Float                @map("current_quantity")
+  unusedQuantity   Float                @default(0) @map("unused_quantity")
+  openedQuantity   Float                @default(0) @map("opened_quantity")
+  expiredQuantity  Float                @default(0) @map("expired_quantity")
   unit             String               @default("unit")
   reorderThreshold Float                @default(0) @map("reorder_threshold")
   storageLocation  String?              @map("storage_location")

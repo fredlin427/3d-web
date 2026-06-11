@@ -20,24 +20,36 @@ export default function EditCasePage() {
           setDefaultValues({
             caseNumber: c.caseNumber,
             applicationDate: new Date(c.applicationDate).toISOString().split("T")[0],
+            expectedCompletionDate: c.expectedCompletionDate ? new Date(c.expectedCompletionDate).toISOString().split("T")[0] : "",
+            approvalDate: c.approvalDate ? new Date(c.approvalDate).toISOString().split("T")[0] : "",
+            completionDate: c.completionDate ? new Date(c.completionDate).toISOString().split("T")[0] : "",
+            ownership: c.ownership || "",
             department: c.department,
+            hospital: c.hospital || "QEH",
             applicantName: c.applicantName,
             contact: c.contact || "",
-            useType: c.useType,
+            rank: c.rank || "",
+            category: c.category,
+            purpose: c.purpose,
+            specification: c.specification || "",
             projectTitle: c.projectTitle,
             description: c.description || "",
-            clinicalPurpose: c.clinicalPurpose || "",
+            modelType: c.modelType || "",
+            requiredService: c.requiredService || "",
+            serviceRequirements: c.serviceRequirements || "",
+            requiresSterilization: c.requiresSterilization || "",
+            quantity: c.quantity || 1,
+            totalComponents: c.totalComponents || 1,
             priority: c.priority,
-            requiredDate: c.requiredDate ? new Date(c.requiredDate).toISOString().split("T")[0] : "",
             currentStatus: c.currentStatus,
+            technician: c.technician || "",
+            printingParty: c.printingParty || "",
             modelImageUrl: c.modelImageUrl || "",
             photoFolderUrl: c.photoFolderUrl || "",
             remarks: c.remarks || "",
           });
         }
-      } catch {
-        // keep defaultValues as null to show error state fallback
-      }
+      } catch { /* keep null */ }
     }
     load();
   }, [caseId]);
@@ -46,10 +58,7 @@ export default function EditCasePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-slate-900">Edit Case</h2>
-        <p className="text-sm text-slate-500 mt-1">Edit case record</p>
-      </div>
+      <div><h2 className="text-xl font-semibold text-slate-900">Edit Case</h2><p className="text-sm text-slate-500 mt-1">Edit case record</p></div>
       <CaseForm defaultValues={defaultValues} isEditing caseId={caseId} />
     </div>
   );

@@ -3,26 +3,17 @@
 import { usePathname } from "next/navigation";
 
 const pageTitles: Record<string, string> = {
-  "/": "Dashboard",
-  "/cases": "Cases",
-  "/cases/new": "New Case",
-  "/materials": "Materials",
-  "/materials/new": "New Material",
-  "/stock-take": "Stock Take",
-  "/reports": "Reports",
-  "/settings": "Settings",
+  "/": "Dashboard", "/cases": "Cases", "/cases/new": "New Case",
+  "/materials": "Materials", "/materials/new": "New Material",
+  "/stock-take": "Stock Take", "/reports": "Reports", "/settings": "Settings",
 };
 
 function getPageTitle(pathname: string): string {
-  // Check exact match first
   if (pageTitles[pathname]) return pageTitles[pathname];
-
-  // Check patterns
   if (pathname.match(/^\/cases\/[^/]+\/edit$/)) return "Edit Case";
   if (pathname.match(/^\/cases\/[^/]+$/)) return "Case Details";
   if (pathname.match(/^\/materials\/[^/]+\/edit$/)) return "Edit Material";
   if (pathname.match(/^\/materials\/[^/]+$/)) return "Material Details";
-
   return "QEH 3D Printing Office";
 }
 
@@ -31,19 +22,17 @@ export function Header() {
   const title = getPageTitle(pathname);
 
   return (
-    <header className="flex h-16 items-center border-b bg-white px-6">
+    <header className="flex h-16 items-center justify-between border-b border-slate-200/60 bg-white/70 backdrop-blur-xl px-8">
       <div>
-        <h1 className="text-lg font-semibold text-slate-900">{title}</h1>
-        <p className="text-xs text-slate-500">3D Printing Office Management</p>
+        <h1 className="text-base font-semibold tracking-tight text-slate-800">{title}</h1>
+        <p className="text-xs text-slate-400 mt-0.5">QEH 3D Printing Office</p>
       </div>
-      <div className="ml-auto flex items-center gap-3">
+      <div className="flex items-center gap-3">
         <div className="text-right">
-          <p className="text-sm font-medium text-slate-700">3D Printing Office</p>
-          <p className="text-xs text-slate-400">Internal Staff Portal</p>
+          <p className="text-[13px] font-medium text-slate-700">3D Printing Office</p>
+          <p className="text-[11px] text-slate-400">Internal Portal</p>
         </div>
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-teal-100 text-sm font-semibold text-teal-700">
-          3D
-        </div>
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500 text-xs font-bold text-white shadow-sm shadow-indigo-500/20">3D</div>
       </div>
     </header>
   );
