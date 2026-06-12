@@ -21,6 +21,7 @@ export default function EditMaterialPage() {
           category: m.category,
           materialName: m.materialName,
           productCode: m.productCode || "",
+          materialId: m.materialId || "",
           brand: m.brand || "",
           materialType: m.materialType || "",
           compatiblePrinter: m.compatiblePrinter || "",

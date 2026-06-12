@@ -17,6 +17,7 @@ interface MaterialDetail {
   id: string;
   category: string;
   materialName: string;
+  materialId: string | null;
   brand: string | null;
   materialType: string | null;
   colour: string | null;
@@ -29,6 +30,9 @@ interface MaterialDetail {
   disposalDate: string | null;
   initialQuantity: number;
   currentQuantity: number;
+  unusedQuantity: number;
+  openedQuantity: number;
+  expiredQuantity: number;
   unit: string;
   reorderThreshold: number;
   storageLocation: string | null;
@@ -134,6 +138,7 @@ export default function MaterialDetailPage() {
         <div>
           <div className="flex items-center gap-3">
             <h2 className="text-xl font-semibold text-slate-900">{material.materialName}</h2>
+            {material.materialId && <span className="text-xs font-mono text-slate-400 bg-slate-100 rounded px-2 py-0.5">{material.materialId}</span>}
             <Badge variant={getStatusBadgeVariant(material.status)}>{material.status}</Badge>
             {alert && alert.type !== "ok" && (
               <Badge variant={alert.type === "danger" ? "destructive" : "secondary"}>
@@ -176,8 +181,9 @@ export default function MaterialDetailPage() {
             <CardHeader><CardTitle className="text-sm font-semibold">Stock Details</CardTitle></CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div><p className="text-xs text-slate-400">Initial Qty</p><p className="font-medium text-lg">{material.initialQuantity} {material.unit}</p></div>
-                <div><p className="text-xs text-slate-400">Current Qty</p><p className="font-medium text-lg">{material.currentQuantity} {material.unit}</p></div>
+                <div><p className="text-xs text-slate-400">Total Weight</p><p className="font-medium text-lg">{material.initialQuantity} {material.unit}</p></div>
+                <div><p className="text-xs text-slate-400">Used</p><p className="font-medium text-lg text-amber-600">{material.initialQuantity - material.currentQuantity} {material.unit}</p></div>
+                <div><p className="text-xs text-slate-400">Remain</p><p className="font-medium text-lg text-emerald-600">{material.currentQuantity} {material.unit}</p></div>
                 <div><p className="text-xs text-slate-400">Unit</p><p className="font-medium">{material.unit}</p></div>
                 <div><p className="text-xs text-slate-400">Reorder Threshold</p><p className="font-medium">{material.reorderThreshold} {material.unit}</p></div>
                 <div><p className="text-xs text-slate-400">Storage</p><p className="font-medium">{material.storageLocation || "—"}</p></div>

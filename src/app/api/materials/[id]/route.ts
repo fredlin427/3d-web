@@ -55,47 +55,56 @@ export async function PUT(
 
     const existing = await prisma.material.findUnique({ where: { id } });
 
+    // Preserve existing values for fields not rendered in the current category form
+    const initQty = body.initialQuantity !== undefined ? body.initialQuantity : (existing?.initialQuantity ?? 0);
+    const unusedQty = body.unusedQuantity !== undefined ? body.unusedQuantity : (existing?.unusedQuantity ?? 0);
+    const openedQty = body.openedQuantity !== undefined ? body.openedQuantity : (existing?.openedQuantity ?? 0);
+    const expiredQty = body.expiredQuantity !== undefined ? body.expiredQuantity : (existing?.expiredQuantity ?? 0);
+
     const updated = await prisma.material.update({
       where: { id },
       data: {
-        category: body.category,
-        materialName: body.materialName,
-        productCode: body.productCode || null,
-        brand: body.brand || null,
-        materialType: body.materialType || null,
-        compatiblePrinter: body.compatiblePrinter || null,
-        colour: body.colour || null,
-        diameter: body.diameter || null,
-        batchNumber: body.batchNumber || null,
-        supplier: body.supplier || null,
-        purchaseDate: body.purchaseDate ? new Date(body.purchaseDate) : null,
-        receivedDate: body.receivedDate ? new Date(body.receivedDate) : null,
-        openDate: body.openDate ? new Date(body.openDate) : null,
-        expiryDate: body.expiryDate ? new Date(body.expiryDate) : null,
-        disposalDate: body.disposalDate ? new Date(body.disposalDate) : null,
-        manufacturingDate: body.manufacturingDate ? new Date(body.manufacturingDate) : null,
-        initialQuantity: body.initialQuantity,
-        currentQuantity: body.currentQuantity,
-        unusedQuantity: body.unusedQuantity ?? 0,
-        openedQuantity: body.openedQuantity ?? 0,
-        expiredQuantity: body.expiredQuantity ?? 0,
-        unit: body.unit,
-        reorderThreshold: body.reorderThreshold ?? 0,
-        storageLocation: body.storageLocation || null,
-        status: body.status,
-        remarks: body.remarks || null,
+        category: body.category !== undefined ? body.category : existing?.category,
+        materialName: body.materialName !== undefined ? body.materialName : existing?.materialName,
+        productCode: body.productCode !== undefined ? (body.productCode || null) : existing?.productCode,
+        materialId: body.materialId !== undefined ? (body.materialId || null) : existing?.materialId,
+        brand: body.brand !== undefined ? (body.brand || null) : existing?.brand,
+        materialType: body.materialType !== undefined ? (body.materialType || null) : existing?.materialType,
+        compatiblePrinter: body.compatiblePrinter !== undefined ? (body.compatiblePrinter || null) : existing?.compatiblePrinter,
+        colour: body.colour !== undefined ? (body.colour || null) : existing?.colour,
+        diameter: body.diameter !== undefined ? (body.diameter || null) : existing?.diameter,
+        batchNumber: body.batchNumber !== undefined ? (body.batchNumber || null) : existing?.batchNumber,
+        supplier: body.supplier !== undefined ? (body.supplier || null) : existing?.supplier,
+        purchaseDate: body.purchaseDate !== undefined ? (body.purchaseDate ? new Date(body.purchaseDate) : null) : existing?.purchaseDate,
+        receivedDate: body.receivedDate !== undefined ? (body.receivedDate ? new Date(body.receivedDate) : null) : existing?.receivedDate,
+        openDate: body.openDate !== undefined ? (body.openDate ? new Date(body.openDate) : null) : existing?.openDate,
+        expiryDate: body.expiryDate !== undefined ? (body.expiryDate ? new Date(body.expiryDate) : null) : existing?.expiryDate,
+        disposalDate: body.disposalDate !== undefined ? (body.disposalDate ? new Date(body.disposalDate) : null) : existing?.disposalDate,
+        manufacturingDate: body.manufacturingDate !== undefined ? (body.manufacturingDate ? new Date(body.manufacturingDate) : null) : existing?.manufacturingDate,
+        initialQuantity: initQty,
+        unusedQuantity: unusedQty,
+        openedQuantity: openedQty,
+        expiredQuantity: expiredQty,
+        // Auto-calculate: remain = weight - used - opened - expired
+        currentQuantity: initQty - unusedQty - openedQty - expiredQty,
+        unit: body.unit !== undefined ? body.unit : existing?.unit,
+        reorderThreshold: body.reorderThreshold !== undefined ? (body.reorderThreshold ?? 0) : existing?.reorderThreshold,
+        storageLocation: body.storageLocation !== undefined ? (body.storageLocation || null) : existing?.storageLocation,
+        status: body.status !== undefined ? body.status : existing?.status,
+        remarks: body.remarks !== undefined ? (body.remarks || null) : existing?.remarks,
       },
     });
 
     // Create stock transaction if quantity changed
-    if (existing && existing.currentQuantity !== body.currentQuantity) {
-      const diff = body.currentQuantity - existing.currentQuantity;
+    const newCurrentQty = initQty - unusedQty - openedQty - expiredQty;
+    if (existing && existing.currentQuantity !== newCurrentQty) {
+      const diff = newCurrentQty - existing.currentQuantity;
       await prisma.stockTransaction.create({
         data: {
           materialId: id,
           transactionType: "Adjustment",
           quantityChange: diff,
-          quantityAfter: body.currentQuantity,
+          quantityAfter: newCurrentQty,
           transactionDate: new Date(),
           staffName: body.staffName || "System",
           notes: `Manual quantity adjustment`,

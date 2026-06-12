@@ -50,6 +50,17 @@ export async function POST(request: NextRequest) {
         priority: "Routine",
         currentStatus: "Draft",
         remarks: body.remarks || null,
+        // V5 new fields
+        telephone: body.telephone || null,
+        email: body.email || null,
+        signature: body.signature || null,
+        signatureDate: body.signatureDate ? new Date(body.signatureDate) : null,
+        modelMaterial: body.modelMaterial || null,
+        colourRequirement: body.colourRequirement || null,
+        copyrightRisk: body.copyrightRisk === true,
+        copyrightDetails: body.copyrightDetails || null,
+        isReprint: body.isReprint === true,
+        fundingSource: body.fundingSource || null,
       },
     });
 

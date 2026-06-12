@@ -39,6 +39,16 @@ model Case {
   modelImageUrl        String?             @map("model_image_url")
   photoFolderUrl       String?             @map("photo_folder_url")
   remarks              String?
+  telephone            String?
+  email                String?
+  signature            String?
+  signatureDate        DateTime?           @map("signature_date")
+  modelMaterial        String?             @map("model_material")
+  colourRequirement    String?             @map("colour_requirement")
+  copyrightRisk        Boolean?            @map("copyright_risk")
+  copyrightDetails     String?             @map("copyright_details")
+  isReprint            Boolean?            @map("is_reprint")
+  fundingSource        String?             @map("funding_source")
   createdAt            DateTime            @default(now()) @map("created_at")
   updatedAt            DateTime            @updatedAt @map("updated_at")
   progressSteps        CaseProgressStep[]
@@ -74,6 +84,7 @@ model Material {
   colour           String?
   diameter         Float?               @map("diameter")
   productCode      String?              @map("product_code")
+  materialId       String?              @map("material_id")
   batchNumber      String               @map("batch_number")
   supplier         String?
   purchaseDate     DateTime?            @map("purchase_date")

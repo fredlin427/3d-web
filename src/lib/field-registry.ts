@@ -65,10 +65,11 @@ export const MATERIAL_FIELD_REGISTRY: Record<string, FieldDef> = {
   colour: { key: "colour", label: "Colour", section: "Material Details", type: "text" },
   diameter: { key: "diameter", label: "Diameter (mm)", section: "Material Details", type: "number" },
   productCode: { key: "productCode", label: "Product Code", section: "Material Details", type: "text" },
+  materialId: { key: "materialId", label: "Material ID (auto)", section: "Material Details", type: "text" },
   batchNumber: { key: "batchNumber", label: "Batch No.", section: "Material Details", type: "text" },
   supplier: { key: "supplier", label: "Supplier", section: "Material Details", type: "text" },
   initialQuantity: { key: "initialQuantity", label: "Total QTY", section: "Stock & Quantities", type: "number", required: true, defaultValue: 0 },
-  currentQuantity: { key: "currentQuantity", label: "Remain QTY", section: "Stock & Quantities", type: "number", required: true, defaultValue: 0 },
+  currentQuantity: { key: "currentQuantity", label: "Remain (auto = Weight − Used)", section: "Stock & Quantities", type: "number", required: true, defaultValue: 0 },
   unusedQuantity: { key: "unusedQuantity", label: "Unused QTY", section: "Stock & Quantities", type: "number", defaultValue: 0 },
   openedQuantity: { key: "openedQuantity", label: "Opened QTY", section: "Stock & Quantities", type: "number", defaultValue: 0 },
   expiredQuantity: { key: "expiredQuantity", label: "Expired QTY", section: "Stock & Quantities", type: "number", defaultValue: 0 },
@@ -94,30 +95,48 @@ export const CASE_SECTION_ORDER = [
   "Media & Remarks",
 ];
 
-// Public application form fields (/apply)
+// Public application form fields (/apply) — matches V5 DOCX sections
 export const APPLY_FIELD_REGISTRY: Record<string, FieldDef> = {
-  applicantName: { key: "applicantName", label: "Applicant Name", section: "Part I — Applicant Information", type: "text", required: true },
-  hospital: { key: "hospital", label: "Hospital", section: "Part I — Applicant Information", type: "combobox", options: "hospital", defaultValue: "QEH" },
-  rank: { key: "rank", label: "Rank / Position", section: "Part I — Applicant Information", type: "combobox", options: "rank" },
-  department: { key: "department", label: "Department", section: "Part I — Applicant Information", type: "combobox", options: "department", required: true },
-  contact: { key: "contact", label: "Contact (Email / Tel)", section: "Part I — Applicant Information", type: "text" },
-  expectedCompletionDate: { key: "expectedCompletionDate", label: "Expected Completion Date", section: "Part I — Applicant Information", type: "date" },
-  category: { key: "category", label: "Category", section: "Purpose & Category", type: "combobox", options: "case_category", required: true },
-  purpose: { key: "purpose", label: "Purpose", section: "Purpose & Category", type: "combobox", options: "purpose", required: true },
-  specification: { key: "specification", label: "Specification (for Others)", section: "Purpose & Category", type: "text" },
-  modelType: { key: "modelType", label: "Model Type", section: "Purpose & Category", type: "combobox", options: "model_type" },
-  projectTitle: { key: "projectTitle", label: "Project Title", section: "Service & Printing Requirements", type: "text" },
-  requiredService: { key: "requiredService", label: "Required Service", section: "Service & Printing Requirements", type: "combobox", options: "service_option" },
-  serviceRequirements: { key: "serviceRequirements", label: "Service Requirements", section: "Service & Printing Requirements", type: "textarea" },
-  requiresSterilization: { key: "requiresSterilization", label: "Requires Sterilization", section: "Service & Printing Requirements", type: "combobox", options: "sterilization" },
+  // Part I — For Applicant Use
+  applicantName: { key: "applicantName", label: "Applicant", section: "Part I — For Applicant Use", type: "text", required: true },
+  expectedCompletionDate: { key: "expectedCompletionDate", label: "Expected Completion Date", section: "Part I — For Applicant Use", type: "date" },
+  hospital: { key: "hospital", label: "Hospital", section: "Part I — For Applicant Use", type: "combobox", options: "hospital", defaultValue: "QEH" },
+  rank: { key: "rank", label: "Rank", section: "Part I — For Applicant Use", type: "combobox", options: "rank" },
+  department: { key: "department", label: "Department", section: "Part I — For Applicant Use", type: "combobox", options: "department" },
+  telephone: { key: "telephone", label: "Telephone", section: "Part I — For Applicant Use", type: "text" },
+  email: { key: "email", label: "Email", section: "Part I — For Applicant Use", type: "text" },
+
+  // Purpose(s) of Using 3D Printed Model
+  purposeCategory: { key: "purposeCategory", label: "Purpose Category", section: "Purpose(s) of Using 3D Printed Model", type: "combobox", options: "case_category", required: true },
+  purposeCheckboxes: { key: "purposeCheckboxes", label: "Purpose Options (Checkboxes)", section: "Purpose(s) of Using 3D Printed Model", type: "checkbox" },
+  isReprint: { key: "isReprint", label: "Is Reprint Model?", section: "Purpose(s) of Using 3D Printed Model", type: "combobox", options: "reprint" },
+  fundingSource: { key: "fundingSource", label: "Funding Source", section: "Purpose(s) of Using 3D Printed Model", type: "text" },
+
+  // Service & Printing Requirements
+  serviceRequirement: { key: "serviceRequirement", label: "Service Requirement", section: "Service & Printing Requirements", type: "checkbox" },
+  modelMaterial: { key: "modelMaterial", label: "Model Material (Rigid / Soft)", section: "Service & Printing Requirements", type: "checkbox" },
+  materialSpecify: { key: "materialSpecify", label: "Material Specification", section: "Service & Printing Requirements", type: "text" },
+  colourRequirement: { key: "colourRequirement", label: "Colour Requirement", section: "Service & Printing Requirements", type: "checkbox" },
+  requiresSterilization: { key: "requiresSterilization", label: "Sterilization", section: "Service & Printing Requirements", type: "checkbox" },
+  otherRequirements: { key: "otherRequirements", label: "Other Requirements", section: "Service & Printing Requirements", type: "checkbox" },
   quantity: { key: "quantity", label: "Quantity Required", section: "Service & Printing Requirements", type: "number", defaultValue: 1 },
-  description: { key: "description", label: "Additional Notes", section: "Service & Printing Requirements", type: "textarea" },
+
+  // Copyright
+  copyrightRisk: { key: "copyrightRisk", label: "Copyright Risk?", section: "Copyright", type: "combobox", options: "copyright_risk" },
+  copyrightDetails: { key: "copyrightDetails", label: "Copyright Details", section: "Copyright", type: "text" },
+  consentText: { key: "consentText", label: "Consent Statement", section: "Copyright", type: "textarea" },
+
+  // Signature
+  signature: { key: "signature", label: "Signature of Applicant", section: "Signature", type: "text" },
+  signatureDate: { key: "signatureDate", label: "Signature Date", section: "Signature", type: "date" },
 };
 
 export const APPLY_SECTION_ORDER = [
-  "Part I — Applicant Information",
-  "Purpose & Category",
+  "Part I — For Applicant Use",
+  "Purpose(s) of Using 3D Printed Model",
   "Service & Printing Requirements",
+  "Copyright",
+  "Signature",
 ];
 
 export const MATERIAL_SECTION_ORDER = [
@@ -127,48 +146,53 @@ export const MATERIAL_SECTION_ORDER = [
   "Additional",
 ];
 
-// Category-specific field sets matching QEH Stock Taking Excel
-// Category field lists — match QEH Stock Taking Excel columns exactly
+// Category-specific field sets matching QEH Stock Taking Excel columns EXACTLY
 export const MATERIAL_CATEGORY_FIELDS: Record<string, string[]> = {
   "FDM Filaments": [
-    // Excel: Material ID(auto), Batch No., Order Date, Arrival Date, Brand, Material Type, Product Name, Supplier, Color, Diameter(mm), Weight(g), Used(g), Remain(g), Status, Open Date, Disposal Date, Remarks
+    // Excel: #, Material ID, Batch No., Order Date, Arrival Date, Brand, Material Type, Product Name, Supplier, Color, Diameter(mm), Weight(g), Used(g), Remain(g), Status, Open Date, Disposal Date, Remarks
+    "materialId",
     "batchNumber",
     "purchaseDate", "receivedDate",
     "brand", "materialType", "materialName", "supplier", "colour", "diameter",
-    "initialQuantity", "unusedQuantity", "openedQuantity", "currentQuantity", "unit",
+    "initialQuantity", "unusedQuantity", "currentQuantity",
     "status",
     "openDate", "disposalDate",
     "remarks",
   ],
   "SLA Resins": [
-    // Excel: Batch No., Order Date, Arrival Date, Product Name, Version, Compatible Printer, Brand, Supplier, Color, Manufacturing Date, Expiry Date, Volume(mL), Used(mL), Remain(mL), Status, Open Date, Disposal Date, Remarks
+    // Excel: #, Material ID, Batch No., Order Date, Arrival Date, Material Code, Product Name, Version, Compatible Printer, Brand, Supplier, Color, Manufacturing Date, Expiry Date, Volume(mL), Used(mL), Remain(mL), Status, Open Date, Disposal Date, Remarks
+    "materialId",
     "batchNumber",
     "purchaseDate", "receivedDate",
+    "productCode",
     "materialName", "materialType", "compatiblePrinter", "brand", "supplier", "colour",
     "manufacturingDate", "expiryDate",
-    "initialQuantity", "unusedQuantity", "openedQuantity", "expiredQuantity", "currentQuantity", "unit",
+    "initialQuantity", "unusedQuantity", "currentQuantity",
     "status",
     "openDate", "disposalDate",
     "remarks",
   ],
   "Resin Tanks": [
-    // Excel: Batch, Order Date, Arrival Date, Product Code, Product Name, Supplier, Status, Open Date, Resin Type, Disposal Date, Remarks
+    // Excel: #, Tank ID, Batch, Order Date, Arrival Date, Product Code, Product Name, Supplier, Status, Open Date, Resin Type, Disposal Date, Remarks
+    "materialId",
     "batchNumber",
     "purchaseDate", "receivedDate",
     "productCode", "materialName", "supplier",
-    "materialType",
     "status",
-    "openDate", "disposalDate",
+    "openDate", "materialType",
+    "disposalDate",
     "remarks",
   ],
   "IPA": [
-    // Excel: Batch, Order Date, Arrival Date, Product Name, Supplier, Volume/Bottle(L), Expiry Date, QTY, Used, Remain, Remarks
+    // Excel: #, Batch, Order Date, Arrival Date, Product Name, Supplier, Volume/Bottle(L), Expiry Date, QTY, Used, Remain, Remarks
+    "materialId",
     "batchNumber",
     "purchaseDate", "receivedDate",
     "materialName", "supplier",
+    "unit",
     "expiryDate",
-    "initialQuantity", "unusedQuantity", "openedQuantity", "currentQuantity", "unit",
-    "status", "openDate",
+    "initialQuantity", "unusedQuantity", "currentQuantity",
+    "openDate",
     "remarks",
   ],
 };

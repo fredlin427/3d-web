@@ -16,22 +16,43 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Loader2, Settings2, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { MATERIAL_FIELD_REGISTRY, MATERIAL_SECTION_ORDER, MATERIAL_CATEGORY_FIELDS, MATERIAL_CATEGORY_SECTION_ORDERS, MATERIAL_CATEGORY_SETTINGS_TYPE, FieldDef } from "@/lib/field-registry";
+import { TANK_PRODUCT_CODES, SLA_MATERIAL_CODES } from "@/lib/constants";
 
 const BASE_OPTIONS: Record<string, string[]> = {
-  fdm_brand: ["3dRe","Ultimaker","Recreus","eSUN","Bambu Lab","Anycubic","Other"],
-  fdm_material_type: ["rPET","ABS","PLA","PETG","TPU","Nylon","Other"],
+  // FDM — from Excel Code List
+  fdm_brand: ["3dRe","Ultimaker","Recreus","eSUN","Bambu Lab","Anycubic","Raise 3D","Dreamcubics","Other"],
+  fdm_material_type: ["ABS","CF","CPE","Glass","PA","PC","PETG","PLA","PP","PVA","TPU","Wood","rPET","Nylon","Other"],
   fdm_unit: ["roll","kg","g","unit"],
   fdm_status: ["New","Opened","Disposed"],
-  sla_product: ["Elastic 50A Resin","Tough 1500 Resin","Flexible 80A Resin","Draft Resin","Clear Resin","High Temp Resin","Other"],
-  sla_printer: ["Form 3BL","Form 4B","Form 3L","Form 4","Other"],
+  // SLA Resins — from Excel Code List (full names)
+  sla_product: [
+    "BioMed Clear Resin","BioMed Durable Resin","BioMed Elastic 50A Resin","BioMed Flex 80A Resin","BioMed White Resin",
+    "BioMed Amber Resin","BioMed Black Resin",
+    "Black Resin","Clear Resin","Color Resin","Dental LT Clear Resin","Draft Resin","Durable Resin",
+    "Elastic 50A Resin","Flexible 80A Resin","Grey Pro Resin","Grey Resin","High Temp Resin",
+    "IBT Resin","IBT Flex Resin","Rigid 10K Resin","Rigid 4000 Resin","Silicone 40A Resin",
+    "Surgical Guide Resin","Tough 1500 Resin","Tough 2000 Resin","White Resin",
+    "Other",
+  ],
+  sla_printer: ["Form 3BL","Form 4B","Other"],
   sla_unit: ["bottle","cartridge","litre","ml","unit"],
-  sla_status: ["New","Opened","Trial Only","Disposed"],
-  tank_product: ["Form 3L Resin Tank V2","Form 4 Resin Tank","Other"],
-  tank_resin_type: ["Standard","Tough","Elastic","Draft","Clear","High Temp","Other"],
+  sla_status: ["New","Opened","Disposed"],
+  // Resin Tanks — from Excel Code List
+  tank_product: ["Form 2 Resin Tank LT","Form 3L Resin Tank V2","Form 3L Resin Tank V3","Form 4 Resin Tank","Form 4L Resin Tank","Other"],
+  tank_resin_type: [
+    "BioMed Clear Resin","BioMed Durable Resin","BioMed Elastic 50A Resin","BioMed Flex 80A Resin","BioMed White Resin",
+    "BioMed Amber Resin","BioMed Black Resin",
+    "Black Resin","Clear Resin","Color Resin","Dental LT Clear Resin","Draft Resin","Durable Resin",
+    "Elastic 50A Resin","Flexible 80A Resin","Grey Pro Resin","Grey Resin","High Temp Resin",
+    "IBT Resin","IBT Flex Resin","Rigid 10K Resin","Rigid 4000 Resin","Silicone 40A Resin",
+    "Surgical Guide Resin","Tough 1500 Resin","Tough 2000 Resin","White Resin",
+    "Other",
+  ],
   tank_unit: ["unit"],
   tank_status: ["New","Opened","Disposed"],
+  // IPA
   ipa_unit: ["litre","ml","bottle","unit"],
-  ipa_status: ["In stock","Opened","Low stock","Expired","Disposed"],
+  ipa_status: ["In stock","Low stock","Expired"],
 };
 
 // Map each category's combo fields to its own option types (NOT shared)
@@ -72,8 +93,11 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
   const apply = async (s: any[]) => {
     const active = s.filter((x: any) => x.isActive).sort((a: any, b: any) => a.sortOrder - b.sortOrder);
     const fields: FieldDef[] = [];
+    const seen = new Set<string>();
     for (const item of active) {
       const val = item.value.trim();
+      if (seen.has(val)) continue;
+      seen.add(val);
       if (val.startsWith("custom::")) {
         const parts = val.split("::");
         const label = parts[1] || "Custom Field";
@@ -120,10 +144,19 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
           setHistory([JSON.parse(JSON.stringify(defaults))]);
           setHistoryIdx(0);
           apply(defaults);
-          // Persist defaults to server
-          for (const d of defaults) {
-            fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: settingsType, value: d.value, sortOrder: d.sortOrder, isActive: true }) }).catch(() => {});
-          }
+          // Persist defaults & refresh to get real IDs
+          Promise.all(defaults.map((d) =>
+            fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: settingsType, value: d.value, sortOrder: d.sortOrder, isActive: true }) })
+          )).then(() =>
+            fetch(`/api/settings?type=${settingsType}`).then((r) => r.json()).then((refreshed) => {
+              if (refreshed.success && refreshed.data.length > 0) {
+                setAllSettings(refreshed.data);
+                setDefaultSettings(JSON.parse(JSON.stringify(refreshed.data)));
+                setHistory([JSON.parse(JSON.stringify(refreshed.data))]);
+                apply(refreshed.data);
+              }
+            })
+          ).catch(() => {});
         }
       })
       .catch(() => {});
@@ -175,24 +208,140 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
     }
   }, [defaultValues?.category]);
 
-  // Auto-calculate status from dates (matches Excel Stock Taking logic)
-  // Only auto-sets for date-derived states; preserves manual "Low stock" / "Expired"
+  // Auto-calculate status from dates (matches Excel formulas per category)
   const watchedOpenDate = watch("openDate");
   const watchedDisposalDate = watch("disposalDate");
+  const watchedExpiryDate = watch("expiryDate");
+  const watchedCategory = watch("category");
+  const watchedBatch = watch("batchNumber");
   useEffect(() => {
-    const currentStatus = watch("status");
-    const defaultNew = (selectedCategory === "FDM Filaments" || selectedCategory === "SLA Resins" || selectedCategory === "Resin Tanks") ? "New" : "In stock";
-    const dateStatuses = [defaultNew, "Opened", "Disposed", ""];
-    if (!dateStatuses.includes(currentStatus as string)) return;
+    const cat = watchedCategory || selectedCategory;
+    const hasDisposal = watchedDisposalDate && String(watchedDisposalDate).trim() !== "";
+    const hasOpen = watchedOpenDate && String(watchedOpenDate).trim() !== "";
+    const hasBatch = watchedBatch && String(watchedBatch).trim() !== "";
 
-    if (watchedDisposalDate) {
-      setValue("status", "Disposed");
-    } else if (watchedOpenDate) {
-      setValue("status", "Opened");
-    } else if (!currentStatus) {
-      setValue("status", defaultNew);
+    if (cat === "SLA Resins") {
+      // SLA Excel formula:
+      // No batch → ""
+      // Expired → Disposed (if disposal date) or "Trial Only"
+      // Not expired + has open date → Disposed (if disposal date) or "Opened" (if not N/A) or "N/A"
+      // Not expired + no open date → "New"
+      if (!hasBatch) {
+        setValue("status", "");
+        return;
+      }
+      const isExpired = watchedExpiryDate && new Date(String(watchedExpiryDate)) < new Date();
+      if (isExpired) {
+        setValue("status", hasDisposal ? "Disposed" : "Trial Only");
+      } else if (hasOpen) {
+        if (hasDisposal) {
+          setValue("status", "Disposed");
+        } else if (String(watchedOpenDate) !== "N/A") {
+          setValue("status", "Opened");
+        } else {
+          setValue("status", "N/A");
+        }
+      } else {
+        setValue("status", "New");
+      }
+    } else if (cat === "FDM Filaments" || cat === "Resin Tanks") {
+      if (hasDisposal) {
+        setValue("status", "Disposed");
+      } else if (hasOpen) {
+        setValue("status", "Opened");
+      } else {
+        setValue("status", "New");
+      }
+    } else {
+      // IPA — no auto status
     }
-  }, [watchedOpenDate, watchedDisposalDate]);
+  }, [watchedOpenDate, watchedDisposalDate, watchedExpiryDate, watchedCategory, watchedBatch]);
+
+  // Auto-fill FDM Material ID = {BrandCode}-{MaterialType}-{ArrivalYear}-{Seq}
+  // Formula: MID(Brand, SEARCH("[",Brand)+1, SEARCH("]",Brand)-2) & "-" & MaterialType & "-" & YEAR(Arrival) & "-" & Seq
+  const watchedBrand = watch("brand");
+  const watchedMaterialType = watch("materialType");
+  const watchedArrivalDate = watch("receivedDate");
+  const watchedCatFdm = watch("category");
+  useEffect(() => {
+    const cat = watchedCatFdm || selectedCategory;
+    if (cat !== "FDM Filaments") return;
+    if (!watchedBrand || !watchedMaterialType || !watchedArrivalDate) return;
+    let code = "";
+    const bracketMatch = String(watchedBrand).match(/\[([^\]]+)\]/);
+    const parenMatch = String(watchedBrand).match(/\(([^)]+)\)/);
+    if (bracketMatch) code = bracketMatch[1];
+    else if (parenMatch) code = parenMatch[1];
+    else code = String(watchedBrand).split(" ")[0];
+    if (!code) return;
+    const year = new Date(String(watchedArrivalDate)).getFullYear();
+    const prefix = `${code}-${watchedMaterialType}-${year}`;
+    // Fetch next sequence number from API
+    fetch(`/api/materials/next-material-id?prefix=${encodeURIComponent(prefix)}&category=${encodeURIComponent(cat)}`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.success && j.data.materialId) {
+          setValue("materialId", j.data.materialId);
+        }
+      })
+      .catch(() => {});
+  }, [watchedBrand, watchedMaterialType, watchedArrivalDate, watchedCatFdm]);
+
+  // Auto-fill SLA Material Code from Product Name (VLOOKUP)
+  const watchedSlaProduct = watch("materialName");
+  const watchedCatSla = watch("category");
+  useEffect(() => {
+    const cat = watchedCatSla || selectedCategory;
+    if (cat === "SLA Resins" && watchedSlaProduct) {
+      const code = SLA_MATERIAL_CODES[watchedSlaProduct];
+      if (code) setValue("productCode", code);
+    }
+  }, [watchedSlaProduct, watchedCatSla]);
+
+  // Auto-fill SLA Material ID = {MaterialCode}-{Version}-{ArrivalYear}-{Seq}
+  const watchedSlaCode = watch("productCode");
+  const watchedSlaVersion = watch("materialType");
+  const watchedSlaArrival = watch("receivedDate");
+  useEffect(() => {
+    const cat = watchedCatSla || selectedCategory;
+    if (cat !== "SLA Resins") return;
+    if (!watchedSlaCode || !watchedSlaVersion || !watchedSlaArrival) return;
+    const year = new Date(String(watchedSlaArrival)).getFullYear();
+    const prefix = `${watchedSlaCode}-${watchedSlaVersion}-${year}`;
+    fetch(`/api/materials/next-material-id?prefix=${encodeURIComponent(prefix)}&category=${encodeURIComponent(cat)}`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.success && j.data.materialId) {
+          setValue("materialId", j.data.materialId);
+        }
+      })
+      .catch(() => {});
+  }, [watchedSlaCode, watchedSlaVersion, watchedSlaArrival, watchedCatSla]);
+
+  // Auto-fill Tank Product Code from Product Name (VLOOKUP)
+  const watchedMaterialName = watch("materialName");
+  const watchedCatTank = watch("category");
+  useEffect(() => {
+    const cat = watchedCatTank || selectedCategory;
+    if (cat === "Resin Tanks" && watchedMaterialName) {
+      const code = TANK_PRODUCT_CODES[watchedMaterialName];
+      if (code) setValue("productCode", code);
+    }
+  }, [watchedMaterialName, watchedCatTank]);
+
+  // Auto-calculate Remain = Weight - Used - Opened - Expired
+  const watchedInitial = watch("initialQuantity");
+  const watchedUnused = watch("unusedQuantity");
+  const watchedOpened = watch("openedQuantity");
+  const watchedExpired = watch("expiredQuantity");
+  useEffect(() => {
+    const init = Number(watchedInitial) || 0;
+    const used = Number(watchedUnused) || 0;
+    const opened = Number(watchedOpened) || 0;
+    const expired = Number(watchedExpired) || 0;
+    const remain = init - used - opened - expired;
+    setValue("currentQuantity", Math.max(0, remain));
+  }, [watchedInitial, watchedUnused, watchedOpened, watchedExpired]);
 
   // Re-apply field filter when category changes
   useEffect(() => {
@@ -207,36 +356,91 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
     if (res.success) { setAllSettings(res.data); pushHistory(res.data); await apply(res.data); }
   };
   const removeField = async (key: string) => {
-    const e = allSettings.find((s: any) => s.value === key); if (!e) return;
-    const u = { ...e, isActive: false };
-    await fetch(`/api/settings/${e.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
-    const ns = allSettings.map((s: any) => s.id === e.id ? u : s);
-    setAllSettings(ns); pushHistory(ns); await apply(ns);
-    const label = key.startsWith("custom::") ? key.split("::")[1] : (MATERIAL_FIELD_REGISTRY[key]?.label || key);
-    toast.success(`Removed: ${label}`);
+    const e = allSettings.find((s: any) => s.value === key);
+    if (!e) { toast.error("Field not found"); return; }
+    try {
+      const u = { type: e.type, value: e.value, sortOrder: e.sortOrder, isActive: false };
+      const res = await fetch(`/api/settings/${e.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
+      if (!res.ok) throw new Error("API error");
+      const ns = allSettings.map((s: any) => s.id === e.id ? { ...s, isActive: false } : s);
+      setAllSettings(ns); pushHistory(ns); await apply(ns);
+      const label = key.startsWith("custom::") ? key.split("::")[1] : (MATERIAL_FIELD_REGISTRY[key]?.label || key);
+      toast.success(`Removed: ${label}`);
+    } catch { toast.error("Failed to remove field"); }
   };
   const editField = async (oldValue: string, newKey: string) => {
     const e = allSettings.find((s: any) => s.value === oldValue);
     if (!e || oldValue === newKey) { setEditingField(null); return; }
-    const u = { ...e, value: newKey };
-    await fetch(`/api/settings/${e.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
-    const ns = allSettings.map((s: any) => s.id === e.id ? u : s);
-    setAllSettings(ns); pushHistory(ns); await apply(ns);
-    const newLabel = newKey.startsWith("custom::") ? newKey.split("::")[1] : (MATERIAL_FIELD_REGISTRY[newKey]?.label || newKey);
-    toast.success(`Changed: ${newLabel}`);
+    try {
+      const u = { type: e.type, value: newKey, sortOrder: e.sortOrder, isActive: e.isActive };
+      const res = await fetch(`/api/settings/${e.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
+      if (!res.ok) throw new Error("API error");
+      const ns = allSettings.map((s: any) => s.id === e.id ? { ...s, value: newKey } : s);
+      setAllSettings(ns); pushHistory(ns); await apply(ns);
+      const newLabel = newKey.startsWith("custom::") ? newKey.split("::")[1] : (MATERIAL_FIELD_REGISTRY[newKey]?.label || newKey);
+      toast.success(`Changed: ${newLabel}`);
+    } catch { toast.error("Failed to change field"); }
     setEditingField(null);
   };
   const [editingField, setEditingField] = useState<string | null>(null);
+  const [editingLabel, setEditingLabel] = useState<string | null>(null);
+  const [editingType, setEditingType] = useState<string | null>(null);
+
+  const parseFieldValue = (val: string, currentSection: string) => {
+    if (val.startsWith("custom::")) {
+      const parts = val.split("::");
+      return { key: val, label: parts[1] || "", type: (parts[2] || "text") as FieldDef["type"], section: parts[3] || currentSection, isCustom: true };
+    }
+    const reg = MATERIAL_FIELD_REGISTRY[val];
+    if (reg) return { key: val, label: reg.label, type: reg.type, section: reg.section, isCustom: false };
+    return { key: val, label: val, type: "text" as FieldDef["type"], section: currentSection, isCustom: false };
+  };
+
+  const updateFieldLabel = async (settingKey: string, newLabel: string) => {
+    const trimmed = newLabel.trim();
+    if (!trimmed || trimmed === parseFieldValue(settingKey, MATERIAL_SECTION_ORDER[0]).label) { setEditingLabel(null); return; }
+    const setting = allSettings.find((s: any) => s.value === settingKey);
+    if (!setting) { toast.error("Field not found"); setEditingLabel(null); return; }
+    try {
+      const parsed = parseFieldValue(setting.value, MATERIAL_SECTION_ORDER[0]);
+      const newValue = `custom::${trimmed}::${parsed.type}::${parsed.section}`;
+      const u = { type: setting.type, value: newValue, sortOrder: setting.sortOrder, isActive: setting.isActive };
+      const res = await fetch(`/api/settings/${setting.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
+      if (!res.ok) throw new Error("Failed");
+      const ns = allSettings.map((s: any) => s.id === setting.id ? { ...s, value: newValue } : s);
+      setAllSettings(ns); pushHistory(ns); await apply(ns);
+      toast.success(`Renamed: ${trimmed}`);
+    } catch { toast.error("Failed to rename field"); }
+    setEditingLabel(null);
+  };
+
+  const updateFieldType = async (settingKey: string, newType: FieldDef["type"]) => {
+    const setting = allSettings.find((s: any) => s.value === settingKey);
+    if (!setting) { toast.error("Field not found"); setEditingType(null); return; }
+    try {
+      const parsed = parseFieldValue(setting.value, MATERIAL_SECTION_ORDER[0]);
+      if (parsed.type === newType) { setEditingType(null); return; }
+      const newValue = `custom::${parsed.label}::${newType}::${parsed.section}`;
+      const u = { type: setting.type, value: newValue, sortOrder: setting.sortOrder, isActive: setting.isActive };
+      const res = await fetch(`/api/settings/${setting.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
+      if (!res.ok) throw new Error("Failed");
+      const ns = allSettings.map((s: any) => s.id === setting.id ? { ...s, value: newValue } : s);
+      setAllSettings(ns); pushHistory(ns); await apply(ns);
+      toast.success(`Type changed: ${parsed.label} → ${newType}`);
+    } catch { toast.error("Failed to change type"); }
+    setEditingType(null);
+  };
   const moveField = async (key: string, dir: -1 | 1) => {
     const sorted = [...allSettings].sort((a: any, b: any) => a.sortOrder - b.sortOrder);
     const idx = sorted.findIndex((s: any) => s.value === key);
     if (idx < 0 || !sorted[idx + dir]) return;
     const a = sorted[idx], b = sorted[idx + dir];
-    const ua = { ...a, sortOrder: b.sortOrder }, ub = { ...b, sortOrder: a.sortOrder };
-    await fetch(`/api/settings/${a.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(ua) });
-    await fetch(`/api/settings/${b.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(ub) });
-    const ns = allSettings.map((s: any) => s.id === a.id ? ua : s.id === b.id ? ub : s);
-    setAllSettings(ns); pushHistory(ns); await apply(ns);
+    try {
+      await fetch(`/api/settings/${a.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: a.type, value: a.value, sortOrder: b.sortOrder, isActive: a.isActive }) });
+      await fetch(`/api/settings/${b.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: b.type, value: b.value, sortOrder: a.sortOrder, isActive: b.isActive }) });
+      const ns = allSettings.map((s: any) => s.id === a.id ? { ...s, sortOrder: b.sortOrder } : s.id === b.id ? { ...s, sortOrder: a.sortOrder } : s);
+      setAllSettings(ns); pushHistory(ns); await apply(ns);
+    } catch { toast.error("Failed to reorder"); }
   };
   const undo = async () => {
     if (historyIdx <= 0) return;
@@ -259,68 +463,66 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
     const registryKey = fieldInput.includes(" — ") ? fieldInput.split(" — ")[0] : null;
     const fieldDef = registryKey ? MATERIAL_FIELD_REGISTRY[registryKey] : null;
 
-    if (fieldDef) {
-      const existing = allSettings.find((s: any) => s.value === registryKey);
-      if (existing) {
-        if (existing.isActive) { toast.info(`${fieldDef.label} is already visible`); return; }
-        const updated = { ...existing, isActive: true };
-        await fetch(`/api/settings/${existing.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updated) });
-        const newSettings = allSettings.map((s: any) => s.id === existing.id ? updated : s);
-        setAllSettings(newSettings); pushHistory(newSettings); await apply(newSettings);
-        toast.success(`Shown: ${fieldDef.label}`);
-        return;
+    try {
+      if (fieldDef) {
+        const existing = allSettings.find((s: any) => s.value === registryKey);
+        if (existing) {
+          if (existing.isActive) { toast.info(`${fieldDef.label} is already visible`); return; }
+          const u = { type: existing.type, value: existing.value, sortOrder: existing.sortOrder, isActive: true };
+          const res = await fetch(`/api/settings/${existing.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
+          if (!res.ok) throw new Error("API error");
+          const ns = allSettings.map((s: any) => s.id === existing.id ? { ...s, isActive: true } : s);
+          setAllSettings(ns); pushHistory(ns); await apply(ns);
+          toast.success(`Shown: ${fieldDef.label}`);
+          return;
+        }
+        const lastInSection = allSettings.filter((s: any) => {
+          const reg = MATERIAL_FIELD_REGISTRY[s.value];
+          return reg && reg.section === fieldDef.section;
+        });
+        const maxSort = lastInSection.length > 0 ? Math.max(...lastInSection.map((s: any) => s.sortOrder)) : allSettings.length;
+        const postRes = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: settingsType, value: registryKey, sortOrder: maxSort + 1, isActive: true }) });
+        if (!postRes.ok) throw new Error("API error");
+        toast.success(`Added: ${fieldDef.label} → ${fieldDef.section}`);
+      } else {
+        const label = fieldInput.trim();
+        if (!label) return;
+        const customValue = `custom::${label}::text::${sectionName}`;
+        const existing = allSettings.find((s: any) => s.value === customValue);
+        if (existing) {
+          if (existing.isActive) { toast.info(`${label} is already visible`); return; }
+          const u = { type: existing.type, value: existing.value, sortOrder: existing.sortOrder, isActive: true };
+          const res = await fetch(`/api/settings/${existing.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
+          if (!res.ok) throw new Error("API error");
+          const ns = allSettings.map((s: any) => s.id === existing.id ? { ...s, isActive: true } : s);
+          setAllSettings(ns); pushHistory(ns); await apply(ns);
+          toast.success(`Shown: ${label}`);
+          return;
+        }
+        const maxSort = allSettings.length;
+        const postRes = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: settingsType, value: customValue, sortOrder: maxSort + 1, isActive: true }) });
+        if (!postRes.ok) throw new Error("API error");
+        toast.success(`Added custom field: ${label} → ${sectionName}`);
       }
-      const lastInSection = allSettings.filter((s: any) => {
-        const reg = MATERIAL_FIELD_REGISTRY[s.value];
-        return reg && reg.section === fieldDef.section;
-      });
-      const maxSort = lastInSection.length > 0 ? Math.max(...lastInSection.map((s: any) => s.sortOrder)) : allSettings.length;
-      const newEntry = { id: `temp-${Date.now()}`, type: settingsType, value: registryKey, sortOrder: maxSort + 1, isActive: true };
-      const updatedSettings = [...allSettings, newEntry];
-      setAllSettings(updatedSettings); pushHistory(updatedSettings); await apply(updatedSettings);
-      const postRes = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: settingsType, value: registryKey, sortOrder: maxSort + 1, isActive: true }) });
-      if (!postRes.ok) { toast.error("Failed to save field"); return; }
-      toast.success(`Added: ${fieldDef.label} → ${fieldDef.section}`);
-    } else {
-      // Custom field
-      const label = fieldInput.trim();
-      if (!label) return;
-      const customValue = `custom::${label}::text::${sectionName}`;
-      const existing = allSettings.find((s: any) => s.value === customValue);
-      if (existing) {
-        if (existing.isActive) { toast.info(`${label} is already visible`); return; }
-        const updated = { ...existing, isActive: true };
-        await fetch(`/api/settings/${existing.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updated) });
-        const newSettings = allSettings.map((s: any) => s.id === existing.id ? updated : s);
-        setAllSettings(newSettings); pushHistory(newSettings); await apply(newSettings);
-        toast.success(`Shown: ${label}`);
-        return;
-      }
-      const lastInSection = allSettings.filter((s: any) => s.value.startsWith("custom::") && s.value.endsWith(`::${sectionName}`));
-      const maxSort = lastInSection.length > 0 ? Math.max(...lastInSection.map((s: any) => s.sortOrder)) : allSettings.length;
-      const newEntry = { id: `temp-${Date.now()}`, type: settingsType, value: customValue, sortOrder: maxSort + 1, isActive: true };
-      const updatedSettings = [...allSettings, newEntry];
-      setAllSettings(updatedSettings); pushHistory(updatedSettings); await apply(updatedSettings);
-      const postRes = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: settingsType, value: customValue, sortOrder: maxSort + 1, isActive: true }) });
-      if (!postRes.ok) { toast.error("Failed to save field"); return; }
-      toast.success(`Added custom field: ${label} → ${sectionName}`);
-    }
-
-    const res = await fetch(`/api/settings?type=${settingsType}`).then((r) => r.json());
-    if (res.success) { setAllSettings(res.data); await apply(res.data); }
+      // Refresh from server to get real IDs
+      const refresh = await fetch(`/api/settings?type=${settingsType}`).then((r) => r.json());
+      if (refresh.success) { setAllSettings(refresh.data); await apply(refresh.data); }
+    } catch { toast.error("Failed to add field"); }
   };
 
   const sections = categorySectionOrder.map((secName) => ({
     name: secName,
     fields: orderedFields.filter((f) => f.section === secName),
-  })).filter((s) => s.fields.length > 0);
+  })).filter((s) => s.fields.length > 0 || editMode);
 
   const onSubmit = async (data: MaterialFormValues) => {
     setSaving(true);
     try {
+      // Merge with defaultValues so unrendered fields (not in current category) keep their original values
+      const merged = { ...(defaultValues || {}), ...data };
       const url = isEditing ? `/api/materials/${materialId}` : "/api/materials";
       const method = isEditing ? "PUT" : "POST";
-      const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+      const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(merged) });
       if (res.ok) { const json = await res.json(); toast.success(isEditing ? "Material updated" : "Material created"); router.push(isEditing ? `/materials/${materialId}` : `/materials/${json.data.id}`); }
       else { const err = await res.json(); toast.error(err.error || "Failed"); }
     } catch { toast.error("Failed"); }
@@ -342,7 +544,10 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
         return (<div className="space-y-2" key={field.key}><div className="flex items-center gap-3 pt-6"><Controller name={key as any} control={control} render={({ field: f }) => (<Switch checked={f.value === "Yes"} onCheckedChange={(v) => f.onChange(v ? "Yes" : "No")} />)} /><Label>{field.label}{field.required ? " *" : ""}</Label></div></div>);
       case "date": return wrapper(<Input type="date" {...register(key as any)} />);
       case "textarea": return wrapper(<Textarea {...register(key as any)} rows={2} />);
-      case "number": return wrapper(<Input type="number" step="0.01" {...register(key as any)} />);
+      case "number": {
+        const isRemain = field.key === "currentQuantity";
+        return wrapper(<Input type="number" step="0.01" {...register(key as any)} readOnly={isRemain} className={isRemain ? "bg-slate-50 text-emerald-600 font-medium" : ""} />);
+      }
       case "combobox": {
         const overrides = CATEGORY_OPTION_OVERRIDES[selectedCategory] || {};
         const optType = overrides[field.key] || field.options;
@@ -363,7 +568,10 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
           </div>
         );
       }
-      default: return wrapper(<Input {...register(key as any)} placeholder={field.placeholder} />);
+      default: {
+        const isAuto = field.key === "materialId" || field.key === "currentQuantity" || field.key === "status" || field.key === "productCode";
+        return wrapper(<Input {...register(key as any)} placeholder={field.placeholder} readOnly={isAuto} className={isAuto ? "bg-slate-100 text-slate-500 cursor-not-allowed" : ""} />);
+      }
     }
   };
 
@@ -390,7 +598,7 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
               await apply(res.data);
             }
           }
-          setEditMode(!editMode);
+          setEditMode(!editMode); setEditingField(null); setEditingLabel(null); setEditingType(null);
         }}>
           <Settings2 className="h-4 w-4" />{editMode ? "Done Editing" : "Edit Layout"}
         </Button>
@@ -448,23 +656,33 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
               {section.fields.map((field) => (
                 <div key={field.key} className={cn(editMode && "rounded-lg border-2 border-dashed border-slate-200 p-3 hover:border-indigo-300")}>
                   {editMode && (
-                    <div className="flex items-center gap-1 mb-2 bg-slate-50 rounded-lg px-2 py-1">
+                    <div className="flex items-center gap-1 mb-2 bg-slate-50 rounded-lg px-2 py-1 flex-wrap">
                       <button type="button" onClick={() => moveField(field.key, -1)} className="text-slate-500 hover:text-slate-700 p-0.5"><ChevronUp className="h-3.5 w-3.5" /></button>
                       <button type="button" onClick={() => moveField(field.key, 1)} className="text-slate-500 hover:text-slate-700 p-0.5"><ChevronDown className="h-3.5 w-3.5" /></button>
+                      {/* Key */}
                       {editingField === field.key ? (
-                        <ComboBox
-                          value=""
-                          onChange={(v) => { if (v) { const newKey = v.split(" — ")[0]; if (MATERIAL_FIELD_REGISTRY[newKey]) editField(field.key, newKey); } }}
+                        <ComboBox value="" onChange={(v) => { if (v) { const nk = v.split(" — ")[0]; if (MATERIAL_FIELD_REGISTRY[nk]) editField(field.key, nk); } }}
                           options={Object.keys(MATERIAL_FIELD_REGISTRY).filter((k) => k !== field.key).map((k) => `${k} — ${MATERIAL_FIELD_REGISTRY[k].label}`)}
-                          placeholder="Replace with..."
-                          className="flex-1 min-w-0"
-                        />
+                          placeholder="Replace..." className="min-w-[120px]" />
                       ) : (
-                        <button type="button" onClick={() => setEditingField(field.key)} className="flex-1 text-center text-[11px] text-slate-500 font-mono hover:text-indigo-600 hover:bg-indigo-50 rounded px-1 py-0.5 transition-colors" title="Click to change">
-                          {field.key}
+                        <button type="button" onClick={() => setEditingField(field.key)}
+                          className="text-[10px] font-mono text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded px-1 py-0.5 transition-colors shrink-0" title="Replace field">
+                          {field.key.startsWith("custom::") ? "custom" : field.key}
                         </button>
                       )}
-                      <button type="button" onClick={() => removeField(field.key)} className="p-0.5 shrink-0" title="Remove field"><Trash2 className="h-3.5 w-3.5 text-slate-400 hover:text-red-500" /></button>
+                      {/* Type selector — always visible in edit mode */}
+                      <select value={field.type} onChange={(e) => updateFieldType(field.key, e.target.value as FieldDef["type"])}
+                        className={cn("text-[10px] px-1 py-0.5 rounded font-medium border cursor-pointer shrink-0",
+                          field.type==="combobox"?"bg-purple-100 text-purple-700 border-purple-200":field.type==="checkbox"?"bg-amber-100 text-amber-700 border-amber-200":field.type==="date"?"bg-blue-100 text-blue-700 border-blue-200":field.type==="number"?"bg-teal-100 text-teal-700 border-teal-200":field.type==="textarea"?"bg-pink-100 text-pink-700 border-pink-200":"bg-slate-100 text-slate-600 border-slate-200")}>
+                        {(["text","combobox","checkbox","date","number","textarea"] as FieldDef["type"][]).map((t) => (<option key={t} value={t}>{t}</option>))}
+                      </select>
+                      {/* Label input — always editable in edit mode */}
+                      <input type="text" defaultValue={field.label}
+                        onBlur={(e) => updateFieldLabel(field.key, e.target.value)}
+                        onKeyDown={(e) => { if (e.key==="Enter") { e.preventDefault(); updateFieldLabel(field.key, (e.target as HTMLInputElement).value); } }}
+                        className="text-xs font-medium text-slate-700 border-b-2 border-slate-200 focus:border-indigo-400 outline-none px-1 min-w-[80px] bg-transparent"
+                        placeholder="Field name" />
+                      <button type="button" onClick={() => removeField(field.key)} className="p-0.5 shrink-0 ml-auto" title="Remove"><Trash2 className="h-3.5 w-3.5 text-slate-400 hover:text-red-500" /></button>
                     </div>
                   )}
                   {renderField(field)}

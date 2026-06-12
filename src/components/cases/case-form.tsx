@@ -95,8 +95,11 @@ export function CaseForm({ defaultValues, isEditing, caseId }: CaseFormProps) {
   const applySettings = async (settings: any[]) => {
     const active = settings.filter((s: any) => s.isActive).sort((a: any, b: any) => a.sortOrder - b.sortOrder);
     const fields: FieldDef[] = [];
+    const seen = new Set<string>();
     for (const item of active) {
       const val = item.value.trim();
+      if (seen.has(val)) continue;
+      seen.add(val);
       if (val.startsWith("custom::")) {
         const parts = val.split("::");
         const label = parts[1] || "Custom Field";
@@ -220,6 +223,53 @@ export function CaseForm({ defaultValues, isEditing, caseId }: CaseFormProps) {
     setEditingField(null);
   };
   const [editingField, setEditingField] = useState<string | null>(null);
+  const [editingLabel, setEditingLabel] = useState<string | null>(null);
+  const [editingType, setEditingType] = useState<string | null>(null);
+
+  const parseFieldValue = (val: string, currentSection: string) => {
+    if (val.startsWith("custom::")) {
+      const parts = val.split("::");
+      return { key: val, label: parts[1] || "", type: (parts[2] || "text") as FieldDef["type"], section: parts[3] || currentSection, isCustom: true };
+    }
+    const reg = CASE_FIELD_REGISTRY[val];
+    if (reg) return { key: val, label: reg.label, type: reg.type, section: reg.section, isCustom: false };
+    return { key: val, label: val, type: "text" as FieldDef["type"], section: currentSection, isCustom: false };
+  };
+
+  const updateFieldLabel = async (settingKey: string, newLabel: string) => {
+    const trimmed = newLabel.trim();
+    if (!trimmed || trimmed === parseFieldValue(settingKey, CASE_SECTION_ORDER[0]).label) { setEditingLabel(null); return; }
+    const setting = allSettings.find((s: any) => s.value === settingKey);
+    if (!setting) { toast.error("Field not found"); setEditingLabel(null); return; }
+    try {
+      const parsed = parseFieldValue(setting.value, CASE_SECTION_ORDER[0]);
+      const newValue = `custom::${trimmed}::${parsed.type}::${parsed.section}`;
+      const u = { type: setting.type, value: newValue, sortOrder: setting.sortOrder, isActive: setting.isActive };
+      const res = await fetch(`/api/settings/${setting.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
+      if (!res.ok) throw new Error("Failed");
+      const ns = allSettings.map((s: any) => s.id === setting.id ? { ...s, value: newValue } : s);
+      setAllSettings(ns); pushHistory(ns); await applySettings(ns);
+      toast.success(`Renamed: ${trimmed}`);
+    } catch { toast.error("Failed to rename field"); }
+    setEditingLabel(null);
+  };
+
+  const updateFieldType = async (settingKey: string, newType: FieldDef["type"]) => {
+    const setting = allSettings.find((s: any) => s.value === settingKey);
+    if (!setting) { toast.error("Field not found"); setEditingType(null); return; }
+    try {
+      const parsed = parseFieldValue(setting.value, CASE_SECTION_ORDER[0]);
+      if (parsed.type === newType) { setEditingType(null); return; }
+      const newValue = `custom::${parsed.label}::${newType}::${parsed.section}`;
+      const u = { type: setting.type, value: newValue, sortOrder: setting.sortOrder, isActive: setting.isActive };
+      const res = await fetch(`/api/settings/${setting.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
+      if (!res.ok) throw new Error("Failed");
+      const ns = allSettings.map((s: any) => s.id === setting.id ? { ...s, value: newValue } : s);
+      setAllSettings(ns); pushHistory(ns); await applySettings(ns);
+      toast.success(`Type changed: ${parsed.label} → ${newType}`);
+    } catch { toast.error("Failed to change type"); }
+    setEditingType(null);
+  };
   const moveFieldUp = async (fieldKey: string) => {
     const sorted = [...allSettings].sort((a: any, b: any) => a.sortOrder - b.sortOrder);
     const idx = sorted.findIndex((s: any) => s.value === fieldKey);
@@ -421,7 +471,7 @@ export function CaseForm({ defaultValues, isEditing, caseId }: CaseFormProps) {
               await applySettings(res.data);
             }
           }
-          setEditMode(!editMode);
+          setEditMode(!editMode); setEditingField(null); setEditingLabel(null); setEditingType(null);
         }}>
           <Settings2 className="h-4 w-4" />
           {editMode ? "Done Editing" : "Edit Layout"}
@@ -439,25 +489,33 @@ export function CaseForm({ defaultValues, isEditing, caseId }: CaseFormProps) {
               {section.fields.map((field) => (
                 <div key={field.key} className={cn("relative", editMode && "rounded-lg border-2 border-dashed border-slate-200 p-3 hover:border-indigo-300 transition-colors")}>
                   {editMode && (
-                    <div className="flex items-center gap-1 mb-2 bg-slate-50 rounded-lg px-2 py-1">
+                    <div className="flex items-center gap-1 mb-2 bg-slate-50 rounded-lg px-2 py-1 flex-wrap">
                       <button type="button" onClick={() => moveFieldUp(field.key)} className="text-slate-500 hover:text-slate-700 p-0.5"><ChevronUp className="h-3.5 w-3.5" /></button>
                       <button type="button" onClick={() => moveFieldDown(field.key)} className="text-slate-500 hover:text-slate-700 p-0.5"><ChevronDown className="h-3.5 w-3.5" /></button>
+                      {/* Key (click to replace) */}
                       {editingField === field.key ? (
-                        <ComboBox
-                          value=""
-                          onChange={(v) => { if (v) { const newKey = v.split(" — ")[0]; if (CASE_FIELD_REGISTRY[newKey]) editField(field.key, newKey); } }}
+                        <ComboBox value="" onChange={(v) => { if (v) { const nk = v.split(" — ")[0]; if (CASE_FIELD_REGISTRY[nk]) editField(field.key, nk); } }}
                           options={Object.keys(CASE_FIELD_REGISTRY).filter((k) => k !== field.key).map((k) => `${k} — ${CASE_FIELD_REGISTRY[k].label}`)}
-                          placeholder="Replace with..."
-                          className="flex-1 min-w-0"
-                        />
+                          placeholder="Replace..." className="min-w-[120px]" />
                       ) : (
-                        <button type="button" onClick={() => setEditingField(field.key)} className="flex-1 text-center text-[11px] text-slate-500 font-mono hover:text-indigo-600 hover:bg-indigo-50 rounded px-1 py-0.5 transition-colors" title="Click to change">
-                          {field.key}
+                        <button type="button" onClick={() => setEditingField(field.key)}
+                          className="text-[10px] font-mono text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded px-1 py-0.5 transition-colors shrink-0" title="Replace field">
+                          {field.key.startsWith("custom::") ? "custom" : field.key}
                         </button>
                       )}
-                      <button type="button" onClick={() => removeField(field.key)} className="p-0.5 shrink-0" title="Remove field">
-                        <Trash2 className="h-3.5 w-3.5 text-slate-400 hover:text-red-500" />
-                      </button>
+                      {/* Type selector — always visible in edit mode */}
+                      <select value={field.type} onChange={(e) => updateFieldType(field.key, e.target.value as FieldDef["type"])}
+                        className={cn("text-[10px] px-1 py-0.5 rounded font-medium border cursor-pointer shrink-0",
+                          field.type==="combobox"?"bg-purple-100 text-purple-700 border-purple-200":field.type==="checkbox"?"bg-amber-100 text-amber-700 border-amber-200":field.type==="date"?"bg-blue-100 text-blue-700 border-blue-200":field.type==="number"?"bg-teal-100 text-teal-700 border-teal-200":field.type==="textarea"?"bg-pink-100 text-pink-700 border-pink-200":field.type==="image"?"bg-cyan-100 text-cyan-700":"bg-slate-100 text-slate-600 border-slate-200")}>
+                        {(["text","combobox","checkbox","date","number","textarea","image"] as FieldDef["type"][]).map((t) => (<option key={t} value={t}>{t}</option>))}
+                      </select>
+                      {/* Label input — always editable in edit mode */}
+                      <input type="text" defaultValue={field.label}
+                        onBlur={(e) => updateFieldLabel(field.key, e.target.value)}
+                        onKeyDown={(e) => { if (e.key==="Enter") { e.preventDefault(); updateFieldLabel(field.key, (e.target as HTMLInputElement).value); } }}
+                        className="text-xs font-medium text-slate-700 border-b-2 border-slate-200 focus:border-indigo-400 outline-none px-1 min-w-[80px] bg-transparent"
+                        placeholder="Field name" />
+                      <button type="button" onClick={() => removeField(field.key)} className="p-0.5 shrink-0 ml-auto" title="Remove"><Trash2 className="h-3.5 w-3.5 text-slate-400 hover:text-red-500" /></button>
                     </div>
                   )}
                   {renderField(field)}

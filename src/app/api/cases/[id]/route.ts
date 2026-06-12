@@ -72,6 +72,16 @@ export async function PUT(
         modelImageUrl: body.modelImageUrl || null,
         photoFolderUrl: body.photoFolderUrl || null,
         remarks: body.remarks || null,
+        telephone: body.telephone || null,
+        email: body.email || null,
+        signature: body.signature || null,
+        signatureDate: body.signatureDate ? new Date(body.signatureDate) : null,
+        modelMaterial: body.modelMaterial || null,
+        colourRequirement: body.colourRequirement || null,
+        copyrightRisk: body.copyrightRisk === true || body.copyrightRisk === "true",
+        copyrightDetails: body.copyrightDetails || null,
+        isReprint: body.isReprint === true || body.isReprint === "true",
+        fundingSource: body.fundingSource || null,
       },
     });
 

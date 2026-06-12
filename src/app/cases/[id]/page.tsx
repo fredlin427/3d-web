@@ -26,6 +26,11 @@ interface CaseDetail {
   priority: string; currentStatus: string; currentProgressStep: string | null;
   technician: string | null; printingParty: string | null;
   modelImageUrl: string | null; photoFolderUrl: string | null; remarks: string | null;
+  telephone: string | null; email: string | null;
+  signature: string | null; signatureDate: string | null;
+  modelMaterial: string | null; colourRequirement: string | null;
+  copyrightRisk: boolean | null; copyrightDetails: string | null;
+  isReprint: boolean | null; fundingSource: string | null;
   createdAt: string; updatedAt: string;
   progressSteps: any[]; materialUsage: any[]; auditLogs?: any[];
 }
@@ -70,12 +75,18 @@ export default function CaseDetailPage() {
     { label: "Ownership", value: caseData.ownership },
     { label: "Service", value: caseData.requiredService },
     { label: "Sterilization", value: caseData.requiresSterilization },
+    { label: "Model Material", value: caseData.modelMaterial },
+    { label: "Colour", value: caseData.colourRequirement },
     { label: "QTY", value: String(caseData.quantity) },
     { label: "Components", value: String(caseData.totalComponents) },
     { label: "Technician", value: caseData.technician },
     { label: "Party", value: caseData.printingParty },
     { label: "Hospital", value: caseData.hospital },
     { label: "Rank", value: caseData.rank },
+    { label: "Copyright Risk", value: caseData.copyrightRisk === true ? "Yes" : caseData.copyrightRisk === false ? "No" : null },
+    { label: "Copyright Details", value: caseData.copyrightDetails },
+    { label: "Reprint", value: caseData.isReprint === true ? "Yes" : null },
+    { label: "Funding Source", value: caseData.fundingSource },
     { label: "Approved", value: formatDate(caseData.approvalDate) },
     { label: "Completed", value: formatDate(caseData.completionDate) },
   ].filter((d) => d.value && d.value !== "—");
@@ -211,6 +222,9 @@ export default function CaseDetailPage() {
             <div><p className="text-xs text-slate-400">Created</p><p className="font-medium">{formatDateTime(caseData.createdAt)}</p></div>
             <div><p className="text-xs text-slate-400">Last Updated</p><p className="font-medium">{formatDateTime(caseData.updatedAt)}</p></div>
             {caseData.contact && <div><p className="text-xs text-slate-400">Contact</p><p className="font-medium">{caseData.contact}</p></div>}
+            {caseData.telephone && <div><p className="text-xs text-slate-400">Telephone</p><p className="font-medium">{caseData.telephone}</p></div>}
+            {caseData.email && <div><p className="text-xs text-slate-400">Email</p><p className="font-medium">{caseData.email}</p></div>}
+            {caseData.signature && <div><p className="text-xs text-slate-400">Applicant Signature</p><p className="font-medium">{caseData.signature}{caseData.signatureDate ? ` (${formatDate(caseData.signatureDate)})` : ""}</p></div>}
             <div><p className="text-xs text-slate-400">Expected</p><p className="font-medium">{formatDate(caseData.expectedCompletionDate)}</p></div>
           </CardContent>
         </Card>
