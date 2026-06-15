@@ -1,5 +1,44 @@
 # QEH 3D Printing Office — Work Log
 
+## 2026-06-12
+
+### Apply Form V5 — Complete Rewrite
+- `/apply` rebuilt to match QEH 3D Printing Application Form V5 DOCX
+- Part I: Applicant info, Purpose checkboxes (Clinical Use / Rehabilitation / Training-Education)
+- Service & Printing Requirements: Segmentation, Device Design, Printing Service, Others
+- Material (Rigid/Soft), Colour, Sterilization, Copyright risk, Signature fields
+- Reprint question for Training/Education with funding source
+- "First print free" remark
+- `/api/apply` updated with 11 new Case DB fields: telephone, email, signature, signatureDate, modelMaterial, colourRequirement, copyrightRisk, copyrightDetails, isReprint, fundingSource
+- `/apply-manage` refactored as full form editor with inline label/type editing + purpose checkbox management
+
+### Material Management — Excel Alignment v2
+- All 4 categories field lists aligned to Stock Taking Excel columns EXACTLY
+- **FDM**: Weight(g), Used(g), Remain(g) — removed openedQuantity/unit from list
+- **SLA**: +productCode (Material Code), Volume(mL), Used(mL), Remain(mL)
+- **Tank**: Product Code VLOOKUP from Code List
+- **IPA**: +unit (Volume/Bottle L), QTY/Bottle, removed status
+- New `materialId` field (auto-generated, separate from productCode):
+  - FDM: `{BrandCode}-{MaterialType}-{Year}-{Seq}` (e.g., UM-PLA-2024-001)
+  - SLA: `{MaterialCode}-{Version}-{Year}-{Seq}` (e.g., CL-V4-2021-001)
+  - API `/api/materials/next-material-id` for auto-sequence
+- SLA Material Code VLOOKUP from Product Name (27 codes)
+- Tank Product Code VLOOKUP (5 codes)
+- Remain (currentQuantity) auto-calculated: Weight - Used - Opened - Expired
+- Status auto-calculated per category with batch check logic
+- Code tables: FDM types (14), SLA products (28), SLA printers (2), Tank products (5)
+- API PUT preserves non-rendered fields
+
+### Edit Layout — Unified Inline Field Editing
+- All 3 forms (Case, Material, Apply) have unified Edit Layout:
+  - Type selector (text/combobox/checkbox/date/number/textarea)
+  - Label input always editable
+  - Key replacement via dropdown
+  - Reorder ↑↓, Remove 🗑, Add field
+  - Undo/Redo/Reset to default
+- Seed ID fix: refresh from server after initial seed to get real IDs
+- Deduplication in field list building
+
 ## 2026-06-11
 
 ### Material Form — Excel Alignment
