@@ -55,56 +55,43 @@ export async function PUT(
 
     const existing = await prisma.material.findUnique({ where: { id } });
 
-    // Preserve existing values for fields not rendered in the current category form
-    const initQty = body.initialQuantity !== undefined ? body.initialQuantity : (existing?.initialQuantity ?? 0);
-    const unusedQty = body.unusedQuantity !== undefined ? body.unusedQuantity : (existing?.unusedQuantity ?? 0);
-    const openedQty = body.openedQuantity !== undefined ? body.openedQuantity : (existing?.openedQuantity ?? 0);
-    const expiredQty = body.expiredQuantity !== undefined ? body.expiredQuantity : (existing?.expiredQuantity ?? 0);
+    // Build update data from request body
+    const data: Record<string, unknown> = {};
+    const textFields = ["category","materialName","productCode","materialId","brand","materialType","compatiblePrinter","colour","batchNumber","supplier","unit","storageLocation","status","remarks"];
+    const numFields = ["diameter","reorderThreshold","initialQuantity","unusedQuantity","openedQuantity","expiredQuantity"];
+    const dateFields = ["purchaseDate","receivedDate","openDate","expiryDate","disposalDate","manufacturingDate"];
+
+    for (const f of textFields) {
+      if (body[f] !== undefined) data[f] = body[f] === "" ? null : (body[f] || null);
+    }
+    for (const f of numFields) {
+      if (body[f] !== undefined) data[f] = (body[f] === "" || body[f] === null) ? null : Number(body[f]);
+    }
+    for (const f of dateFields) {
+      if (body[f] !== undefined) data[f] = body[f] ? new Date(body[f]) : null;
+    }
+    // Remain = Weight − Used (match Excel formula, keep existing opened/expired)
+    const w = (data["initialQuantity"] !== undefined ? Number(data["initialQuantity"]) : (existing?.initialQuantity ?? 0)) as number;
+    const u = (data["unusedQuantity"] !== undefined ? Number(data["unusedQuantity"]) : (existing?.unusedQuantity ?? 0)) as number;
+    const o = (data["openedQuantity"] !== undefined ? Number(data["openedQuantity"]) : (existing?.openedQuantity ?? 0)) as number;
+    const e = (data["expiredQuantity"] !== undefined ? Number(data["expiredQuantity"]) : (existing?.expiredQuantity ?? 0)) as number;
+    data["currentQuantity"] = Math.max(0, w - u - o - e);
 
     const updated = await prisma.material.update({
       where: { id },
-      data: {
-        category: body.category !== undefined ? body.category : existing?.category,
-        materialName: body.materialName !== undefined ? body.materialName : existing?.materialName,
-        productCode: body.productCode !== undefined ? (body.productCode || null) : existing?.productCode,
-        materialId: body.materialId !== undefined ? (body.materialId || null) : existing?.materialId,
-        brand: body.brand !== undefined ? (body.brand || null) : existing?.brand,
-        materialType: body.materialType !== undefined ? (body.materialType || null) : existing?.materialType,
-        compatiblePrinter: body.compatiblePrinter !== undefined ? (body.compatiblePrinter || null) : existing?.compatiblePrinter,
-        colour: body.colour !== undefined ? (body.colour || null) : existing?.colour,
-        diameter: body.diameter !== undefined ? (body.diameter || null) : existing?.diameter,
-        batchNumber: body.batchNumber !== undefined ? (body.batchNumber || null) : existing?.batchNumber,
-        supplier: body.supplier !== undefined ? (body.supplier || null) : existing?.supplier,
-        purchaseDate: body.purchaseDate !== undefined ? (body.purchaseDate ? new Date(body.purchaseDate) : null) : existing?.purchaseDate,
-        receivedDate: body.receivedDate !== undefined ? (body.receivedDate ? new Date(body.receivedDate) : null) : existing?.receivedDate,
-        openDate: body.openDate !== undefined ? (body.openDate ? new Date(body.openDate) : null) : existing?.openDate,
-        expiryDate: body.expiryDate !== undefined ? (body.expiryDate ? new Date(body.expiryDate) : null) : existing?.expiryDate,
-        disposalDate: body.disposalDate !== undefined ? (body.disposalDate ? new Date(body.disposalDate) : null) : existing?.disposalDate,
-        manufacturingDate: body.manufacturingDate !== undefined ? (body.manufacturingDate ? new Date(body.manufacturingDate) : null) : existing?.manufacturingDate,
-        initialQuantity: initQty,
-        unusedQuantity: unusedQty,
-        openedQuantity: openedQty,
-        expiredQuantity: expiredQty,
-        // Auto-calculate: remain = weight - used - opened - expired
-        currentQuantity: initQty - unusedQty - openedQty - expiredQty,
-        unit: body.unit !== undefined ? body.unit : existing?.unit,
-        reorderThreshold: body.reorderThreshold !== undefined ? (body.reorderThreshold ?? 0) : existing?.reorderThreshold,
-        storageLocation: body.storageLocation !== undefined ? (body.storageLocation || null) : existing?.storageLocation,
-        status: body.status !== undefined ? body.status : existing?.status,
-        remarks: body.remarks !== undefined ? (body.remarks || null) : existing?.remarks,
-      },
+      data,
     });
 
     // Create stock transaction if quantity changed
-    const newCurrentQty = initQty - unusedQty - openedQty - expiredQty;
-    if (existing && existing.currentQuantity !== newCurrentQty) {
-      const diff = newCurrentQty - existing.currentQuantity;
+    const newQty = data["currentQuantity"] as number;
+    if (existing && existing.currentQuantity !== newQty) {
+      const diff = newQty - existing.currentQuantity;
       await prisma.stockTransaction.create({
         data: {
           materialId: id,
           transactionType: "Adjustment",
           quantityChange: diff,
-          quantityAfter: newCurrentQty,
+          quantityAfter: newQty,
           transactionDate: new Date(),
           staffName: body.staffName || "System",
           notes: `Manual quantity adjustment`,

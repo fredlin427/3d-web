@@ -20,7 +20,7 @@ import { TANK_PRODUCT_CODES, SLA_MATERIAL_CODES } from "@/lib/constants";
 
 const BASE_OPTIONS: Record<string, string[]> = {
   // FDM — from Excel Code List
-  fdm_brand: ["3dRe","Ultimaker","Recreus","eSUN","Bambu Lab","Anycubic","Raise 3D","Dreamcubics","Other"],
+  fdm_brand: ["[UM] Ultimaker","[R3D] Raise 3D","[DC] 3dRe","[RE] Recreus","[eSUN] eSUN","[BBL] Bambu Lab","[AC] Anycubic","Other"],
   fdm_material_type: ["ABS","CF","CPE","Glass","PA","PC","PETG","PLA","PP","PVA","TPU","Wood","rPET","Nylon","Other"],
   fdm_unit: ["roll","kg","g","unit"],
   fdm_status: ["New","Opened","Disposed"],
@@ -105,21 +105,21 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
         const section = parts[3] || "Additional";
         fields.push({ key: val, label, section, type });
       } else if (MATERIAL_FIELD_REGISTRY[val]) {
-        if (categoryFields && !categoryFields.includes(val)) continue;
         fields.push({ ...MATERIAL_FIELD_REGISTRY[val] });
       }
     }
     setOrderedFields(fields);
   };
 
-  const { register, handleSubmit, control, setValue, watch, formState: { errors } } = useForm<MaterialFormValues>({
+  const { register, handleSubmit, control, setValue, watch, getValues, formState: { errors } } = useForm<MaterialFormValues>({
     resolver: zodResolver(materialFormSchema) as any,
     defaultValues: defaultValues || { status: "In stock", unit: "unit", initialQuantity: 0, currentQuantity: 0, reorderThreshold: 0 },
   });
 
-  const settingsType = selectedCategory ? (MATERIAL_CATEGORY_SETTINGS_TYPE[selectedCategory] || "material_form_field") : "material_form_field";
+  const settingsType = selectedCategory ? (MATERIAL_CATEGORY_SETTINGS_TYPE[selectedCategory] || "") : "";
 
   useEffect(() => {
+    if (!settingsType) return;
     fetch(`/api/settings?type=${settingsType}`)
       .then((r) => r.json())
       .then((j) => {
@@ -257,91 +257,13 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
     }
   }, [watchedOpenDate, watchedDisposalDate, watchedExpiryDate, watchedCategory, watchedBatch]);
 
-  // Auto-fill FDM Material ID = {BrandCode}-{MaterialType}-{ArrivalYear}-{Seq}
-  // Formula: MID(Brand, SEARCH("[",Brand)+1, SEARCH("]",Brand)-2) & "-" & MaterialType & "-" & YEAR(Arrival) & "-" & Seq
-  const watchedBrand = watch("brand");
-  const watchedMaterialType = watch("materialType");
-  const watchedArrivalDate = watch("receivedDate");
-  const watchedCatFdm = watch("category");
+  // Auto-calculate Remain = Weight − Used (on change)
+  const watchedForm = watch();
   useEffect(() => {
-    const cat = watchedCatFdm || selectedCategory;
-    if (cat !== "FDM Filaments") return;
-    if (!watchedBrand || !watchedMaterialType || !watchedArrivalDate) return;
-    let code = "";
-    const bracketMatch = String(watchedBrand).match(/\[([^\]]+)\]/);
-    const parenMatch = String(watchedBrand).match(/\(([^)]+)\)/);
-    if (bracketMatch) code = bracketMatch[1];
-    else if (parenMatch) code = parenMatch[1];
-    else code = String(watchedBrand).split(" ")[0];
-    if (!code) return;
-    const year = new Date(String(watchedArrivalDate)).getFullYear();
-    const prefix = `${code}-${watchedMaterialType}-${year}`;
-    // Fetch next sequence number from API
-    fetch(`/api/materials/next-material-id?prefix=${encodeURIComponent(prefix)}&category=${encodeURIComponent(cat)}`)
-      .then((r) => r.json())
-      .then((j) => {
-        if (j.success && j.data.materialId) {
-          setValue("materialId", j.data.materialId);
-        }
-      })
-      .catch(() => {});
-  }, [watchedBrand, watchedMaterialType, watchedArrivalDate, watchedCatFdm]);
-
-  // Auto-fill SLA Material Code from Product Name (VLOOKUP)
-  const watchedSlaProduct = watch("materialName");
-  const watchedCatSla = watch("category");
-  useEffect(() => {
-    const cat = watchedCatSla || selectedCategory;
-    if (cat === "SLA Resins" && watchedSlaProduct) {
-      const code = SLA_MATERIAL_CODES[watchedSlaProduct];
-      if (code) setValue("productCode", code);
-    }
-  }, [watchedSlaProduct, watchedCatSla]);
-
-  // Auto-fill SLA Material ID = {MaterialCode}-{Version}-{ArrivalYear}-{Seq}
-  const watchedSlaCode = watch("productCode");
-  const watchedSlaVersion = watch("materialType");
-  const watchedSlaArrival = watch("receivedDate");
-  useEffect(() => {
-    const cat = watchedCatSla || selectedCategory;
-    if (cat !== "SLA Resins") return;
-    if (!watchedSlaCode || !watchedSlaVersion || !watchedSlaArrival) return;
-    const year = new Date(String(watchedSlaArrival)).getFullYear();
-    const prefix = `${watchedSlaCode}-${watchedSlaVersion}-${year}`;
-    fetch(`/api/materials/next-material-id?prefix=${encodeURIComponent(prefix)}&category=${encodeURIComponent(cat)}`)
-      .then((r) => r.json())
-      .then((j) => {
-        if (j.success && j.data.materialId) {
-          setValue("materialId", j.data.materialId);
-        }
-      })
-      .catch(() => {});
-  }, [watchedSlaCode, watchedSlaVersion, watchedSlaArrival, watchedCatSla]);
-
-  // Auto-fill Tank Product Code from Product Name (VLOOKUP)
-  const watchedMaterialName = watch("materialName");
-  const watchedCatTank = watch("category");
-  useEffect(() => {
-    const cat = watchedCatTank || selectedCategory;
-    if (cat === "Resin Tanks" && watchedMaterialName) {
-      const code = TANK_PRODUCT_CODES[watchedMaterialName];
-      if (code) setValue("productCode", code);
-    }
-  }, [watchedMaterialName, watchedCatTank]);
-
-  // Auto-calculate Remain = Weight - Used - Opened - Expired
-  const watchedInitial = watch("initialQuantity");
-  const watchedUnused = watch("unusedQuantity");
-  const watchedOpened = watch("openedQuantity");
-  const watchedExpired = watch("expiredQuantity");
-  useEffect(() => {
-    const init = Number(watchedInitial) || 0;
-    const used = Number(watchedUnused) || 0;
-    const opened = Number(watchedOpened) || 0;
-    const expired = Number(watchedExpired) || 0;
-    const remain = init - used - opened - expired;
+    const vals = getValues();
+    const remain = (Number(vals.initialQuantity) || 0) - (Number(vals.unusedQuantity) || 0);
     setValue("currentQuantity", Math.max(0, remain));
-  }, [watchedInitial, watchedUnused, watchedOpened, watchedExpired]);
+  }, [watchedForm]);
 
   // Re-apply field filter when category changes
   useEffect(() => {
@@ -358,15 +280,18 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
   const removeField = async (key: string) => {
     const e = allSettings.find((s: any) => s.value === key);
     if (!e) { toast.error("Field not found"); return; }
-    try {
-      const u = { type: e.type, value: e.value, sortOrder: e.sortOrder, isActive: false };
-      const res = await fetch(`/api/settings/${e.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
-      if (!res.ok) throw new Error("API error");
-      const ns = allSettings.map((s: any) => s.id === e.id ? { ...s, isActive: false } : s);
-      setAllSettings(ns); pushHistory(ns); await apply(ns);
-      const label = key.startsWith("custom::") ? key.split("::")[1] : (MATERIAL_FIELD_REGISTRY[key]?.label || key);
-      toast.success(`Removed: ${label}`);
-    } catch { toast.error("Failed to remove field"); }
+    // Persist first, then update UI
+    const res = await fetch(`/api/settings/${e.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: e.type, value: e.value, sortOrder: e.sortOrder, isActive: false }) });
+    if (!res.ok) { toast.error("Failed to remove"); return; }
+    // Reload from server to confirm
+    const check = await fetch(`/api/settings?type=${e.type}`).then(r => r.json());
+    if (check.success) {
+      setAllSettings(check.data);
+      pushHistory(check.data);
+      await apply(check.data);
+    }
+    const label = key.startsWith("custom::") ? key.split("::")[1] : (MATERIAL_FIELD_REGISTRY[key]?.label || key);
+    toast.success(`Removed: ${label}`);
   };
   const editField = async (oldValue: string, newKey: string) => {
     const e = allSettings.find((s: any) => s.value === oldValue);
@@ -451,11 +376,19 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
     const n = history[historyIdx + 1]; setHistoryIdx(historyIdx + 1); setAllSettings(n); await apply(n);
   };
   const resetToDefault = async () => {
+    const cat = selectedCategory || "";
+    const defaultKeys = MATERIAL_CATEGORY_FIELDS[cat] || Object.keys(MATERIAL_FIELD_REGISTRY);
     for (const s of allSettings) {
-      const d = defaultSettings.find((x: any) => x.value === s.value);
-      await fetch(`/api/settings/${s.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...s, isActive: d ? d.isActive : true, sortOrder: d ? d.sortOrder : s.sortOrder }) });
+      const shouldBeActive = defaultKeys.includes(s.value);
+      const defaultOrder = defaultKeys.indexOf(s.value);
+      await fetch(`/api/settings/${s.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...s, isActive: shouldBeActive, sortOrder: shouldBeActive ? defaultOrder : s.sortOrder }) });
     }
-    setAllSettings(defaultSettings); pushHistory(defaultSettings); await apply(defaultSettings);
+    const res = await fetch(`/api/settings?type=${settingsType}`).then((r) => r.json());
+    if (res.success) {
+      setAllSettings(res.data);
+      pushHistory(res.data);
+      await apply(res.data);
+    }
     toast.success("Reset to default");
   };
 
@@ -515,17 +448,66 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
     fields: orderedFields.filter((f) => f.section === secName),
   })).filter((s) => s.fields.length > 0 || editMode);
 
-  const onSubmit = async (data: MaterialFormValues) => {
+  const generateMaterialId = async (data: MaterialFormValues): Promise<string | null> => {
+    const cat = data.category || selectedCategory;
+    if (cat === "FDM Filaments" && data.brand && data.materialType && data.receivedDate) {
+      const bracketMatch = String(data.brand).match(/\[([^\]]+)\]/);
+      const code = bracketMatch ? bracketMatch[1] : String(data.brand).split(" ")[0];
+      if (!code) return null;
+      const year = new Date(data.receivedDate as string).getFullYear();
+      if (isNaN(year)) return null;
+      const prefix = `${code}-${data.materialType}-${year}`;
+      try {
+        const j = await fetch(`/api/materials/next-material-id?prefix=${encodeURIComponent(prefix)}&category=${encodeURIComponent(cat)}`).then((r) => r.json());
+        return j?.data?.materialId || null;
+      } catch { return null; }
+    }
+    if (cat === "SLA Resins" && data.productCode && data.materialType && data.receivedDate) {
+      const year = new Date(data.receivedDate as string).getFullYear();
+      if (isNaN(year)) return null;
+      const prefix = `${data.productCode}-${data.materialType}-${year}`;
+      try {
+        const j = await fetch(`/api/materials/next-material-id?prefix=${encodeURIComponent(prefix)}&category=${encodeURIComponent(cat)}`).then((r) => r.json());
+        return j?.data?.materialId || null;
+      } catch { return null; }
+    }
+    if (cat === "Resin Tanks" && data.productCode && data.receivedDate) {
+      const year = new Date(data.receivedDate as string).getFullYear();
+      if (isNaN(year)) return null;
+      const prefix = `${data.productCode}-${year}`;
+      try {
+        const j = await fetch(`/api/materials/next-material-id?prefix=${encodeURIComponent(prefix)}&category=${encodeURIComponent(cat)}`).then((r) => r.json());
+        return j?.data?.materialId || null;
+      } catch { return null; }
+    }
+    return null;
+  };
+
+  const onSubmit = async (formData: MaterialFormValues) => {
     setSaving(true);
     try {
-      // Merge with defaultValues so unrendered fields (not in current category) keep their original values
-      const merged = { ...(defaultValues || {}), ...data };
+      // Always get fresh values from form state
+      const fresh = getValues();
+      const data = { ...(defaultValues || {}), ...fresh, ...formData };
+      // VLOOKUP and auto-ID
+      const cat = data.category || selectedCategory;
+      if (!data.category) data.category = selectedCategory;
+      if (cat === "SLA Resins" && data.materialName && !data.productCode) {
+        data.productCode = SLA_MATERIAL_CODES[data.materialName as string] || (data.productCode as string);
+      }
+      if (cat === "Resin Tanks" && data.materialName && !data.productCode) {
+        data.productCode = TANK_PRODUCT_CODES[data.materialName as string] || (data.productCode as string);
+      }
+      if (!data.materialId) {
+        const generated = await generateMaterialId(data);
+        if (generated) data.materialId = generated;
+      }
       const url = isEditing ? `/api/materials/${materialId}` : "/api/materials";
       const method = isEditing ? "PUT" : "POST";
-      const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(merged) });
+      const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
       if (res.ok) { const json = await res.json(); toast.success(isEditing ? "Material updated" : "Material created"); router.push(isEditing ? `/materials/${materialId}` : `/materials/${json.data.id}`); }
       else { const err = await res.json(); toast.error(err.error || "Failed"); }
-    } catch { toast.error("Failed"); }
+    } catch (e) { toast.error("Save failed: " + (e as Error).message); }
     finally { setSaving(false); }
   };
 
@@ -569,8 +551,8 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
         );
       }
       default: {
-        const isAuto = field.key === "materialId" || field.key === "currentQuantity" || field.key === "status" || field.key === "productCode";
-        return wrapper(<Input {...register(key as any)} placeholder={field.placeholder} readOnly={isAuto} className={isAuto ? "bg-slate-100 text-slate-500 cursor-not-allowed" : ""} />);
+        const isAuto = field.key === "currentQuantity";
+        return wrapper(<Input {...register(key as any)} placeholder={field.placeholder} readOnly={isAuto} className={isAuto ? "bg-slate-50 text-emerald-600 font-medium" : ""} />);
       }
     }
   };
@@ -588,11 +570,10 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
           )}
         </div>
         <Button type="button" variant={editMode ? "default" : "outline"} size="sm" className="gap-2" onClick={async () => {
-          if (!editMode) {
+          if (!editMode && settingsType) {
             const res = await fetch(`/api/settings?type=${settingsType}`).then((r) => r.json());
             if (res.success) {
               setAllSettings(res.data);
-              setDefaultSettings(JSON.parse(JSON.stringify(res.data)));
               setHistory([JSON.parse(JSON.stringify(res.data))]);
               setHistoryIdx(0);
               await apply(res.data);

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Search, ChevronDown, ChevronRight, X } from "lucide-react";
-import { CASE_FIELD_REGISTRY, MATERIAL_FIELD_REGISTRY, APPLY_FIELD_REGISTRY } from "@/lib/field-registry";
+import { CASE_FIELD_REGISTRY, MATERIAL_FIELD_REGISTRY, APPLY_FIELD_REGISTRY, MATERIAL_CATEGORY_FIELDS } from "@/lib/field-registry";
 
 const MASTER_DATA_TYPES = [
   { key: "department", title: "Departments" },
@@ -150,14 +150,35 @@ export default function SettingsPage() {
     fetchSettings();
   };
 
+  const getDefaultFieldKeys = (type: string): string[] => {
+    if (type === "case_form_field") return Object.keys(CASE_FIELD_REGISTRY);
+    if (type === "apply_form_field") return Object.keys(APPLY_FIELD_REGISTRY);
+    const catMap: Record<string, string> = { fdm_form_field: "FDM Filaments", sla_form_field: "SLA Resins", tank_form_field: "Resin Tanks", ipa_form_field: "IPA" };
+    if (catMap[type]) return MATERIAL_CATEGORY_FIELDS[catMap[type]] || [];
+    return [];
+  };
+
   const handleReset = async () => {
     const current = settings[activeKey] || [];
-    for (const s of current) {
-      const d = defaultRef.current.find((x: any) => x.value === s.value);
-      await fetch(`/api/settings/${s.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...s, isActive: d ? d.isActive : true, sortOrder: d ? d.sortOrder : s.sortOrder }) });
+    const defaultKeys = getDefaultFieldKeys(activeKey);
+    if (isFormField && defaultKeys.length > 0) {
+      // Form field: reset to hardcoded registry defaults
+      for (const s of current) {
+        const shouldBeActive = defaultKeys.includes(s.value);
+        const defaultOrder = defaultKeys.indexOf(s.value);
+        await fetch(`/api/settings/${s.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...s, isActive: shouldBeActive, sortOrder: shouldBeActive ? defaultOrder : s.sortOrder }) });
+      }
+      toast.success("Reset to default");
+      fetchSettings();
+    } else {
+      // Option type: reset to initial snapshot
+      for (const s of current) {
+        const d = defaultRef.current.find((x: any) => x.value === s.value);
+        await fetch(`/api/settings/${s.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...s, isActive: d ? d.isActive : true, sortOrder: d ? d.sortOrder : s.sortOrder }) });
+      }
+      toast.success("Reset to default");
+      fetchSettings();
     }
-    toast.success("Reset to default");
-    fetchSettings();
   };
 
   const initHistory = (items: any[]) => {

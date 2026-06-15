@@ -82,13 +82,18 @@ export function CaseForm({ defaultValues, isEditing, caseId }: CaseFormProps) {
   };
 
   const resetToDefault = async () => {
+    const defaultKeys = Object.keys(CASE_FIELD_REGISTRY);
     for (const s of allSettings) {
-      const def = defaultSettings.find((d: any) => d.value === s.value);
-      await fetch(`/api/settings/${s.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...s, isActive: def ? def.isActive : true, sortOrder: def ? def.sortOrder : s.sortOrder }) });
+      const shouldBeActive = defaultKeys.includes(s.value);
+      const defaultOrder = defaultKeys.indexOf(s.value);
+      await fetch(`/api/settings/${s.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...s, isActive: shouldBeActive, sortOrder: shouldBeActive ? defaultOrder : s.sortOrder }) });
     }
-    pushHistory(defaultSettings);
-    setAllSettings(defaultSettings);
-    await applySettings(defaultSettings);
+    const res = await fetch("/api/settings?type=case_form_field").then((r) => r.json());
+    if (res.success) {
+      setAllSettings(res.data);
+      pushHistory(res.data);
+      await applySettings(res.data);
+    }
     toast.success("Reset to default");
   };
 
@@ -200,12 +205,11 @@ export function CaseForm({ defaultValues, isEditing, caseId }: CaseFormProps) {
   const removeField = async (fieldKey: string) => {
     const entry = allSettings.find((s: any) => s.value === fieldKey);
     if (!entry) return;
-    const updated = { ...entry, isActive: false };
-    await fetch(`/api/settings/${entry.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updated) });
-    const newSettings = allSettings.map((s: any) => s.id === entry.id ? updated : s);
-    setAllSettings(newSettings);
-    pushHistory(newSettings);
-    await applySettings(newSettings);
+    const ns = allSettings.map((s: any) => s.id === entry.id ? { ...s, isActive: false } : s);
+    setAllSettings(ns);
+    pushHistory(ns);
+    await applySettings(ns);
+    await fetch(`/api/settings/${entry.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: entry.type, value: entry.value, sortOrder: entry.sortOrder, isActive: false }) });
     const label = fieldKey.startsWith("custom::") ? fieldKey.split("::")[1] : (CASE_FIELD_REGISTRY[fieldKey]?.label || fieldKey);
     toast.success(`Removed: ${label}`);
   };
@@ -465,7 +469,6 @@ export function CaseForm({ defaultValues, isEditing, caseId }: CaseFormProps) {
             const res = await fetch("/api/settings?type=case_form_field").then((r) => r.json());
             if (res.success) {
               setAllSettings(res.data);
-              setDefaultSettings(JSON.parse(JSON.stringify(res.data)));
               setHistory([JSON.parse(JSON.stringify(res.data))]);
               setHistoryIdx(0);
               await applySettings(res.data);

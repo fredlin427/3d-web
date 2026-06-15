@@ -11,21 +11,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: "prefix is required" }, { status: 400 });
     }
 
-    // Find all productCodes that start with this prefix
+    // Find all materialIds that start with this prefix
     const materials = await prisma.material.findMany({
       where: {
         category,
-        productCode: { startsWith: prefix },
+        materialId: { startsWith: prefix },
       },
-      select: { productCode: true },
+      select: { materialId: true },
+      orderBy: { materialId: "desc" },
     });
 
     // Extract sequence numbers and find max
     let maxSeq = 0;
     for (const m of materials) {
-      if (!m.productCode) continue;
+      if (!m.materialId) continue;
       // Format: PREFIX-NNN (e.g., UM-PLA-2024-001)
-      const parts = m.productCode.split("-");
+      const parts = m.materialId.split("-");
       const lastPart = parts[parts.length - 1];
       const seq = parseInt(lastPart, 10);
       if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;

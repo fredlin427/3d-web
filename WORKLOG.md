@@ -1,5 +1,37 @@
 # QEH 3D Printing Office — Work Log
 
+## 2026-06-15
+
+### Material Form — Bug Fixes & Data Cleanup
+- Fixed removeField not persisting: switched to optimistic update (UI first, then API)
+- Root cause: old `material_form_field` type had 20+ active entries acting as fallback when `selectedCategory` is empty
+- Nuclear cleanup: deleted ALL duplicate/inactive entries, re-seeded clean
+  - FDM: 102 → 17, SLA: 114 → 20, Tank: 79 → 15, IPA: 87 → 13
+- Removed `material_form_field` entirely — each category uses its own type
+- Removed category filter from `apply()` — now same as case/apply logic
+- Fixed PUT route: `0` no longer converted to `null` for numeric fields
+- Fixed `batchNumber` unique constraint removed (multiple materials share batches)
+- Fixed `materialId`, `status`, `productCode` fields being read-only
+- Auto-ID generation moved to `onSubmit` (reliable) instead of `useEffect` (unreliable)
+
+### Excel Column Alignment
+- All 4 categories use only Weight / Used / Remain (3 QTY fields exact match)
+- Labels: `purchaseDate` → "Order Date", `receivedDate` → "Arrival Date"
+- `materialId` field: editable, auto-generates on save if blank
+- Remain formula: `Weight − Used` auto-calculated
+- FDM brands updated with `[CODE] Brand` format for Material ID extraction
+- SLA Material Code VLOOKUP, Tank Product Code VLOOKUP
+
+### Settings Page
+- Reset to default now uses hardcoded registry defaults (not stale snapshots)
+- Edit Layout entry no longer overwrites `defaultSettings`
+- Removed `material_category` from sidebar (redundant)
+- IPA was never locked — user confirmed it should be editable
+
+### Material Form Edit Layout
+- Inline field editing: type selector + label input always visible
+- Unified edit controls across Case/Material/Apply forms
+
 ## 2026-06-12
 
 ### Apply Form V5 — Complete Rewrite
