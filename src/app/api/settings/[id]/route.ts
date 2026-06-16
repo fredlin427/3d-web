@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { settingFormSchema } from "@/lib/validators";
+import { validateBody } from "@/lib/api-utils";
 
 export async function PUT(
   request: NextRequest,
@@ -7,7 +9,9 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    const body = await request.json();
+    const parsed = await validateBody(request, settingFormSchema.partial());
+    if (!parsed.success) return parsed.response;
+    const body = parsed.data;
     const setting = await prisma.setting.update({
       where: { id },
       data: {
@@ -20,6 +24,7 @@ export async function PUT(
 
     return NextResponse.json({ success: true, data: setting });
   } catch (error) {
+    console.error(error);
     return NextResponse.json(
       { success: false, error: "Failed to update setting" },
       { status: 500 }

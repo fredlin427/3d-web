@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createAuditLog } from "@/lib/audit";
+import { materialFormSchema } from "@/lib/validators";
+import { validateBody } from "@/lib/api-utils";
+import { generateMaterialId } from "@/lib/material-id";
 
 export async function GET(
   request: NextRequest,
@@ -8,18 +11,26 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const material = await prisma.material.findUnique({
-      where: { id },
-      include: {
-        materialUsage: {
-          include: { case: true },
-          orderBy: { usageDate: "desc" },
+
+    // Fetch material and audit logs in parallel (fix N+1)
+    const [material, auditLogs] = await Promise.all([
+      prisma.material.findUnique({
+        where: { id },
+        include: {
+          materialUsage: {
+            include: { case: true },
+            orderBy: { usageDate: "desc" },
+          },
+          stockTransactions: {
+            orderBy: { transactionDate: "desc" },
+          },
         },
-        stockTransactions: {
-          orderBy: { transactionDate: "desc" },
-        },
-      },
-    });
+      }),
+      prisma.auditLog.findMany({
+        where: { entityId: id },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
 
     if (!material) {
       return NextResponse.json(
@@ -28,16 +39,12 @@ export async function GET(
       );
     }
 
-    const auditLogs = await prisma.auditLog.findMany({
-      where: { entityId: id },
-      orderBy: { createdAt: "desc" },
-    });
-
     return NextResponse.json({
       success: true,
       data: { ...material, auditLogs },
     });
   } catch (error) {
+    console.error(error);
     return NextResponse.json(
       { success: false, error: "Failed to fetch material" },
       { status: 500 }
@@ -51,7 +58,9 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    const body = await request.json();
+    const parsed = await validateBody(request, materialFormSchema.partial());
+    if (!parsed.success) return parsed.response;
+    const raw = parsed.data as Record<string, unknown>;
 
     const existing = await prisma.material.findUnique({ where: { id } });
 
@@ -62,14 +71,23 @@ export async function PUT(
     const dateFields = ["purchaseDate","receivedDate","openDate","expiryDate","disposalDate","manufacturingDate"];
 
     for (const f of textFields) {
-      if (body[f] !== undefined) data[f] = body[f] === "" ? null : (body[f] || null);
+      if (raw[f] !== undefined) data[f] = raw[f] === "" ? null : (raw[f] || null);
     }
     for (const f of numFields) {
-      if (body[f] !== undefined) data[f] = (body[f] === "" || body[f] === null) ? null : Number(body[f]);
+      if (raw[f] !== undefined) data[f] = (raw[f] === "" || raw[f] === null) ? null : Number(raw[f]);
     }
     for (const f of dateFields) {
-      if (body[f] !== undefined) data[f] = body[f] ? new Date(body[f]) : null;
+      if (raw[f] !== undefined) data[f] = raw[f] ? new Date(raw[f] as string) : null;
     }
+    // Auto-generate materialId if empty (both existing and requested are blank)
+    const existingMaterialId = existing?.materialId || "";
+    const requestedMaterialId = data["materialId"] as string | undefined;
+    if (!existingMaterialId && !requestedMaterialId) {
+      const mergedData = { ...existing, ...data, category: data["category"] || existing?.category };
+      const generated = await generateMaterialId(mergedData as Record<string, unknown>);
+      if (generated) data["materialId"] = generated;
+    }
+
     // Remain = Weight − Used (match Excel formula, keep existing opened/expired)
     const w = (data["initialQuantity"] !== undefined ? Number(data["initialQuantity"]) : (existing?.initialQuantity ?? 0)) as number;
     const u = (data["unusedQuantity"] !== undefined ? Number(data["unusedQuantity"]) : (existing?.unusedQuantity ?? 0)) as number;
@@ -93,7 +111,7 @@ export async function PUT(
           quantityChange: diff,
           quantityAfter: newQty,
           transactionDate: new Date(),
-          staffName: body.staffName || "System",
+          staffName: (raw.staffName as string) || "System",
           notes: `Manual quantity adjustment`,
         },
       });
@@ -103,8 +121,8 @@ export async function PUT(
       entityType: "Material",
       entityId: id,
       action: "material_updated",
-      staffName: body.staffName || "System",
-      details: `Material ${body.materialName} updated`,
+      staffName: (raw.staffName as string) || "System",
+      details: `Material ${raw.materialName} updated`,
     });
 
     return NextResponse.json({ success: true, data: updated });

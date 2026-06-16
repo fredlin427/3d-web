@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createAuditLog } from "@/lib/audit";
+import { caseFormSchema } from "@/lib/validators";
+import { validateBody } from "@/lib/api-utils";
 
 export async function GET(
   request: NextRequest,
@@ -8,25 +10,29 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const caseRecord = await prisma.case.findUnique({
-      where: { id },
-      include: {
-        progressSteps: { orderBy: { stepOrder: "asc" } },
-        materialUsage: { include: { material: true }, orderBy: { usageDate: "desc" } },
-      },
-    });
+
+    // Fetch case and audit logs in parallel (fix N+1)
+    const [caseRecord, auditLogs] = await Promise.all([
+      prisma.case.findUnique({
+        where: { id },
+        include: {
+          progressSteps: { orderBy: { stepOrder: "asc" } },
+          materialUsage: { include: { material: true }, orderBy: { usageDate: "desc" } },
+        },
+      }),
+      prisma.auditLog.findMany({
+        where: { entityId: id },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
 
     if (!caseRecord) {
       return NextResponse.json({ success: false, error: "Case not found" }, { status: 404 });
     }
 
-    const auditLogs = await prisma.auditLog.findMany({
-      where: { entityId: id },
-      orderBy: { createdAt: "desc" },
-    });
-
     return NextResponse.json({ success: true, data: { ...caseRecord, auditLogs } });
   } catch (error) {
+    console.error(error);
     return NextResponse.json({ success: false, error: "Failed to fetch case" }, { status: 500 });
   }
 }
@@ -37,59 +43,47 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    const body = await request.json();
+    const parsed = await validateBody(request, caseFormSchema.partial());
+    if (!parsed.success) return parsed.response;
+    const body = parsed.data as Record<string, unknown>;
 
-    const updated = await prisma.case.update({
-      where: { id },
-      data: {
-        caseNumber: body.caseNumber,
-        applicationDate: new Date(body.applicationDate),
-        expectedCompletionDate: body.expectedCompletionDate ? new Date(body.expectedCompletionDate) : null,
-        approvalDate: body.approvalDate ? new Date(body.approvalDate) : null,
-        completionDate: body.completionDate ? new Date(body.completionDate) : null,
-        ownership: body.ownership || null,
-        department: body.department,
-        hospital: body.hospital || "QEH",
-        applicantName: body.applicantName,
-        contact: body.contact || null,
-        rank: body.rank || null,
-        category: body.category,
-        purpose: body.purpose,
-        specification: body.specification || null,
-        projectTitle: body.projectTitle,
-        description: body.description || null,
-        modelType: body.modelType || null,
-        requiredService: body.requiredService || null,
-        serviceRequirements: body.serviceRequirements || null,
-        requiresSterilization: body.requiresSterilization || null,
-        quantity: body.quantity || 1,
-        totalComponents: body.totalComponents || 1,
-        priority: body.priority,
-        currentStatus: body.currentStatus,
-        currentProgressStep: body.currentProgressStep || null,
-        technician: body.technician || null,
-        printingParty: body.printingParty || null,
-        modelImageUrl: body.modelImageUrl || null,
-        photoFolderUrl: body.photoFolderUrl || null,
-        remarks: body.remarks || null,
-        telephone: body.telephone || null,
-        email: body.email || null,
-        signature: body.signature || null,
-        signatureDate: body.signatureDate ? new Date(body.signatureDate) : null,
-        modelMaterial: body.modelMaterial || null,
-        colourRequirement: body.colourRequirement || null,
-        copyrightRisk: body.copyrightRisk === true || body.copyrightRisk === "true",
-        copyrightDetails: body.copyrightDetails || null,
-        isReprint: body.isReprint === true || body.isReprint === "true",
-        fundingSource: body.fundingSource || null,
-      },
-    });
+    // Build data object conditionally for partial update
+    const data: Record<string, unknown> = {};
+    const textFields = [
+      "caseNumber","department","hospital","applicantName","contact","rank",
+      "category","purpose","specification","projectTitle","description","modelType",
+      "requiredService","serviceRequirements","requiresSterilization",
+      "priority","currentStatus","currentProgressStep","technician","printingParty",
+      "modelImageUrl","photoFolderUrl","remarks","telephone","email","signature",
+      "modelMaterial","colourRequirement","copyrightDetails","fundingSource","ownership",
+    ];
+    const dateFields = [
+      "applicationDate","expectedCompletionDate","approvalDate","completionDate",
+      "signatureDate",
+    ];
+    const boolFields = ["copyrightRisk","isReprint"];
+    const numFields = ["quantity","totalComponents"];
+
+    for (const f of textFields) {
+      if (body[f] !== undefined) data[f] = body[f] === "" ? null : body[f];
+    }
+    for (const f of dateFields) {
+      if (body[f] !== undefined) data[f] = body[f] ? new Date(body[f] as string) : null;
+    }
+    for (const f of boolFields) {
+      if (body[f] !== undefined) data[f] = body[f] === true || body[f] === "true";
+    }
+    for (const f of numFields) {
+      if (body[f] !== undefined) data[f] = body[f] ?? 1;
+    }
+
+    const updated = await prisma.case.update({ where: { id }, data });
 
     await createAuditLog({
       entityType: "Case",
       entityId: id,
       action: "case_updated",
-      staffName: body.staffName || "System",
+      staffName: (body.staffName as string) || "System",
       details: `Case ${body.caseNumber} updated`,
     });
 

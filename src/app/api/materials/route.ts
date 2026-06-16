@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createAuditLog } from "@/lib/audit";
+import { materialFormSchema } from "@/lib/validators";
+import { validateBody } from "@/lib/api-utils";
+import { generateMaterialId } from "@/lib/material-id";
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,6 +13,8 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status") || "";
     const lowStock = searchParams.get("lowStock") || "";
     const expiring = searchParams.get("expiring") || "";
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const pageSize = parseInt(searchParams.get("pageSize") || "0", 10); // 0 = all
 
     const where: Record<string, unknown> = {};
 
@@ -33,17 +38,30 @@ export async function GET(request: NextRequest) {
       where.expiryDate = { lte: thirtyDaysFromNow };
     }
 
-    const materials = await prisma.material.findMany({
-      where,
-      include: {
-        _count: {
-          select: { materialUsage: true, stockTransactions: true },
+    const [materials, total] = await Promise.all([
+      prisma.material.findMany({
+        where,
+        include: {
+          _count: {
+            select: { materialUsage: true, stockTransactions: true },
+          },
         },
-      },
-      orderBy: { updatedAt: "desc" },
-    });
+        orderBy: { updatedAt: "desc" },
+        ...(pageSize > 0 ? { skip: (page - 1) * pageSize, take: pageSize } : {}),
+      }),
+      prisma.material.count({ where }),
+    ]);
 
-    return NextResponse.json({ success: true, data: materials });
+    return NextResponse.json({
+      success: true,
+      data: materials,
+      pagination: pageSize > 0 ? {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+      } : undefined,
+    });
   } catch (error) {
     console.error(error);
     return NextResponse.json(
@@ -55,20 +73,28 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const parsed = await validateBody(request, materialFormSchema);
+    if (!parsed.success) return parsed.response;
+    const body = parsed.data;
+
+    // Auto-generate material ID if empty
+    let materialId = body.materialId || null;
+    if (!materialId) {
+      const generated = await generateMaterialId(body as Record<string, unknown>);
+      if (generated) materialId = generated;
+    }
 
     const material = await prisma.material.create({
       data: {
-        category: body.category,
-        materialName: body.materialName,
+        ...body,
         productCode: body.productCode || null,
-        materialId: body.materialId || null,
+        materialId,
         brand: body.brand || null,
         materialType: body.materialType || null,
         compatiblePrinter: body.compatiblePrinter || null,
         colour: body.colour || null,
         diameter: body.diameter || null,
-        batchNumber: body.batchNumber || null,
+        batchNumber: body.batchNumber || "",
         supplier: body.supplier || null,
         purchaseDate: body.purchaseDate ? new Date(body.purchaseDate) : null,
         receivedDate: body.receivedDate ? new Date(body.receivedDate) : null,
@@ -80,14 +106,13 @@ export async function POST(request: NextRequest) {
         unusedQuantity: body.unusedQuantity ?? 0,
         openedQuantity: body.openedQuantity ?? 0,
         expiredQuantity: body.expiredQuantity ?? 0,
-        // Auto-calculate: remain = weight - used - opened - expired
         currentQuantity: (body.initialQuantity ?? 0) - (body.unusedQuantity ?? 0) - (body.openedQuantity ?? 0) - (body.expiredQuantity ?? 0),
         unit: body.unit || "unit",
         reorderThreshold: body.reorderThreshold ?? 0,
         storageLocation: body.storageLocation || null,
         status: body.status || "In stock",
         remarks: body.remarks || null,
-      },
+      } as any,
     });
 
     // Create initial stock transaction
@@ -98,7 +123,7 @@ export async function POST(request: NextRequest) {
         quantityChange: material.currentQuantity,
         quantityAfter: material.currentQuantity,
         transactionDate: new Date(),
-        staffName: body.staffName || "System",
+        staffName: (body as any).staffName || "System",
         notes: "Initial stock added",
       },
     });
@@ -107,7 +132,7 @@ export async function POST(request: NextRequest) {
       entityType: "Material",
       entityId: material.id,
       action: "material_created",
-      staffName: body.staffName || "System",
+      staffName: (body as any).staffName || "System",
       details: `Material ${body.materialName} (${body.batchNumber}) created`,
     });
 

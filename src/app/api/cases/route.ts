@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createAuditLog } from "@/lib/audit";
 import { DEFAULT_PROGRESS_STEPS } from "@/lib/constants";
+import { caseFormSchema } from "@/lib/validators";
+import { validateBody } from "@/lib/api-utils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,6 +15,8 @@ export async function GET(request: NextRequest) {
     const priority = searchParams.get("priority") || "";
     const dateFrom = searchParams.get("dateFrom") || "";
     const dateTo = searchParams.get("dateTo") || "";
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const pageSize = parseInt(searchParams.get("pageSize") || "0", 10); // 0 = all
 
     const where: Record<string, unknown> = {};
 
@@ -33,13 +37,26 @@ export async function GET(request: NextRequest) {
       if (dateTo) (where.applicationDate as Record<string, unknown>).lte = new Date(dateTo);
     }
 
-    const cases = await prisma.case.findMany({
-      where,
-      include: { _count: { select: { progressSteps: true, materialUsage: true } } },
-      orderBy: { updatedAt: "desc" },
-    });
+    const [cases, total] = await Promise.all([
+      prisma.case.findMany({
+        where,
+        include: { _count: { select: { progressSteps: true, materialUsage: true } } },
+        orderBy: { updatedAt: "desc" },
+        ...(pageSize > 0 ? { skip: (page - 1) * pageSize, take: pageSize } : {}),
+      }),
+      prisma.case.count({ where }),
+    ]);
 
-    return NextResponse.json({ success: true, data: cases });
+    return NextResponse.json({
+      success: true,
+      data: cases,
+      pagination: pageSize > 0 ? {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+      } : undefined,
+    });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ success: false, error: "Failed to fetch cases" }, { status: 500 });
@@ -48,13 +65,16 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const parsed = await validateBody(request, caseFormSchema);
+    if (!parsed.success) return parsed.response;
+    const body = parsed.data;
     // Generate sequential case number if not provided
     let caseNumber = body.caseNumber;
     if (!caseNumber) {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = now.getMonth() + 1;
+      // FY based on applicationDate (requirement: "The financial year is determined based on the application date")
+      const appDate = new Date(body.applicationDate);
+      const year = appDate.getFullYear();
+      const month = appDate.getMonth() + 1;
       const fyEnd = month >= 4 ? (year + 1) % 100 : year % 100;
       const fyStart = fyEnd - 1;
       const fy = `${String(fyStart).padStart(2, "0")}${String(fyEnd).padStart(2, "0")}`;

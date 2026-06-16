@@ -57,8 +57,7 @@ export const PURPOSES: Record<string, string[]> = {
 
 export const MODEL_TYPES = [
   "Anatomical Model",
-  "Device / Tool",
-  "Anatomical + Device",
+  "Device/Tools",
 ] as const;
 
 export const OWNERSHIP_TYPES = [

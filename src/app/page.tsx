@@ -3,15 +3,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatDate, getStatusBadgeVariant } from "@/lib/utils";
+import { formatDate, getStatusBadgeVariant, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LoadingState } from "@/components/shared/loading-state";
 import { toast } from "sonner";
-import { FolderOpen, Clock, CheckCircle2, AlertTriangle, Package, TrendingDown, Download, ImageIcon, ArrowRight, Camera } from "lucide-react";
+import { FolderOpen, Clock, CheckCircle2, AlertTriangle, Package, TrendingDown, Download, ImageIcon, ArrowRight, Camera, Presentation, X } from "lucide-react";
 import Link from "next/link";
 import { DEPARTMENT_LABELS } from "@/lib/constants";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LabelList } from "recharts";
 import { DEPARTMENTS, CATEGORIES } from "@/lib/constants";
 import * as XLSX from "xlsx";
 
@@ -22,8 +22,50 @@ interface DashboardData {
   caseVolumeByMonth: { month: string; count: number }[];
   caseByDepartment: { department: string; count: number }[];
   caseBycategory: { category: string; count: number }[];
+  caseByPurpose: { category: string; purpose: string; count: number }[];
   materialUsageTrend: { month: string; usageCount: number }[];
   materialUsageByCategory: { category: string; totalUsed: number }[];
+}
+
+// Module-level export helpers (no state dependency — no need to recreate)
+function exportDataFile(rows: Record<string, unknown>[], filename: string) {
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Data");
+  XLSX.writeFile(wb, `${filename}.xlsx`);
+  toast.success(`Exported: ${filename}.xlsx`);
+}
+
+function exportChartImageFile(chartId: string, filename: string) {
+  const container = document.getElementById(chartId);
+  const svg = container?.querySelector("svg");
+  if (!svg) { toast.error("Chart not found"); return; }
+  const clone = svg.cloneNode(true) as SVGElement;
+  clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  const rect = svg.getBoundingClientRect();
+  const w = rect.width || 600;
+  const h = rect.height || 300;
+  const svgData = new XMLSerializer().serializeToString(clone);
+  const canvas = document.createElement("canvas");
+  canvas.width = w * 2;
+  canvas.height = h * 2;
+  const ctx = canvas.getContext("2d")!;
+  ctx.scale(2, 2);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, w, h);
+  const img = new Image();
+  img.onload = () => {
+    ctx.drawImage(img, 0, 0, w, h);
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `${filename}.png`;
+      a.click(); URL.revokeObjectURL(url);
+      toast.success(`Exported: ${filename}.png`);
+    }, "image/png");
+  };
+  img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
 }
 
 const statDefs = [
@@ -46,6 +88,8 @@ export default function DashboardPage() {
   const [recentCases, setRecentCases] = useState<any[]>([]);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [dismissed, setDismissed] = useState(false);
+  const [presMode, setPresMode] = useState(false);
+  const [presChart, setPresChart] = useState<"sunburst" | "bars" | "table">("sunburst");
 
   // Check if alerts were dismissed today
   useEffect(() => {
@@ -69,7 +113,7 @@ export default function DashboardPage() {
       const res = await fetch(`/api/dashboard?${params}`);
       const json = await res.json();
       if (json.success) setData(json.data);
-    } catch { /* */ }
+    } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, [dateFrom, dateTo, deptFilter, catFilter]);
 
@@ -80,7 +124,7 @@ export default function DashboardPage() {
     fetch("/api/cases")
       .then((r) => r.json())
       .then((j) => { if (j.success) setRecentCases(j.data.slice(0, 6)); })
-      .catch(() => {});
+      .catch((e) => { console.error(e); });
     // Fetch materials with alerts
     fetch("/api/materials")
       .then((r) => r.json())
@@ -98,46 +142,6 @@ export default function DashboardPage() {
   }, []);
 
   if (!data && loading) return <LoadingState />;
-
-  const exportData = (rows: Record<string, unknown>[], filename: string) => {
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Data");
-    XLSX.writeFile(wb, `${filename}.xlsx`);
-    toast.success(`Exported: ${filename}.xlsx`);
-  };
-
-  const exportChartImage = (chartId: string, filename: string) => {
-    const container = document.getElementById(chartId);
-    const svg = container?.querySelector("svg");
-    if (!svg) { toast.error("Chart not found"); return; }
-    const clone = svg.cloneNode(true) as SVGElement;
-    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-    const rect = svg.getBoundingClientRect();
-    const w = rect.width || 600;
-    const h = rect.height || 300;
-    const svgData = new XMLSerializer().serializeToString(clone);
-    const canvas = document.createElement("canvas");
-    canvas.width = w * 2;
-    canvas.height = h * 2;
-    const ctx = canvas.getContext("2d")!;
-    ctx.scale(2, 2);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, w, h);
-    const img = new Image();
-    img.onload = () => {
-      ctx.drawImage(img, 0, 0, w, h);
-      canvas.toBlob((blob) => {
-        if (!blob) return;
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url; a.download = `${filename}.png`;
-        a.click(); URL.revokeObjectURL(url);
-        toast.success(`Exported: ${filename}.png`);
-      }, "image/png");
-    };
-    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
-  };
 
   return (
     <div className="space-y-6">
@@ -167,16 +171,28 @@ export default function DashboardPage() {
       <div className="!flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">Dashboard</h2>
-          <p className="text-sm text-slate-500 mt-1">3D printing office activity overview</p>
+          <p className="text-sm text-slate-500 mt-1">{presMode ? "Meeting Presentation View" : "3D printing office activity overview"}</p>
         </div>
-        <Button variant="outline" size="sm" className="h-9 gap-2" onClick={() => {
-          window.open("/api/reports?type=cases", "_blank");
-          toast.success("Report exported");
-        }}><Download className="h-4 w-4" />Export</Button>
+        <div className="flex gap-2">
+          {!presMode && (
+            <Button variant="outline" size="sm" className="h-9 gap-2" onClick={() => {
+              window.open("/api/reports?type=cases", "_blank");
+              toast.success("Report exported");
+            }}><Download className="h-4 w-4" />Export</Button>
+          )}
+          <Button
+            size="sm"
+            className="h-9 gap-2"
+            variant={presMode ? "default" : "outline"}
+            onClick={() => setPresMode(!presMode)}
+          >
+            {presMode ? <><X className="h-4 w-4" />Exit Meeting View</> : <><Presentation className="h-4 w-4" />Meeting View</>}
+          </Button>
+        </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
+      {!presMode && (<>
+        <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2"><span className="text-xs font-medium text-slate-500">From</span><input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 text-sm border rounded-lg px-3 py-1.5 bg-white" /></div>
         <div className="flex items-center gap-2"><span className="text-xs font-medium text-slate-500">To</span><input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 text-sm border rounded-lg px-3 py-1.5 bg-white" /></div>
         <Select value={deptFilter} onValueChange={(v) => { if (v) setDeptFilter(v); }}>
@@ -248,8 +264,8 @@ export default function DashboardPage() {
           <CardHeader className="!flex items-center justify-between">
             <CardTitle className="text-[15px] font-semibold">Case Volume</CardTitle>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export PNG" onClick={() => exportChartImage("chart-case-volume", "case-volume")}><Camera className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export XLSX" onClick={() => exportData(data?.caseVolumeByMonth || [], "case-volume")}><Download className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export PNG" onClick={() => exportChartImageFile("chart-case-volume", "case-volume")}><Camera className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export XLSX" onClick={() => exportDataFile(data?.caseVolumeByMonth || [], "case-volume")}><Download className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
             </div>
           </CardHeader>
           <CardContent id="chart-case-volume"><ResponsiveContainer width="100%" height={260}><BarChart data={data?.caseVolumeByMonth || []} barSize={28}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f2f6" /><XAxis dataKey="month" tick={{ fontSize: 12, fill: "#8b8fa8" }} axisLine={false} tickLine={false} /><YAxis allowDecimals={false} tick={{ fontSize: 12, fill: "#8b8fa8" }} axisLine={false} tickLine={false} /><Tooltip cursor={{ fill: "#f8f9fc" }} /><Bar dataKey="count" fill="#4f46e5" radius={[6,6,0,0]} /></BarChart></ResponsiveContainer></CardContent></Card>
@@ -258,8 +274,8 @@ export default function DashboardPage() {
           <CardHeader className="!flex items-center justify-between">
             <CardTitle className="text-[15px] font-semibold">By Department</CardTitle>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export PNG" onClick={() => exportChartImage("chart-by-dept", "cases-by-department")}><Camera className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export XLSX" onClick={() => exportData(data?.caseByDepartment || [], "cases-by-department")}><Download className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export PNG" onClick={() => exportChartImageFile("chart-by-dept", "cases-by-department")}><Camera className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export XLSX" onClick={() => exportDataFile(data?.caseByDepartment || [], "cases-by-department")}><Download className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
             </div>
           </CardHeader>
           <CardContent id="chart-by-dept"><ResponsiveContainer width="100%" height={280}><PieChart><Pie data={data?.caseByDepartment || []} dataKey="count" nameKey="department" cx="50%" cy="50%" outerRadius={100} innerRadius={55} paddingAngle={3} label={({ name, value }) => `${name}: ${value}`} labelLine={{ stroke: "#cbd5e1", strokeWidth: 1 }}>{(data?.caseByDepartment || []).map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="none" />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
@@ -268,8 +284,8 @@ export default function DashboardPage() {
           <CardHeader className="!flex items-center justify-between">
             <CardTitle className="text-[15px] font-semibold">Material Usage Trend</CardTitle>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export PNG" onClick={() => exportChartImage("chart-usage-trend", "material-usage-trend")}><Camera className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export XLSX" onClick={() => exportData(data?.materialUsageTrend || [], "material-usage-trend")}><Download className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export PNG" onClick={() => exportChartImageFile("chart-usage-trend", "material-usage-trend")}><Camera className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export XLSX" onClick={() => exportDataFile(data?.materialUsageTrend || [], "material-usage-trend")}><Download className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
             </div>
           </CardHeader>
           <CardContent id="chart-usage-trend"><ResponsiveContainer width="100%" height={280}><BarChart data={data?.materialUsageTrend || []} barSize={32}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f2f6" /><XAxis dataKey="month" tick={{ fontSize: 12, fill: "#8b8fa8" }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 12, fill: "#8b8fa8" }} axisLine={false} tickLine={false} /><Tooltip cursor={{ fill: "#f8f9fc" }} /><Bar dataKey="usageCount" fill="#f59e0b" radius={[6,6,0,0]} /></BarChart></ResponsiveContainer></CardContent></Card>
@@ -278,12 +294,324 @@ export default function DashboardPage() {
           <CardHeader className="!flex items-center justify-between">
             <CardTitle className="text-[15px] font-semibold">Usage by Material</CardTitle>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export PNG" onClick={() => exportChartImage("chart-usage-by-mat", "usage-by-material")}><Camera className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export XLSX" onClick={() => exportData(data?.materialUsageByCategory || [], "usage-by-material")}><Download className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export PNG" onClick={() => exportChartImageFile("chart-usage-by-mat", "usage-by-material")}><Camera className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export XLSX" onClick={() => exportDataFile(data?.materialUsageByCategory || [], "usage-by-material")}><Download className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
             </div>
           </CardHeader>
           <CardContent id="chart-usage-by-mat"><ResponsiveContainer width="100%" height={280}><BarChart data={data?.materialUsageByCategory || []} layout="vertical" barSize={24}><CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f2f6" /><XAxis type="number" tick={{ fontSize: 12, fill: "#8b8fa8" }} axisLine={false} tickLine={false} /><YAxis type="category" dataKey="category" width={120} tick={{ fontSize: 12, fill: "#8b8fa8" }} axisLine={false} tickLine={false} /><Tooltip /><Bar dataKey="totalUsed" fill="#8b5cf6" radius={[0,6,6,0]} /></BarChart></ResponsiveContainer></CardContent></Card>
       </div>
+      </> )}
+
+      {/* ─── PRESENTATION MODE ─────────────────────────────────── */}
+      {presMode && data && (
+        <div className="space-y-6">
+          {/* Toolbar */}
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2"><span className="text-xs font-medium text-slate-500">From</span><input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 text-sm border rounded-lg px-3 py-1.5 bg-white" /></div>
+              <div className="flex items-center gap-2"><span className="text-xs font-medium text-slate-500">To</span><input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 text-sm border rounded-lg px-3 py-1.5 bg-white" /></div>
+              <Select value={deptFilter} onValueChange={(v) => { if (v) setDeptFilter(v); }}>
+                <SelectTrigger className="w-[140px] h-9 bg-white"><SelectValue placeholder="Dept" /></SelectTrigger>
+                <SelectContent><SelectItem value="all">All</SelectItem>{DEPARTMENTS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Chart type tabs */}
+              <div className="flex bg-slate-100 rounded-lg p-1 mr-2">
+                {([
+                  { key: "sunburst" as const, label: "Sunburst" },
+                  { key: "bars" as const, label: "Grouped Bars" },
+                  { key: "table" as const, label: "Table" },
+                ]).map((t) => (
+                  <button key={t.key} onClick={() => setPresChart(t.key)}
+                    className={cn("px-3 py-1.5 rounded-md text-xs font-medium transition-all", presChart === t.key ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700")}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={() => exportChartImageFile("pres-main-chart", "qeh-cases")}>
+                <Camera className="h-3.5 w-3.5" />Export PNG
+              </Button>
+            </div>
+          </div>
+
+          {/* Summary cards */}
+          <div className="grid grid-cols-4 gap-3">
+            {[
+              { label: "Total Cases", value: data.stats.totalCases, color: "#4f46e5" },
+              { label: "This Month", value: data.stats.casesThisMonth, color: "#06b6d4" },
+              { label: "In Progress", value: data.stats.casesInProgress, color: "#f59e0b" },
+              { label: "Completed", value: data.stats.completedCases, color: "#10b981" },
+            ].map((s) => (
+              <Card key={s.label} className="border-0 shadow-sm text-center">
+                <CardContent className="p-4">
+                  <p className="text-2xl font-bold tabular-nums" style={{ color: s.color }}>{s.value}</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">{s.label}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* ─── MAIN CHART AREA ──────────────────────────────────── */}
+          <div id="pres-main-chart">
+            {presChart === "sunburst" && (
+              <div className="space-y-6">
+                {/* Chart A: Departments — Black pie with bold labels */}
+                <div className="rounded-xl overflow-hidden" style={{ background: "#000000" }}>
+                  <div style={{ fontFamily: "Calibri, Arial, sans-serif", background: "#000000", padding: 24 }}>
+                    <div style={{ textAlign: "center", fontSize: 28, fontWeight: 700, color: "#595959", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>
+                      Cases by Department
+                    </div>
+                    <ResponsiveContainer width="100%" height={480}>
+                      <PieChart>
+                        <Pie data={data?.caseByDepartment || []} dataKey="count" nameKey="department" cx="62%" cy="55%" outerRadius={190} startAngle={90} endAngle={-270} stroke="none"
+                          label={({ cx, cy, midAngle, outerRadius, payload, percent }: any) => {
+                            const ma = midAngle || 0; const r = (outerRadius || 190) + 45;
+                            const x = (cx || 0) + r * Math.cos(-ma * Math.PI / 180);
+                            const y = (cy || 0) + r * Math.sin(-ma * Math.PI / 180);
+                            return (
+                              <text x={x} y={y} textAnchor="middle" dominantBaseline="central" style={{ fontFamily: "Calibri, Arial, sans-serif", fontSize: 14, fontWeight: 700, fill: "#ffffff" }}>
+                                <tspan x={x} dy="-0.5em">{payload?.department || ""}</tspan>
+                                <tspan x={x} dy="1.3em" style={{ fontSize: 18 }}>{payload?.count || 0} ({((percent || 0) * 100).toFixed(0)}%)</tspan>
+                              </text>
+                            );
+                          }}
+                          labelLine={({ cx, cy, midAngle, outerRadius }: any) => {
+                            const ma = midAngle || 0; const or = outerRadius || 190;
+                            const mx = (cx || 0) + (or + 12) * Math.cos(-ma * Math.PI / 180);
+                            const my = (cy || 0) + (or + 12) * Math.sin(-ma * Math.PI / 180);
+                            const ex = (cx || 0) + (or + 40) * Math.cos(-ma * Math.PI / 180);
+                            const ey = (cy || 0) + (or + 40) * Math.sin(-ma * Math.PI / 180);
+                            return <polyline points={`${mx},${my} ${ex},${ey}`} stroke="#A6A6A6" strokeWidth={1.5} fill="none" />;
+                          }}
+                        >
+                          {["#5B9BD5","#ED7D31","#A5A5A5","#FFC000","#4472C4","#70AD47","#2E75B6","#C55A11","#7F7F7F","#A68A00"].map((c, i) => <Cell key={i} fill={c} />)}
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Chart B: Sunburst — outer ring with ALL purpose items labeled on side */}
+                <div className="rounded-xl overflow-hidden border" style={{ backgroundColor: "#ffffff", backgroundImage: "repeating-linear-gradient(135deg, #f4f4f4 0px, #f4f4f4 1px, #ffffff 1px, #ffffff 5px)" }}>
+                  <div style={{ fontFamily: "Calibri, Arial, sans-serif", padding: 24 }}>
+                    <div style={{ textAlign: "center", fontSize: 22, fontWeight: 400, color: "#666666", marginBottom: 12 }}>
+                      Application Categories
+                    </div>
+                    <div style={{ display: "flex" }}>
+                      {/* Sunburst chart — left 60% */}
+                      <div style={{ flex: "0 0 60%" }}>
+                        <ResponsiveContainer width="100%" height={520}>
+                          <PieChart>
+                            <Pie data={(data?.caseByPurpose || []).map((p) => ({ name: p.purpose, value: p.count, parent: p.category }))}
+                              dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={180} outerRadius={265} startAngle={90} endAngle={-270} stroke="#ffffff" strokeWidth={1.5}
+                              label={({ cx, cy, midAngle, innerRadius, outerRadius, payload, percent }: any) => {
+                                const RADIAN = Math.PI / 180;
+                                const ma = midAngle || 0;
+                                const ir = innerRadius || 180;
+                                const or = outerRadius || 265;
+                                const midR = (ir + or) / 2;
+                                const x = (cx || 0) + midR * Math.cos(-ma * RADIAN);
+                                const y = (cy || 0) + midR * Math.sin(-ma * RADIAN);
+                                const pct = ((percent || 0) * 100).toFixed(0);
+                                // Only show label if slice is big enough (>3%)
+                                if ((percent || 0) < 0.03) return null;
+                                return (
+                                  <text x={x} y={y} textAnchor="middle" dominantBaseline="central" style={{ fontFamily: "Calibri, Arial, sans-serif", fontSize: 11, fontWeight: 600, fill: "#1e293b" }}>
+                                    <tspan x={x} dy="-0.3em">{payload?.name || ""}</tspan>
+                                    <tspan x={x} dy="1.2em" style={{ fontSize: 13, fontWeight: 700 }}>{payload?.value || 0} ({pct}%)</tspan>
+                                  </text>
+                                );
+                              }}
+                              labelLine={({ cx, cy, midAngle, outerRadius, payload, percent }: any) => {
+                                if ((percent || 0) >= 0.03) return <g />; // No leader line for big slices
+                                const RADIAN = Math.PI / 180;
+                                const ma = midAngle || 0;
+                                const or = outerRadius || 265;
+                                const mx = (cx || 0) + (or + 5) * Math.cos(-ma * RADIAN);
+                                const my = (cy || 0) + (or + 5) * Math.sin(-ma * RADIAN);
+                                const ex = (cx || 0) + (or + 35) * Math.cos(-ma * RADIAN);
+                                const ey = (cy || 0) + (or + 35) * Math.sin(-ma * RADIAN);
+                                return (
+                                  <g>
+                                    <polyline points={`${mx},${my} ${ex},${ey}`} stroke="#94a3b8" strokeWidth={1} fill="none" />
+                                    <text x={ex} y={ey} textAnchor={ex > (cx || 0) ? "start" : "end"} dominantBaseline="central"
+                                      style={{ fontFamily: "Calibri, Arial, sans-serif", fontSize: 10, fontWeight: 600, fill: "#334155" }}>
+                                      <tspan x={ex} dy="-0.4em">{payload?.name || ""}</tspan>
+                                      <tspan x={ex} dy="1.1em" style={{ fontWeight: 700, fill: "#64748b" }}>{payload?.value || 0} ({(percent * 100).toFixed(0)}%)</tspan>
+                                    </text>
+                                  </g>
+                                );
+                              }}>
+                              {(data?.caseByPurpose || []).map((p, i) => {
+                                const catShades: Record<string, string[]> = {
+                                  "Clinical Use": ["#70AD47","#8CC168","#A9D18E"],
+                                  "Rehabilitation": ["#5B9BD5","#7FB3E0","#9DC3E6","#BDD7EE","#D2E4F4","#E1EDF9","#F0F5FB"],
+                                  "Training/ Education": ["#FFC000","#FFD34D","#FFE699"],
+                                };
+                                const shades = catShades[p.category] || ["#A5A5A5"];
+                                const siblings = (data?.caseByPurpose || []).filter((x: any) => x.category === p.category);
+                                const idx = siblings.findIndex((x: any) => x.purpose === p.purpose);
+                                return <Cell key={i} fill={shades[idx % shades.length]} />;
+                              })}
+                            </Pie>
+                            <Pie data={data?.caseBycategory || []} dataKey="count" nameKey="category" cx="50%" cy="50%" innerRadius={100} outerRadius={180} startAngle={90} endAngle={-270} stroke="#ffffff" strokeWidth={1.5}
+                              label={({ payload }: any) => payload?.category || ""} labelLine={false}>
+                              {["#70AD47","#5B9BD5","#FFC000"].map((c, i) => <Cell key={i} fill={c} />)}
+                            </Pie>
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                      {/* Legend — right 40%: list ALL purpose items with counts */}
+                      <div style={{ flex: "0 0 40%", paddingLeft: 16, overflowY: "auto", maxHeight: 520 }}>
+                        {(["Clinical Use","Rehabilitation","Training/ Education"] as const).map((cat) => {
+                          const catColor = { "Clinical Use": "#70AD47", "Rehabilitation": "#5B9BD5", "Training/ Education": "#FFC000" }[cat];
+                          const catTotal = (data?.caseBycategory || []).find((c: any) => c.category === cat)?.count || 0;
+                          const purposes = (data?.caseByPurpose || []).filter((p: any) => p.category === cat);
+                          return (
+                            <div key={cat} style={{ marginBottom: 14 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                                <div style={{ width: 10, height: 10, backgroundColor: catColor, borderRadius: 2 }} />
+                                <span style={{ fontSize: 13, fontWeight: 700, color: "#334155", fontFamily: "Calibri, Arial, sans-serif" }}>{cat}</span>
+                                <span style={{ fontSize: 12, color: "#94a3b8", fontFamily: "Calibri, Arial, sans-serif" }}>({catTotal})</span>
+                              </div>
+                              {purposes.map((p: any, j: number) => {
+                                const shades = {
+                                  "Clinical Use": ["#A9D18E","#8CC168","#70AD47"],
+                                  "Rehabilitation": ["#BDD7EE","#9DC3E6","#7FB3E0","#5B9BD5","#D2E4F4","#E1EDF9","#F0F5FB"],
+                                  "Training/ Education": ["#FFE699","#FFD34D","#FFC000"],
+                                }[cat] || ["#D9D9D9"];
+                                return (
+                                  <div key={p.purpose} style={{ display: "flex", alignItems: "center", gap: 6, paddingLeft: 16, paddingTop: 2 }}>
+                                    <div style={{ width: 8, height: 8, backgroundColor: shades[j % shades.length], borderRadius: 2, flexShrink: 0 }} />
+                                    <span style={{ fontSize: 12, color: "#475569", fontFamily: "Calibri, Arial, sans-serif", flex: 1 }}>{p.purpose}</span>
+                                    <span style={{ fontSize: 12, fontWeight: 700, color: "#334155", fontFamily: "Calibri, Arial, sans-serif", minWidth: 28, textAlign: "right" }}>{p.count}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {presChart === "bars" && (
+              <div className="space-y-6">
+                {/* Dept — horizontal bars */}
+                <Card className="border-0 shadow-sm" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
+                  <CardHeader><CardTitle className="text-base font-bold text-slate-700">Cases by Department</CardTitle></CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={Math.max(200, (data?.caseByDepartment || []).length * 48)}>
+                      <BarChart data={data?.caseByDepartment || []} layout="vertical" barSize={28} margin={{ left: 60, right: 60 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f2f6" />
+                        <XAxis type="number" tick={{ fontSize: 13, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                        <YAxis type="category" dataKey="department" width={100} tick={{ fontSize: 13, fontWeight: 600, fill: "#334155" }} axisLine={false} tickLine={false} />
+                        <Tooltip cursor={{ fill: "#f8f9fc" }} />
+                        <Bar dataKey="count" fill="#4472C4" radius={[0,6,6,0]}>
+                          <LabelList dataKey="count" position="right" style={{ fontSize: 14, fontWeight: 700, fill: "#4472C4" }} />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+
+                {/* Categories + Sub-items — grouped nested bars */}
+                <Card className="border-0 shadow-sm" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
+                  <CardHeader><CardTitle className="text-base font-bold text-slate-700">Cases by Application Category & Purpose</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      {(["Clinical Use","Rehabilitation","Training/ Education"] as const).map((cat) => {
+                        const catColor = { "Clinical Use": "#70AD47", "Rehabilitation": "#5B9BD5", "Training/ Education": "#FFC000" }[cat];
+                        const subItems = (data?.caseByPurpose || []).filter((p: any) => p.category === cat);
+                        const chartData = subItems.map((p: any) => ({ name: p.purpose, count: p.count }));
+                        return (
+                          <div key={cat}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, paddingLeft: 4 }}>
+                              <div style={{ width: 12, height: 12, backgroundColor: catColor, borderRadius: 3 }} />
+                              <span style={{ fontSize: 14, fontWeight: 700, color: "#334155" }}>{cat}</span>
+                              <span style={{ fontSize: 12, color: "#94a3b8" }}>({subItems.reduce((s: number, x: any) => s + x.count, 0)} cases)</span>
+                            </div>
+                            <ResponsiveContainer width="100%" height={Math.max(120, chartData.length * 42)}>
+                              <BarChart data={chartData} layout="vertical" barSize={24} margin={{ left: 180, right: 50 }}>
+                                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f2f6" />
+                                <XAxis type="number" tick={{ fontSize: 12, fill: "#94a3b8" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                                <YAxis type="category" dataKey="name" width={175} tick={{ fontSize: 12, fill: "#475569" }} axisLine={false} tickLine={false} />
+                                <Bar dataKey="count" fill={catColor} radius={[0,5,5,0]}>
+                                  <LabelList dataKey="count" position="right" style={{ fontSize: 13, fontWeight: 700, fill: catColor }} />
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {presChart === "table" && (
+              <div className="space-y-6">
+                <Card className="border-0 shadow-sm" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
+                  <CardHeader><CardTitle className="text-base font-bold text-slate-700">Cases by Department</CardTitle></CardHeader>
+                  <CardContent>
+                    <table className="w-full text-sm">
+                      <thead><tr className="border-b border-slate-200"><th className="text-left py-2 px-3 text-xs font-semibold text-slate-400 uppercase">Department</th><th className="text-right py-2 px-3 text-xs font-semibold text-slate-400 uppercase">Cases</th><th className="text-right py-2 px-3 text-xs font-semibold text-slate-400 uppercase">%</th></tr></thead>
+                      <tbody>
+                        {(data?.caseByDepartment || []).map((d: any) => {
+                          const total = (data?.caseByDepartment || []).reduce((s: number, x: any) => s + x.count, 0);
+                          return (
+                            <tr key={d.department} className="border-b border-slate-100 hover:bg-slate-50">
+                              <td className="py-2.5 px-3 font-medium text-slate-700">{d.department}</td>
+                              <td className="py-2.5 px-3 text-right font-bold text-slate-900 tabular-nums">{d.count}</td>
+                              <td className="py-2.5 px-3 text-right text-slate-500 tabular-nums">{total > 0 ? ((d.count / total) * 100).toFixed(1) : 0}%</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-0 shadow-sm" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
+                  <CardHeader><CardTitle className="text-base font-bold text-slate-700">Cases by Category & Purpose</CardTitle></CardHeader>
+                  <CardContent>
+                    {(["Clinical Use","Rehabilitation","Training/ Education"] as const).map((cat) => {
+                      const catColor = { "Clinical Use": "#70AD47", "Rehabilitation": "#5B9BD5", "Training/ Education": "#FFC000" }[cat];
+                      const subItems = (data?.caseByPurpose || []).filter((p: any) => p.category === cat);
+                      const catTotal = subItems.reduce((s: number, x: any) => s + x.count, 0);
+                      return (
+                        <div key={cat} className="mb-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div style={{ width: 10, height: 10, backgroundColor: catColor, borderRadius: 2 }} />
+                            <span className="text-sm font-bold text-slate-700">{cat}</span>
+                            <span className="text-xs text-slate-400">({catTotal} cases)</span>
+                          </div>
+                          <table className="w-full text-sm ml-4">
+                            <thead><tr className="border-b border-slate-100"><th className="text-left py-1.5 px-2 text-[11px] font-semibold text-slate-400 uppercase">Purpose</th><th className="text-right py-1.5 px-2 text-[11px] font-semibold text-slate-400 uppercase">Count</th></tr></thead>
+                            <tbody>
+                              {subItems.map((p: any) => (
+                                <tr key={p.purpose} className="border-b border-slate-50">
+                                  <td className="py-1.5 px-2 text-slate-600">{p.purpose}</td>
+                                  <td className="py-1.5 px-2 text-right font-bold text-slate-900 tabular-nums">{p.count}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -113,7 +113,7 @@ export default function SettingsPage() {
         }
         setSettings(grouped);
       }
-    } catch { /* silent */ }
+    } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, []);
 

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
 import { formatDate, getStockStatusColor } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { useAPI } from "@/lib/swr-config";
 
 interface MaterialInfo {
   id: string;
@@ -22,42 +23,38 @@ interface MaterialInfo {
 
 export function MaterialInfoPopover({ materialId, name }: { materialId: string; name: string }) {
   const [open, setOpen] = useState(false);
-  const [info, setInfo] = useState<MaterialInfo | null>(null);
-  const [loading, setLoading] = useState(false);
-  const timerRef = useRef<any>(null);
+  const [hasFetched, setHasFetched] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchInfo = async () => {
-    if (info) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/materials/${materialId}`);
-      const json = await res.json();
-      if (json.success) {
-        const m = json.data;
-        setInfo({
-          id: m.id, materialName: m.materialName, category: m.category,
-          batchNumber: m.batchNumber, brand: m.brand,
-          currentQuantity: m.currentQuantity, unit: m.unit,
-          status: m.status, storageLocation: m.storageLocation,
-          expiryDate: m.expiryDate,
-        });
-      }
-    } catch { /* */ }
-    finally { setLoading(false); }
-  };
+  // SWR dedupes parallel requests to same materialId across all popover instances
+  const { data: swrData, isLoading } = useAPI<{ success: boolean; data: any }>(
+    hasFetched ? `/api/materials/${materialId}` : null,
+    { revalidateOnFocus: false }
+  );
+  const json = swrData as { success: boolean; data: any } | undefined;
+  const m = json?.success ? json.data : null;
+  const info: MaterialInfo | null = m ? {
+    id: m.id, materialName: m.materialName, category: m.category,
+    batchNumber: m.batchNumber, brand: m.brand,
+    currentQuantity: m.currentQuantity, unit: m.unit,
+    status: m.status, storageLocation: m.storageLocation,
+    expiryDate: m.expiryDate,
+  } : null;
+
+  // Remove the old fetchInfo function — SWR handles everything
 
   return (
-    <span className="relative inline-flex" onMouseEnter={() => { timerRef.current = setTimeout(() => { setOpen(true); fetchInfo(); }, 300); }} onMouseLeave={() => { clearTimeout(timerRef.current); setTimeout(() => setOpen(false), 200); }}>
+    <span className="relative inline-flex" onMouseEnter={() => { timerRef.current = setTimeout(() => { setOpen(true); setHasFetched(true); }, 300); }} onMouseLeave={() => { if (timerRef.current) clearTimeout(timerRef.current); setTimeout(() => setOpen(false), 200); }}>
       <span className="text-indigo-600 font-medium text-sm cursor-default hover:underline">{name}</span>
 
       {open && (
         <div className="absolute z-50 left-0 top-full mt-2 w-72 rounded-xl border bg-white shadow-xl animate-in fade-in-0 zoom-in-95 duration-150"
-          onMouseEnter={() => clearTimeout(timerRef.current)}
+          onMouseEnter={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
           onMouseLeave={() => setOpen(false)}
         >
           <div className="p-3 border-b"><p className="text-xs font-semibold text-slate-700">Material Details</p></div>
           <div className="p-3">
-            {loading ? (
+            {isLoading ? (
               <div className="flex items-center justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-slate-300" /></div>
             ) : info ? (
               <div className="space-y-2 text-sm">

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { useAPI } from "@/lib/swr-config";
 
 interface CaseInfo {
   id: string;
@@ -18,41 +19,31 @@ interface CaseInfo {
 
 export function CaseUsagePopover({ materialId, count }: { materialId: string; count: number }) {
   const [open, setOpen] = useState(false);
-  const [cases, setCases] = useState<CaseInfo[]>([]);
-  const [loading, setLoading] = useState(false);
-  const timerRef = useRef<any>(null);
+  const [hasFetched, setHasFetched] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLSpanElement>(null);
 
-  const fetchCases = async () => {
-    if (cases.length > 0) return; // already loaded
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/materials/${materialId}`);
-      const json = await res.json();
-      if (json.success && json.data.materialUsage) {
-        setCases(json.data.materialUsage.map((u: any) => ({
-          id: u.case?.id || "",
-          caseNumber: u.case?.caseNumber || "—",
-          projectTitle: u.case?.projectTitle || "",
-          department: u.case?.department || "",
-          usageDate: u.usageDate,
-          quantityUsed: u.quantityUsed,
-          unit: u.unit,
-        })));
-      }
-    } catch { /* */ }
-    finally { setLoading(false); }
-  };
+  // SWR dedupes parallel requests to same materialId
+  const { data: swrData, isLoading } = useAPI<{ success: boolean; data: any }>(
+    hasFetched ? `/api/materials/${materialId}` : null,
+    { revalidateOnFocus: false }
+  );
+  const materialData = swrData as { success: boolean; data: any } | undefined;
+  const cases: CaseInfo[] = materialData?.success ? (materialData.data?.materialUsage || []).map((u: any) => ({
+    id: u.case?.id || "", caseNumber: u.case?.caseNumber || "",
+    projectTitle: u.case?.projectTitle || "", department: u.case?.department || "",
+    usageDate: u.usageDate, quantityUsed: u.quantityUsed, unit: u.unit,
+  })) : [];
 
   const handleMouseEnter = () => {
-    timerRef.current = setTimeout(() => { setOpen(true); fetchCases(); }, 300);
+    timerRef.current = setTimeout(() => { setOpen(true); setHasFetched(true); }, 300);
   };
   const handleMouseLeave = () => {
-    clearTimeout(timerRef.current);
+    if (timerRef.current) clearTimeout(timerRef.current);
     setTimeout(() => setOpen(false), 200);
   };
 
-  useEffect(() => { return () => clearTimeout(timerRef.current); }, []);
+  useEffect(() => { return () => { if (timerRef.current) clearTimeout(timerRef.current); }; }, []);
 
   if (count === 0) return null;
 
@@ -65,14 +56,14 @@ export function CaseUsagePopover({ materialId, count }: { materialId: string; co
       {open && (
         <div
           className="absolute z-50 left-0 top-full mt-2 w-80 rounded-xl border bg-white shadow-xl animate-in fade-in-0 zoom-in-95 duration-150"
-          onMouseEnter={() => clearTimeout(timerRef.current)}
+          onMouseEnter={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
           onMouseLeave={() => setOpen(false)}
         >
           <div className="p-3 border-b">
             <p className="text-xs font-semibold text-slate-700">Cases using this material</p>
           </div>
           <div className="max-h-64 overflow-y-auto p-2">
-            {loading ? (
+            {isLoading ? (
               <div className="flex items-center justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-slate-300" /></div>
             ) : cases.length === 0 ? (
               <p className="text-xs text-slate-400 text-center py-4">No usage records</p>

@@ -59,7 +59,7 @@ export default function CasesPage() {
       const res = await fetch(`/api/cases?${params}`);
       const json = await res.json();
       if (json.success) setCases(json.data);
-    } catch { /* silent */ }
+    } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, [search, deptFilter, catFilter, statusFilter]);
 

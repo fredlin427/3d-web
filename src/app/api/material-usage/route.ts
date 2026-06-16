@@ -1,77 +1,69 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createAuditLog } from "@/lib/audit";
+import { materialUsageFormSchema } from "@/lib/validators";
+import { validateBody } from "@/lib/api-utils";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const parsed = await validateBody(request, materialUsageFormSchema);
+    if (!parsed.success) return parsed.response;
+    const body = parsed.data;
 
-    // Verify material exists and has enough quantity
-    const material = await prisma.material.findUnique({
-      where: { id: body.materialId },
-    });
+    // Wrap in transaction to prevent race condition on quantity
+    const usage = await prisma.$transaction(async (tx) => {
+      const material = await tx.material.findUnique({
+        where: { id: body.materialId },
+      });
 
-    if (!material) {
-      return NextResponse.json(
-        { success: false, error: "Material not found" },
-        { status: 404 }
-      );
-    }
+      if (!material) throw new Error("Material not found");
+      if (material.currentQuantity < body.quantityUsed) {
+        throw new Error(`Insufficient quantity. Available: ${material.currentQuantity} ${material.unit}`);
+      }
 
-    if (material.currentQuantity < body.quantityUsed) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Insufficient quantity. Available: ${material.currentQuantity} ${material.unit}`,
+      const record = await tx.caseMaterialUsage.create({
+        data: {
+          caseId: body.caseId,
+          materialId: body.materialId,
+          usageDate: new Date(body.usageDate),
+          quantityUsed: body.quantityUsed,
+          unit: body.unit || material.unit,
+          staffName: body.staffName || null,
+          printerOrTank: body.printerOrTank || null,
+          notes: body.notes || null,
         },
-        { status: 400 }
-      );
-    }
+      });
 
-    // Create material usage record
-    const usage = await prisma.caseMaterialUsage.create({
-      data: {
-        caseId: body.caseId,
-        materialId: body.materialId,
-        usageDate: new Date(body.usageDate),
-        quantityUsed: body.quantityUsed,
-        unit: body.unit || material.unit,
-        staffName: body.staffName || null,
-        printerOrTank: body.printerOrTank || null,
-        notes: body.notes || null,
-      },
-    });
+      const newQuantity = material.currentQuantity - body.quantityUsed;
+      await tx.material.update({
+        where: { id: material.id },
+        data: {
+          currentQuantity: newQuantity,
+          status: newQuantity <= material.reorderThreshold && material.reorderThreshold > 0
+            ? "Low stock"
+            : material.status,
+        },
+      });
 
-    // Reduce material quantity
-    const newQuantity = material.currentQuantity - body.quantityUsed;
-    await prisma.material.update({
-      where: { id: material.id },
-      data: {
-        currentQuantity: newQuantity,
-        status: newQuantity <= material.reorderThreshold && material.reorderThreshold > 0
-          ? "Low stock"
-          : material.status,
-      },
-    });
+      await tx.stockTransaction.create({
+        data: {
+          materialId: material.id,
+          transactionType: "Usage",
+          quantityChange: -body.quantityUsed,
+          quantityAfter: newQuantity,
+          relatedCaseId: body.caseId,
+          transactionDate: new Date(body.usageDate),
+          staffName: body.staffName || null,
+          notes: `Used for case: ${body.caseId}`,
+        },
+      });
 
-    // Create stock transaction
-    await prisma.stockTransaction.create({
-      data: {
-        materialId: material.id,
-        transactionType: "Usage",
-        quantityChange: -body.quantityUsed,
-        quantityAfter: newQuantity,
-        relatedCaseId: body.caseId,
-        transactionDate: new Date(body.usageDate),
-        staffName: body.staffName || null,
-        notes: `Used for case: ${body.caseId}`,
-      },
-    });
+      await tx.case.update({
+        where: { id: body.caseId },
+        data: { updatedAt: new Date() },
+      });
 
-    // Update case's materialUsage relation
-    await prisma.case.update({
-      where: { id: body.caseId },
-      data: { updatedAt: new Date() },
+      return { record, material };
     });
 
     await createAuditLog({
@@ -79,15 +71,16 @@ export async function POST(request: NextRequest) {
       entityId: body.caseId,
       action: "material_usage_added",
       staffName: body.staffName || "System",
-      details: `${body.quantityUsed} ${body.unit} of ${material.materialName} used`,
+      details: `${body.quantityUsed} ${body.unit} of ${usage.material.materialName} used`,
     });
 
-    return NextResponse.json({ success: true, data: usage }, { status: 201 });
+    return NextResponse.json({ success: true, data: usage.record }, { status: 201 });
   } catch (error) {
+    const msg = error instanceof Error ? error.message : "Failed to record material usage";
+    if (msg.startsWith("Insufficient") || msg === "Material not found") {
+      return NextResponse.json({ success: false, error: msg }, { status: 400 });
+    }
     console.error(error);
-    return NextResponse.json(
-      { success: false, error: "Failed to record material usage" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }

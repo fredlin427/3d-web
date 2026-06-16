@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, Column } from "@/components/shared/data-table";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Download, Upload, Loader2, CheckCircle2, AlertTriangle, Clock } from "lucide-react";
+import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Download, Upload, Loader2, CheckCircle2, AlertTriangle, Clock, Package, Layers, TrendingDown, CalendarX } from "lucide-react";
 import { CaseUsagePopover } from "@/components/materials/case-usage-popover";
 import { cn, formatDate, getStockAlertStatus, getStockStatusColor } from "@/lib/utils";
+import { useAPI, apiUrl } from "@/lib/swr-config";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -25,16 +27,34 @@ const CATEGORIES = [
 interface MaterialItem {
   id: string; category: string; materialName: string; brand: string | null;
   materialType: string | null; colour: string | null; batchNumber: string;
-  currentQuantity: number; unit: string; reorderThreshold: number;
+  materialId: string | null; productCode: string | null;
+  initialQuantity: number; unusedQuantity: number; currentQuantity: number;
+  unit: string; reorderThreshold: number;
   openDate: string | null; expiryDate: string | null; disposalDate: string | null;
   storageLocation: string | null; status: string;
   _count: { materialUsage: number; stockTransactions: number };
 }
 
+// ─── Stock bar: color-coded visual gauge ────────────────────────
+function StockBar({ used, remain, total, unit }: { used: number; remain: number; total: number; unit: string }) {
+  if (total <= 0) return <span className="text-xs text-slate-300">—</span>;
+  const usedPct = Math.min(100, Math.round((used / total) * 100));
+  const remainPct = 100 - usedPct;
+  const barColor = remainPct <= 10 ? "bg-red-500" : remainPct <= 25 ? "bg-amber-500" : "bg-emerald-500";
+  const usedColor = usedPct > 80 ? "bg-red-400" : usedPct > 50 ? "bg-amber-400" : "bg-indigo-400";
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 flex h-2 rounded-full bg-slate-100 overflow-hidden min-w-[60px]">
+        <div className={cn("transition-all", usedColor)} style={{ width: `${usedPct}%` }} />
+        <div className={cn("transition-all", barColor)} style={{ width: `${remainPct}%` }} />
+      </div>
+      <span className="text-xs font-bold text-slate-700 tabular-nums whitespace-nowrap">{remain} {unit}</span>
+    </div>
+  );
+}
+
 export default function MaterialsPage() {
   const router = useRouter();
-  const [materials, setMaterials] = useState<MaterialItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [activeCat, setActiveCat] = useState("FDM Filaments");
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -42,26 +62,17 @@ export default function MaterialsPage() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
 
-  const fetchMaterials = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      params.set("category", activeCat);
-      if (search) params.set("search", search);
-      const res = await fetch(`/api/materials?${params}`);
-      const json = await res.json();
-      if (json.success) setMaterials(json.data);
-    } catch { /* */ }
-    finally { setLoading(false); }
-  }, [search, activeCat]);
-
-  useEffect(() => { fetchMaterials(); }, [fetchMaterials]);
+  // SWR: auto-caches, deduplicates, revalidates on focus
+  const swrKey = apiUrl("/api/materials", { category: activeCat, ...(search && { search }) });
+  const { data: swrData, isLoading, mutate } = useAPI<{ success: boolean; data: MaterialItem[] }>(swrKey);
+  const materials = swrData?.success ? swrData.data : [];
+  const loading = isLoading;
 
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
       await fetch(`/api/materials/${deleteId}`, { method: "DELETE" });
-      toast.success("Deleted"); setDeleteId(null); fetchMaterials();
+      toast.success("Deleted"); setDeleteId(null); mutate();
     } catch { toast.error("Failed"); }
   };
 
@@ -78,12 +89,27 @@ export default function MaterialsPage() {
     fetch("/api/stock-take/import", { method: "POST", body: formData })
       .then((r) => r.json())
       .then((json) => {
-        if (json.success) { setImportResult(json.data); toast.success(`${json.data.updatedItems} updated`); fetchMaterials(); }
+        if (json.success) { setImportResult(json.data); toast.success(`${json.data.updatedItems} updated`); mutate(); }
         else toast.error(json.error || "Import failed");
       })
       .catch(() => toast.error("Failed to import file"))
       .finally(() => setImporting(false));
   };
+
+  // ─── Summary stats ─────────────────────────────────────────────
+  const stats = useMemo(() => {
+    const now = Date.now();
+    const thirtyDays = now + 30 * 24 * 60 * 60 * 1000;
+    return {
+      total: materials.length,
+      lowStock: materials.filter((m) => m.status === "Low stock").length,
+      expired: materials.filter((m) => m.status === "Expired").length,
+      expiringSoon: materials.filter((m) => m.expiryDate && new Date(m.expiryDate).getTime() <= thirtyDays && m.status !== "Expired").length,
+      opened: materials.filter((m) => m.status === "Opened").length,
+      totalWeight: materials.reduce((s, m) => s + (m.initialQuantity || 0), 0),
+      totalRemain: materials.reduce((s, m) => s + (m.currentQuantity || 0), 0),
+    };
+  }, [materials]);
 
   const columns: Column<MaterialItem>[] = [
     {
@@ -100,39 +126,95 @@ export default function MaterialsPage() {
       ),
     },
     {
-      key: "alerts", header: "", className: "w-8",
-      render: (m) => { const a = getStockAlertStatus(m); if (!a || a.type === "ok") return null; return <div title={a.message}>{a.type === "danger" ? <AlertTriangle className="h-4 w-4 text-red-500" /> : <Clock className="h-4 w-4 text-amber-500" />}</div>; },
+      key: "status", header: "", className: "w-10",
+      render: (m) => {
+        const icon = m.status === "Expired" ? <CalendarX className="h-4 w-4 text-red-500" />
+          : m.status === "Low stock" ? <AlertTriangle className="h-4 w-4 text-amber-500" />
+          : m.status === "Opened" ? <Package className="h-4 w-4 text-blue-500" />
+          : m.status === "Disposed" ? <Trash2 className="h-4 w-4 text-slate-400" />
+          : <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
+        return <div title={m.status}>{icon}</div>;
+      },
     },
-    { key: "materialName", header: "Material", sortable: true, render: (m) => (
-      <div>
-        <Link href={`/materials/${m.id}`} className="text-indigo-600 hover:text-indigo-800 font-medium text-sm hover:underline">{m.materialName}</Link>
-        <CaseUsagePopover materialId={m.id} count={m._count?.materialUsage || 0} />
+    { key: "materialName", header: "Material", sortable: true, className: "min-w-[180px]", render: (m) => (
+      <div className="space-y-0.5">
+        <Link href={`/materials/${m.id}`} className="text-indigo-600 hover:text-indigo-800 font-semibold text-sm hover:underline">{m.materialName}</Link>
+        <div className="flex items-center gap-2">
+          {m.materialId && <span className="text-[10px] font-mono text-slate-400 bg-slate-100 rounded px-1">{m.materialId}</span>}
+          <CaseUsagePopover materialId={m.id} count={m._count?.materialUsage || 0} />
+        </div>
       </div>
     )},
-    { key: "brand", header: "Brand", render: (m) => <span className="text-sm">{m.brand || "—"}</span> },
-    { key: "batchNumber", header: "Batch #", render: (m) => <span className="text-xs font-mono">{m.batchNumber}</span> },
-    { key: "currentQuantity", header: "QTY", sortable: true, render: (m) => <span className="text-sm font-bold tabular-nums">{m.currentQuantity} <span className="text-slate-400 font-normal text-xs">{m.unit}</span></span> },
-    { key: "status", header: "Status", sortable: true, render: (m) => <Badge className={cn(getStockStatusColor(m.status), "border")} variant="outline">{m.status}</Badge> },
-    { key: "storageLocation", header: "Location", render: (m) => <span className="text-xs">{m.storageLocation || "—"}</span> },
-    { key: "expiryDate", header: "Expiry", render: (m) => <span className="text-xs">{formatDate(m.expiryDate)}</span> },
+    { key: "brand", header: "Brand / Type", sortable: true, render: (m) => (
+      <div className="text-sm">
+        {m.brand && <span className="font-medium text-slate-700">{m.brand}</span>}
+        {m.materialType && <span className="text-slate-400 ml-1">{m.materialType}</span>}
+        {!m.brand && !m.materialType && <span className="text-slate-300">—</span>}
+      </div>
+    )},
+    { key: "batchNumber", header: "Batch", render: (m) => <span className="text-xs font-mono text-slate-500">{m.batchNumber || "—"}</span> },
+    { key: "currentQuantity", header: "Stock Level", sortable: true, className: "min-w-[160px]", render: (m) => (
+      <StockBar
+        used={m.initialQuantity - m.currentQuantity}
+        remain={m.currentQuantity}
+        total={m.initialQuantity}
+        unit={m.unit}
+      />
+    )},
+    { key: "storageLocation", header: "Location", render: (m) => <span className="text-xs text-slate-500">{m.storageLocation || "—"}</span> },
+    { key: "expiryDate", header: "Expiry", sortable: true, render: (m) => {
+      if (!m.expiryDate) return <span className="text-xs text-slate-300">—</span>;
+      const d = new Date(m.expiryDate);
+      const isExpired = d.getTime() < Date.now();
+      const isSoon = d.getTime() < Date.now() + 30 * 24 * 60 * 60 * 1000;
+      return <span className={cn("text-xs font-medium", isExpired ? "text-red-600" : isSoon ? "text-amber-600" : "text-slate-500")}>{formatDate(m.expiryDate)}</span>;
+    }},
   ];
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">Materials & Stock</h2>
-          <p className="text-sm text-slate-500 mt-1">Manage inventory, export for stock-take, import counted quantities</p>
+          <p className="text-sm text-slate-500 mt-1">{activeCat} · {stats.total} items</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={handleExport} variant="outline" size="sm" className="gap-2"><Download className="h-4 w-4" />Export</Button>
           <label className={cn("inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer transition-colors", importing ? "bg-slate-100 text-slate-400" : "bg-indigo-600 text-white hover:bg-indigo-700")}>
             {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            {importing ? "Importing..." : "Import CSV"}
+            {importing ? "Importing..." : "Import"}
             <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImport} disabled={importing} />
           </label>
           <Link href="/materials/new"><Button size="sm" className="gap-2 bg-indigo-600 hover:bg-indigo-700"><Plus className="h-4 w-4" />New</Button></Link>
         </div>
+      </div>
+
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+        {[
+          { label: "Total", value: stats.total, icon: Layers, color: "#4f46e5", bg: "#eef0ff" },
+          { label: "In Stock", value: stats.total - stats.lowStock - stats.expired - stats.opened, icon: CheckCircle2, color: "#10b981", bg: "#ecfdf5" },
+          { label: "Opened", value: stats.opened, icon: Package, color: "#3b82f6", bg: "#eff6ff" },
+          { label: "Low Stock", value: stats.lowStock, icon: TrendingDown, color: "#f59e0b", bg: "#fffbeb" },
+          { label: "Expired", value: stats.expired, icon: CalendarX, color: "#ef4444", bg: "#fef2f2" },
+          { label: "Expiring Soon", value: stats.expiringSoon, icon: Clock, color: "#f97316", bg: "#fff7ed" },
+          { label: "Total Remain", value: `${stats.totalRemain}`, icon: Package, color: "#8b5cf6", bg: "#f5f3ff", suffix: "" },
+        ].map((s) => (
+          <Card key={s.label} className="border-0 shadow-sm overflow-hidden">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg shrink-0" style={{ backgroundColor: s.bg }}>
+                  <s.icon className="h-4 w-4" style={{ color: s.color }} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[21px] font-bold tracking-tight text-slate-900 tabular-nums leading-none">{s.value}{s.suffix || ""}</p>
+                  <p className="text-[11px] text-slate-400 font-medium mt-0.5 truncate">{s.label}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Import result */}
@@ -144,14 +226,18 @@ export default function MaterialsPage() {
         </div>
       )}
 
-      {/* Category tabs */}
+      {/* Category tabs with counts */}
       <div className="flex gap-1 bg-slate-100 rounded-xl p-1 w-fit">
-        {CATEGORIES.map((c) => (
-          <button key={c.key} onClick={() => { setActiveCat(c.key); setImportResult(null); }}
-            className={cn("px-4 py-2 rounded-lg text-sm font-medium transition-all", activeCat === c.key ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700")}>
-            {c.label}
-          </button>
-        ))}
+        {CATEGORIES.map((c) => {
+          const count = materials.filter((m) => m.category === c.key).length;
+          return (
+            <button key={c.key} onClick={() => { setActiveCat(c.key); setImportResult(null); }}
+              className={cn("px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2", activeCat === c.key ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700")}>
+              {c.label}
+              <span className={cn("text-[10px] rounded-full px-1.5 py-0.5 font-bold", activeCat === c.key ? "bg-indigo-100 text-indigo-600" : "bg-slate-200 text-slate-400")}>{count}</span>
+            </button>
+          );
+        })}
       </div>
 
       <DataTable

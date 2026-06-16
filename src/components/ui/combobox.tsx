@@ -58,7 +58,7 @@ export function ComboBox({ value, onChange, options, placeholder, disabled, clas
       });
       // Notify all forms to refresh their options
       window.dispatchEvent(new CustomEvent("settings-updated", { detail: { type: settingsType } }));
-    } catch { /* ok */ }
+    } catch (e) { console.error(e); }
     handleSelect(newValue);
   }, [inputValue, settingsType, options.length, handleSelect]);
 

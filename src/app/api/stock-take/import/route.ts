@@ -50,11 +50,13 @@ export async function POST(request: NextRequest) {
 
 async function processRows(rows: Array<{ materialId?: string; batchNumber?: string; countedQuantity: number; staffName?: string; notes?: string }>) {
   const errors: { row: number; message: string }[] = [];
-  let updatedItems = 0;
+
+  // Pre-validate and look up all materials first (outside transaction)
+  const validRows: Array<{ row: (typeof rows)[number]; material: { id: string; currentQuantity: number; reorderThreshold: number; status: string }; diff: number; rowNum: number }> = [];
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    const rowNum = i + 2; // Excel row (1-indexed + header)
+    const rowNum = i + 2;
 
     if (!row.materialId && !row.batchNumber) {
       errors.push({ row: rowNum, message: "Material ID or Batch number required" });
@@ -78,28 +80,44 @@ async function processRows(rows: Array<{ materialId?: string; batchNumber?: stri
     }
 
     const diff = row.countedQuantity - material.currentQuantity;
-    await prisma.material.update({
-      where: { id: material.id },
-      data: {
-        currentQuantity: row.countedQuantity,
-        status: row.countedQuantity <= material.reorderThreshold && material.reorderThreshold > 0 ? "Low stock" : material.status === "Low stock" ? "In stock" : material.status,
-      },
-    });
-
-    await prisma.stockTransaction.create({
-      data: {
-        materialId: material.id,
-        transactionType: "Stock take adjustment",
-        quantityChange: diff,
-        quantityAfter: row.countedQuantity,
-        transactionDate: new Date(),
-        staffName: row.staffName || "System",
-        notes: row.notes || "Stock take adjustment",
-      },
-    });
-
-    updatedItems++;
+    validRows.push({ row, material, diff, rowNum });
   }
 
-  return { totalRows: rows.length, updatedItems, errors, importedAt: new Date().toISOString() };
+  if (validRows.length === 0) {
+    return { totalRows: rows.length, updatedItems: 0, errors, importedAt: new Date().toISOString() };
+  }
+
+  // Execute all updates in a single transaction (atomic: all succeed or all roll back)
+  await prisma.$transaction(
+    validRows.map(({ material, row, diff }) =>
+      prisma.material.update({
+        where: { id: material.id },
+        data: {
+          currentQuantity: row.countedQuantity,
+          status: row.countedQuantity <= material.reorderThreshold && material.reorderThreshold > 0
+            ? "Low stock"
+            : material.status === "Low stock" ? "In stock" : material.status,
+        },
+      })
+    )
+  );
+
+  // Stock transactions can be created outside the critical path
+  await Promise.all(
+    validRows.map(({ material, row, diff }) =>
+      prisma.stockTransaction.create({
+        data: {
+          materialId: material.id,
+          transactionType: "Stock take adjustment",
+          quantityChange: diff,
+          quantityAfter: row.countedQuantity,
+          transactionDate: new Date(),
+          staffName: row.staffName || "System",
+          notes: row.notes || "Stock take adjustment",
+        },
+      })
+    )
+  );
+
+  return { totalRows: rows.length, updatedItems: validRows.length, errors, importedAt: new Date().toISOString() };
 }

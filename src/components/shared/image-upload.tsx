@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Upload, X, ImageIcon, Loader2 } from "lucide-react";
@@ -32,15 +33,15 @@ export function ImageUpload({ value, onChange, className }: ImageUploadProps) {
       } else {
         toast.error(json.error || "Upload failed");
       }
-    } catch { toast.error("Upload failed"); }
+    } catch (e) { console.error(e); toast.error("Upload failed"); }
     finally { setUploading(false); }
   };
 
   return (
     <div className={cn("space-y-2", className)}>
       {value ? (
-        <div className="relative group rounded-lg overflow-hidden border bg-slate-50">
-          <img src={value} alt="Preview" className="w-full h-40 object-cover" />
+        <div className="relative group rounded-lg overflow-hidden border bg-slate-50 h-40">
+          <Image src={value} alt="Preview" fill sizes="400px" className="object-cover" />
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
             <Button
               type="button"

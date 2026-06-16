@@ -90,14 +90,16 @@ export function MasterDataTable({ title, type, items, onRefresh, showReorder, di
   };
 
   const swapOrder = async (item: MasterDataItem, target: MasterDataItem) => {
-    await fetch(`/api/settings/${item.id}`, {
-      method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...item, sortOrder: target.sortOrder }),
-    });
-    await fetch(`/api/settings/${target.id}`, {
-      method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...target, sortOrder: item.sortOrder }),
-    });
+    await Promise.all([
+      fetch(`/api/settings/${item.id}`, {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...item, sortOrder: target.sortOrder }),
+      }),
+      fetch(`/api/settings/${target.id}`, {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...target, sortOrder: item.sortOrder }),
+      }),
+    ]);
     onRefresh();
   };
 

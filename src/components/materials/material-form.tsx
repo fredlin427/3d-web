@@ -7,6 +7,7 @@ import { materialFormSchema, MaterialFormValues } from "@/lib/validators";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,38 +17,24 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Loader2, Settings2, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { MATERIAL_FIELD_REGISTRY, MATERIAL_SECTION_ORDER, MATERIAL_CATEGORY_FIELDS, MATERIAL_CATEGORY_SECTION_ORDERS, MATERIAL_CATEGORY_SETTINGS_TYPE, FieldDef } from "@/lib/field-registry";
-import { TANK_PRODUCT_CODES, SLA_MATERIAL_CODES } from "@/lib/constants";
+import { TANK_PRODUCT_CODES, SLA_MATERIAL_CODES, FDM_MATERIAL_TYPES, SLA_RESIN_PRODUCTS, SLA_PRINTERS, TANK_PRODUCTS } from "@/lib/constants";
 
+// Base options for combo fields. Options defined in constants.ts are imported;
+// only form-specific options (brands, units, statuses) are defined here.
 const BASE_OPTIONS: Record<string, string[]> = {
-  // FDM — from Excel Code List
+  // FDM
   fdm_brand: ["[UM] Ultimaker","[R3D] Raise 3D","[DC] 3dRe","[RE] Recreus","[eSUN] eSUN","[BBL] Bambu Lab","[AC] Anycubic","Other"],
-  fdm_material_type: ["ABS","CF","CPE","Glass","PA","PC","PETG","PLA","PP","PVA","TPU","Wood","rPET","Nylon","Other"],
+  fdm_material_type: [...FDM_MATERIAL_TYPES],
   fdm_unit: ["roll","kg","g","unit"],
   fdm_status: ["New","Opened","Disposed"],
-  // SLA Resins — from Excel Code List (full names)
-  sla_product: [
-    "BioMed Clear Resin","BioMed Durable Resin","BioMed Elastic 50A Resin","BioMed Flex 80A Resin","BioMed White Resin",
-    "BioMed Amber Resin","BioMed Black Resin",
-    "Black Resin","Clear Resin","Color Resin","Dental LT Clear Resin","Draft Resin","Durable Resin",
-    "Elastic 50A Resin","Flexible 80A Resin","Grey Pro Resin","Grey Resin","High Temp Resin",
-    "IBT Resin","IBT Flex Resin","Rigid 10K Resin","Rigid 4000 Resin","Silicone 40A Resin",
-    "Surgical Guide Resin","Tough 1500 Resin","Tough 2000 Resin","White Resin",
-    "Other",
-  ],
-  sla_printer: ["Form 3BL","Form 4B","Other"],
+  // SLA
+  sla_product: [...SLA_RESIN_PRODUCTS, "Other"],
+  sla_printer: [...SLA_PRINTERS, "Other"],
   sla_unit: ["bottle","cartridge","litre","ml","unit"],
   sla_status: ["New","Opened","Disposed"],
-  // Resin Tanks — from Excel Code List
-  tank_product: ["Form 2 Resin Tank LT","Form 3L Resin Tank V2","Form 3L Resin Tank V3","Form 4 Resin Tank","Form 4L Resin Tank","Other"],
-  tank_resin_type: [
-    "BioMed Clear Resin","BioMed Durable Resin","BioMed Elastic 50A Resin","BioMed Flex 80A Resin","BioMed White Resin",
-    "BioMed Amber Resin","BioMed Black Resin",
-    "Black Resin","Clear Resin","Color Resin","Dental LT Clear Resin","Draft Resin","Durable Resin",
-    "Elastic 50A Resin","Flexible 80A Resin","Grey Pro Resin","Grey Resin","High Temp Resin",
-    "IBT Resin","IBT Flex Resin","Rigid 10K Resin","Rigid 4000 Resin","Silicone 40A Resin",
-    "Surgical Guide Resin","Tough 1500 Resin","Tough 2000 Resin","White Resin",
-    "Other",
-  ],
+  // Resin Tanks
+  tank_product: [...TANK_PRODUCTS, "Other"],
+  tank_resin_type: [...SLA_RESIN_PRODUCTS, "Other"],
   tank_unit: ["unit"],
   tank_status: ["New","Opened","Disposed"],
   // IPA
@@ -258,12 +245,13 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
   }, [watchedOpenDate, watchedDisposalDate, watchedExpiryDate, watchedCategory, watchedBatch]);
 
   // Auto-calculate Remain = Weight − Used (on change)
-  const watchedForm = watch();
+  const watchedWeight = watch("initialQuantity");
+  const watchedUsed = watch("unusedQuantity");
   useEffect(() => {
-    const vals = getValues();
-    const remain = (Number(vals.initialQuantity) || 0) - (Number(vals.unusedQuantity) || 0);
-    setValue("currentQuantity", Math.max(0, remain));
-  }, [watchedForm]);
+    const w = Number(watchedWeight) || 0;
+    const u = Number(watchedUsed) || 0;
+    setValue("currentQuantity", Math.max(0, w - u));
+  }, [watchedWeight, watchedUsed]);
 
   // Re-apply field filter when category changes
   useEffect(() => {
@@ -304,7 +292,7 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
       setAllSettings(ns); pushHistory(ns); await apply(ns);
       const newLabel = newKey.startsWith("custom::") ? newKey.split("::")[1] : (MATERIAL_FIELD_REGISTRY[newKey]?.label || newKey);
       toast.success(`Changed: ${newLabel}`);
-    } catch { toast.error("Failed to change field"); }
+    } catch (e) { console.error(e); toast.error("Failed to change field"); }
     setEditingField(null);
   };
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -335,7 +323,7 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
       const ns = allSettings.map((s: any) => s.id === setting.id ? { ...s, value: newValue } : s);
       setAllSettings(ns); pushHistory(ns); await apply(ns);
       toast.success(`Renamed: ${trimmed}`);
-    } catch { toast.error("Failed to rename field"); }
+    } catch (e) { console.error(e); toast.error("Failed to rename field"); }
     setEditingLabel(null);
   };
 
@@ -352,7 +340,7 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
       const ns = allSettings.map((s: any) => s.id === setting.id ? { ...s, value: newValue } : s);
       setAllSettings(ns); pushHistory(ns); await apply(ns);
       toast.success(`Type changed: ${parsed.label} → ${newType}`);
-    } catch { toast.error("Failed to change type"); }
+    } catch (e) { console.error(e); toast.error("Failed to change type"); }
     setEditingType(null);
   };
   const moveField = async (key: string, dir: -1 | 1) => {
@@ -365,7 +353,7 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
       await fetch(`/api/settings/${b.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: b.type, value: b.value, sortOrder: a.sortOrder, isActive: b.isActive }) });
       const ns = allSettings.map((s: any) => s.id === a.id ? { ...s, sortOrder: b.sortOrder } : s.id === b.id ? { ...s, sortOrder: a.sortOrder } : s);
       setAllSettings(ns); pushHistory(ns); await apply(ns);
-    } catch { toast.error("Failed to reorder"); }
+    } catch (e) { console.error(e); toast.error("Failed to reorder"); }
   };
   const undo = async () => {
     if (historyIdx <= 0) return;
@@ -440,7 +428,7 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
       // Refresh from server to get real IDs
       const refresh = await fetch(`/api/settings?type=${settingsType}`).then((r) => r.json());
       if (refresh.success) { setAllSettings(refresh.data); await apply(refresh.data); }
-    } catch { toast.error("Failed to add field"); }
+    } catch (e) { console.error(e); toast.error("Failed to add field"); }
   };
 
   const sections = categorySectionOrder.map((secName) => ({
@@ -448,40 +436,6 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
     fields: orderedFields.filter((f) => f.section === secName),
   })).filter((s) => s.fields.length > 0 || editMode);
 
-  const generateMaterialId = async (data: MaterialFormValues): Promise<string | null> => {
-    const cat = data.category || selectedCategory;
-    if (cat === "FDM Filaments" && data.brand && data.materialType && data.receivedDate) {
-      const bracketMatch = String(data.brand).match(/\[([^\]]+)\]/);
-      const code = bracketMatch ? bracketMatch[1] : String(data.brand).split(" ")[0];
-      if (!code) return null;
-      const year = new Date(data.receivedDate as string).getFullYear();
-      if (isNaN(year)) return null;
-      const prefix = `${code}-${data.materialType}-${year}`;
-      try {
-        const j = await fetch(`/api/materials/next-material-id?prefix=${encodeURIComponent(prefix)}&category=${encodeURIComponent(cat)}`).then((r) => r.json());
-        return j?.data?.materialId || null;
-      } catch { return null; }
-    }
-    if (cat === "SLA Resins" && data.productCode && data.materialType && data.receivedDate) {
-      const year = new Date(data.receivedDate as string).getFullYear();
-      if (isNaN(year)) return null;
-      const prefix = `${data.productCode}-${data.materialType}-${year}`;
-      try {
-        const j = await fetch(`/api/materials/next-material-id?prefix=${encodeURIComponent(prefix)}&category=${encodeURIComponent(cat)}`).then((r) => r.json());
-        return j?.data?.materialId || null;
-      } catch { return null; }
-    }
-    if (cat === "Resin Tanks" && data.productCode && data.receivedDate) {
-      const year = new Date(data.receivedDate as string).getFullYear();
-      if (isNaN(year)) return null;
-      const prefix = `${data.productCode}-${year}`;
-      try {
-        const j = await fetch(`/api/materials/next-material-id?prefix=${encodeURIComponent(prefix)}&category=${encodeURIComponent(cat)}`).then((r) => r.json());
-        return j?.data?.materialId || null;
-      } catch { return null; }
-    }
-    return null;
-  };
 
   const onSubmit = async (formData: MaterialFormValues) => {
     setSaving(true);
@@ -489,7 +443,7 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
       // Always get fresh values from form state
       const fresh = getValues();
       const data = { ...(defaultValues || {}), ...fresh, ...formData };
-      // VLOOKUP and auto-ID
+      // VLOOKUP (materialId auto-generated server-side)
       const cat = data.category || selectedCategory;
       if (!data.category) data.category = selectedCategory;
       if (cat === "SLA Resins" && data.materialName && !data.productCode) {
@@ -497,10 +451,6 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
       }
       if (cat === "Resin Tanks" && data.materialName && !data.productCode) {
         data.productCode = TANK_PRODUCT_CODES[data.materialName as string] || (data.productCode as string);
-      }
-      if (!data.materialId) {
-        const generated = await generateMaterialId(data);
-        if (generated) data.materialId = generated;
       }
       const url = isEditing ? `/api/materials/${materialId}` : "/api/materials";
       const method = isEditing ? "PUT" : "POST";
@@ -529,6 +479,38 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
       case "number": {
         const isRemain = field.key === "currentQuantity";
         return wrapper(<Input type="number" step="0.01" {...register(key as any)} readOnly={isRemain} className={isRemain ? "bg-slate-50 text-emerald-600 font-medium" : ""} />);
+      }
+      case "multiselect": {
+        const multiOptions = (field.options || "").split(",").filter(Boolean);
+        return (
+          <div className="space-y-2" key={field.key}>
+            <Label>{field.label}{field.required ? " *" : ""}</Label>
+            <Controller name={key as any} control={control}
+              render={({ field: f }) => {
+                const selected = ((f.value as string) || "").split(",").filter(Boolean);
+                return (
+                  <div className="flex flex-wrap gap-3">
+                    {multiOptions.map((opt) => (
+                      <label key={opt} className="flex items-center gap-2 cursor-pointer">
+                        <Checkbox
+                          checked={selected.includes(opt)}
+                          onCheckedChange={(checked) => {
+                            const next = checked
+                              ? [...selected, opt]
+                              : selected.filter((v: string) => v !== opt);
+                            f.onChange(next.join(","));
+                          }}
+                        />
+                        <span className="text-sm text-slate-700">{opt}</span>
+                      </label>
+                    ))}
+                  </div>
+                );
+              }}
+            />
+            {(errors as any)[key] && <p className="text-xs text-red-500">{(errors as any)[key]?.message}</p>}
+          </div>
+        );
       }
       case "combobox": {
         const overrides = CATEGORY_OPTION_OVERRIDES[selectedCategory] || {};

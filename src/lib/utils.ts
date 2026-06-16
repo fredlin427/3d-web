@@ -70,21 +70,6 @@ export function getStockAlertStatus(material: {
   return null;
 }
 
-// QEH3D format: QEH3D-[FY]-[3-digit-number]
-export function generateCaseNumber(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
-  // Financial year: April to March
-  const fyEnd = month >= 4 ? (year + 1) % 100 : year % 100;
-  const fyStart = fyEnd - 1;
-  const fy = `${String(fyStart).padStart(2, "0")}${String(fyEnd).padStart(2, "0")}`;
-  const random = Math.floor(Math.random() * 1000)
-    .toString()
-    .padStart(3, "0");
-  return `QEH3D-${fy}-${random}`;
-}
-
 export function getStatusBadgeVariant(
   status: string
 ): "default" | "secondary" | "destructive" | "outline" | null {

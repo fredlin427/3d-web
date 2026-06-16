@@ -105,6 +105,20 @@ export async function GET(request: NextRequest) {
       count: u._count.id,
     }));
 
+    // Case by purpose (sub-categories) for sunburst outer ring
+    const purposeGroups = await prisma.case.groupBy({
+      by: ["category", "purpose"],
+      where: caseWhere,
+      _count: { id: true },
+      orderBy: [{ category: "asc" }, { _count: { id: "desc" } }],
+    });
+
+    const caseByPurpose = purposeGroups.map((g) => ({
+      category: g.category,
+      purpose: g.purpose,
+      count: g._count.id,
+    }));
+
     // Material usage trend
     const materialUsage = await prisma.caseMaterialUsage.findMany({
       select: { usageDate: true, quantityUsed: true },
@@ -163,7 +177,8 @@ export async function GET(request: NextRequest) {
         },
         caseVolumeByMonth,
         caseByDepartment,
-        caseByUseType,
+        caseBycategory: caseByUseType,
+        caseByPurpose,
         materialUsageTrend,
         materialUsageByCategory,
       },

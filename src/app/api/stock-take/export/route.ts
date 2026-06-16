@@ -43,7 +43,13 @@ export async function GET(request: NextRequest) {
       mapRow: (m: any) => [m.id, m.category, m.materialName, m.brand || "", m.materialType || "", m.colour || "", m.batchNumber, m.currentQuantity, m.unit, m.storageLocation || "", m.status, fmt(m.expiryDate), m.remarks || ""],
     };
 
-    const data = [tmpl.columns, ...materials.map(tmpl.mapRow)];
+    const SIGNATURE_ROWS = [
+      [""],
+      ["Checked by:", "", "", "Date:", ""],
+      ["Verified by:", "", "", "Date:", ""],
+    ];
+    const bodyData = materials.map(tmpl.mapRow);
+    const data = [tmpl.columns, ...bodyData, ...SIGNATURE_ROWS];
     const ws = XLSX.utils.aoa_to_sheet(data);
     ws["!cols"] = tmpl.columns.map(() => ({ wch: 16 }));
     const wb = XLSX.utils.book_new();

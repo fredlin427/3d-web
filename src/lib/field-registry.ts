@@ -5,8 +5,8 @@ export interface FieldDef {
   key: string;
   label: string;
   section: string;
-  type: "text" | "combobox" | "date" | "textarea" | "number" | "checkbox" | "image";
-  options?: string; // settingsType for combobox, or comma-separated list
+  type: "text" | "combobox" | "date" | "textarea" | "number" | "checkbox" | "image" | "multiselect";
+  options?: string; // settingsType for combobox/multiselect, or comma-separated list for checkbox groups
   required?: boolean;
   placeholder?: string;
   defaultValue?: string | number;
@@ -29,11 +29,11 @@ export const CASE_FIELD_REGISTRY: Record<string, FieldDef> = {
   category: { key: "category", label: "Category", section: "Purpose & Category", type: "combobox", options: "case_category", required: true },
   purpose: { key: "purpose", label: "Purpose", section: "Purpose & Category", type: "combobox", options: "purpose", required: true },
   specification: { key: "specification", label: "Specification (for Others)", section: "Purpose & Category", type: "text" },
-  modelType: { key: "modelType", label: "Model Type", section: "Purpose & Category", type: "combobox", options: "model_type" },
+  modelType: { key: "modelType", label: "Model Type", section: "Purpose & Category", type: "multiselect", options: "Anatomical Model,Device/Tools" },
 
   // Project
   projectTitle: { key: "projectTitle", label: "Project Title", section: "Project Details", type: "text", required: true },
-  requiredService: { key: "requiredService", label: "Required Service", section: "Project Details", type: "combobox", options: "service_option" },
+  requiredService: { key: "requiredService", label: "Required Service", section: "Project Details", type: "multiselect", options: "Segmentation,Design,Printing" },
   serviceRequirements: { key: "serviceRequirements", label: "Service Requirements", section: "Project Details", type: "textarea" },
   requiresSterilization: { key: "requiresSterilization", label: "Requires Sterilization", section: "Project Details", type: "checkbox" },
   description: { key: "description", label: "Case Description", section: "Project Details", type: "textarea" },

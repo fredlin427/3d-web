@@ -7,6 +7,7 @@ import { caseFormSchema, CaseFormValues } from "@/lib/validators";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -254,7 +255,7 @@ export function CaseForm({ defaultValues, isEditing, caseId }: CaseFormProps) {
       const ns = allSettings.map((s: any) => s.id === setting.id ? { ...s, value: newValue } : s);
       setAllSettings(ns); pushHistory(ns); await applySettings(ns);
       toast.success(`Renamed: ${trimmed}`);
-    } catch { toast.error("Failed to rename field"); }
+    } catch (e) { console.error(e); toast.error("Failed to rename field"); }
     setEditingLabel(null);
   };
 
@@ -271,7 +272,7 @@ export function CaseForm({ defaultValues, isEditing, caseId }: CaseFormProps) {
       const ns = allSettings.map((s: any) => s.id === setting.id ? { ...s, value: newValue } : s);
       setAllSettings(ns); pushHistory(ns); await applySettings(ns);
       toast.success(`Type changed: ${parsed.label} → ${newType}`);
-    } catch { toast.error("Failed to change type"); }
+    } catch (e) { console.error(e); toast.error("Failed to change type"); }
     setEditingType(null);
   };
   const moveFieldUp = async (fieldKey: string) => {
@@ -376,7 +377,7 @@ export function CaseForm({ defaultValues, isEditing, caseId }: CaseFormProps) {
       const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
       if (res.ok) { const json = await res.json(); toast.success(isEditing ? "Case updated" : "Case created"); router.push(isEditing ? `/cases/${caseId}` : `/cases/${json.data.id}`); }
       else { const err = await res.json(); toast.error(err.error || "Failed to save case"); }
-    } catch { toast.error("Failed to save case"); }
+    } catch (e) { console.error(e); toast.error("Failed to save case"); }
     finally { setSaving(false); }
   };
 
@@ -412,6 +413,39 @@ export function CaseForm({ defaultValues, isEditing, caseId }: CaseFormProps) {
 
       case "number":
         return wrapper(<Input type="number" {...register(key as any)} min={1} />);
+
+      case "multiselect": {
+        const multiOptions = (field.options || "").split(",").filter(Boolean);
+        return (
+          <div className="space-y-2" key={field.key}>
+            <Label>{field.label}{field.required ? " *" : ""}</Label>
+            <Controller name={key as any} control={control}
+              render={({ field: f }) => {
+                const selected = ((f.value as string) || "").split(",").filter(Boolean);
+                return (
+                  <div className="flex flex-wrap gap-3">
+                    {multiOptions.map((opt) => (
+                      <label key={opt} className="flex items-center gap-2 cursor-pointer">
+                        <Checkbox
+                          checked={selected.includes(opt)}
+                          onCheckedChange={(checked) => {
+                            const next = checked
+                              ? [...selected, opt]
+                              : selected.filter((v: string) => v !== opt);
+                            f.onChange(next.join(","));
+                          }}
+                        />
+                        <span className="text-sm text-slate-700">{opt}</span>
+                      </label>
+                    ))}
+                  </div>
+                );
+              }}
+            />
+            {(errors as any)[key] && <p className="text-xs text-red-500">{(errors as any)[key]?.message}</p>}
+          </div>
+        );
+      }
 
       case "combobox":
         const opt = isPurposeField && selectedCategory && PURPOSES[selectedCategory]

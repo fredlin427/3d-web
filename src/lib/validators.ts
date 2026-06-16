@@ -26,11 +26,23 @@ export const caseFormSchema = z.object({
   totalComponents: z.coerce.number().int().min(1).default(1),
   priority: z.string().default("Routine"),
   currentStatus: z.string().default("Draft"),
+  currentProgressStep: z.string().optional().or(z.literal("")),
   technician: z.string().optional().or(z.literal("")),
   printingParty: z.string().optional().or(z.literal("")),
   modelImageUrl: z.string().optional().or(z.literal("")),
   photoFolderUrl: z.string().optional().or(z.literal("")),
   remarks: z.string().optional().or(z.literal("")),
+  // Apply form fields
+  telephone: z.string().optional().or(z.literal("")),
+  email: z.string().optional().or(z.literal("")),
+  signature: z.string().optional().or(z.literal("")),
+  signatureDate: z.string().optional().or(z.literal("")),
+  modelMaterial: z.string().optional().or(z.literal("")),
+  colourRequirement: z.string().optional().or(z.literal("")),
+  copyrightRisk: z.union([z.boolean(), z.string()]).optional(),
+  copyrightDetails: z.string().optional().or(z.literal("")),
+  isReprint: z.union([z.boolean(), z.string()]).optional(),
+  fundingSource: z.string().optional().or(z.literal("")),
   staffName: z.string().optional().or(z.literal("")),
 });
 
@@ -65,6 +77,7 @@ export const materialFormSchema = z.object({
   storageLocation: z.string().optional().or(z.literal("")),
   status: z.string().default("In stock"),
   remarks: z.string().optional().or(z.literal("")),
+  staffName: z.string().optional().or(z.literal("")),
 });
 
 export type MaterialFormValues = z.infer<typeof materialFormSchema>;
