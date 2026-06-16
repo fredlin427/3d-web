@@ -1,5 +1,83 @@
 # QEH 3D Printing Office — Work Log
 
+## 2026-06-16
+
+### Presentation Mode — Meeting View
+- Added "Meeting View" toggle on Dashboard with 3 switchable chart types:
+  - **Sunburst**: Black-background pie (Dept) + nested donut (Categories + Purposes) with Excel Office 2013 colors
+  - **Grouped Bars**: Horizontal bar charts with data labels, categorized by purpose
+  - **Table**: Clean tabular view with counts and percentages
+- Purpose sub-items now visible in both sunburst (outer ring + side legend) and grouped bars
+- All charts use Calibri font stack, Excel-style color palette
+- Export PNG button for each chart view
+- Dashboard export functions moved to module level (no re-render cost)
+- Fixed `caseByUseType` → `caseBycategory` API key mismatch
+- Added `caseByPurpose` data to dashboard API for sunburst outer ring
+
+### QEH Requirements from Tiffany (June 16 email)
+- **Case number FY** now based on `applicationDate` instead of `new Date()` (requirement: FY determined by application date)
+- **Model Type** changed to multi-select (checkbox group): Anatomical Model, Device/Tools
+- **Required Service** changed to multi-select (checkbox group): Segmentation, Design, Printing
+- Added `multiselect` field type to FieldDef + rendering in case-form and material-form
+- **Stock take export** now includes Checker/Verifier signature rows at bottom of Excel
+- **Purpose dropdown** already dynamically filters by category (confirmed working)
+
+### Comprehensive Optimization Pass
+- **Zod validation** on all POST/PUT API routes (cases, materials, settings, material-usage) via `validateBody()` helper
+- **N+1 queries** fixed: audit logs fetched in parallel via `Promise.all` in case/material detail endpoints
+- **Pagination** added to cases and materials list APIs (`page`/`pageSize`/`total`)
+- **Material usage race condition** fixed: wrapped in `prisma.$transaction`
+- **31 silent catch blocks** now log errors via `console.error(e)`
+- **Stock-take import** made transactional: pre-validates all rows, then `$transaction` for atomic updates
+- **SWR caching** installed: materials list uses `useSWR` with auto-dedup, popovers use SWR to prevent N+1 hover fetches
+- **Material ID generation** moved from client to server-side (`lib/material-id.ts`) — no blocking client API call
+- **watch() optimization**: replaced full `watch()` with individual field watchers in material-form
+- **swapOrder** parallelized: `Promise.all` instead of sequential PUTs
+- **image-upload** uses Next.js `<Image>` instead of plain `<img>`
+- **Dead code** removed: `generateCaseNumber` (unused, used Math.random)
+- **Error boundary** added: `app/error.tsx` global error handler
+- **`cn` utility** imported in dashboard (was missing)
+
+### Shared Code Extraction
+- Created `lib/use-field-editor.ts`: `useUndoHistory` hook + `swapSortOrders`/`deactivateSetting`/`createSetting`/`fetchSettings` helpers
+- Created `lib/api-utils.ts`: `validateBody()` Zod validation wrapper
+- Created `lib/swr-config.ts`: `useAPI` typed SWR wrapper + `apiUrl` helper
+- Created `lib/material-id.ts`: server-side material ID auto-generation
+
+### Materials Page UI Overhaul
+- 7 stat cards: Total, In Stock, Opened, Low Stock, Expired, Expiring Soon, Total Remain
+- Stock level progress bars (green/amber/red) with remain count
+- Material ID displayed under material name
+- Status icons per row (check/warning/package/trash)
+- Category tabs show item counts
+- Expiry dates color-coded (red=expired, amber=soon, gray=normal)
+- Brand/Type combined into single column
+
+### Reports System Rewrite
+- 9 report types (added: Stock Levels, Expiry & Disposal, Monthly Summary, Audit Trail)
+- Live preview table with search, pagination, column sorting
+- Column picker (select which columns to export)
+- Save/load filter presets (localStorage)
+- Print-friendly view
+- XLSX export with bold headers, auto-width, cell formatting
+- `format=json` for preview, `format=xlsx` for download
+
+### Deployment — Portable Standalone Package
+- `output: "standalone"` in next.config.ts
+- `package.bat`: one-click build → portable ZIP with bundled Node.js
+- `start.bat`: auto-install Node.js (winget/brew/apt) if missing
+- `deploy-package/start.bat`: runs with bundled portable Node.js — no installation needed
+- CORS middleware (`src/middleware.ts`) for intranet apply form cross-origin POST
+- GitHub Release v1.0.0 with pre-built ZIP (62MB)
+- Architecture: ZIP runs on one internal computer; apply form on qeh.home POSTs to it
+
+### Bug Fixes
+- Fixed `<button>` inside `<button>` hydration error (PopoverTrigger already renders button)
+- Fixed `ZodError.errors` → `ZodError.issues` for Zod v4 API
+- Fixed `PieChart` import conflict between lucide-react and recharts
+- Fixed `caseByUseType` → `caseBycategory` data mapping
+- Prisma 7 seed config: created `prisma.config.ts`
+
 ## 2026-06-15
 
 ### Material Form — Bug Fixes & Data Cleanup
