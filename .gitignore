@@ -43,3 +43,10 @@ next-env.d.ts
 /src/generated/prisma
 dev.db
 dev.db-journal
+
+# Deploy package
+deploy-package/
+*.zip
+node-portable/
+node-tmp/
+node-tmp.zip
