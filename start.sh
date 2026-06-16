@@ -6,10 +6,21 @@ echo "  QEH 3D Printing Office - Startup"
 echo "============================================"
 echo ""
 
-# Check Node.js
+# Check Node.js — auto-install if missing
 if ! command -v node &> /dev/null; then
-    echo "[ERROR] Node.js not found. Please install Node.js first."
-    exit 1
+    echo ""
+    echo "[INFO] Node.js not found. Attempting automatic install..."
+    if command -v brew &> /dev/null; then
+        brew install node
+        echo "[OK] Node.js installed via Homebrew"
+    elif command -v apt-get &> /dev/null; then
+        curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+        sudo apt-get install -y nodejs
+        echo "[OK] Node.js installed via apt"
+    else
+        echo "[ERROR] Cannot auto-install. Please install Node.js: https://nodejs.org/"
+        exit 1
+    fi
 fi
 echo "[OK] Node.js: $(node -v)"
 
