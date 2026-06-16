@@ -78,6 +78,21 @@
 - Fixed `caseByUseType` → `caseBycategory` data mapping
 - Prisma 7 seed config: created `prisma.config.ts`
 
+### Deployment Documentation
+- Created `DEPLOY.md`: complete deployment guide covering:
+  - Architecture: qeh.home (static apply form) ↔ internal PC (Next.js backend)
+  - Part A: Backend deployment (ZIP extract → start.bat, fixed IP, Task Scheduler auto-start)
+  - Part B: Apply form deployment to intranet server (HTML template, API IP config)
+  - Part C: Update process (package.bat → new ZIP → replace on internal PC)
+  - Part D: Troubleshooting (common issues + solutions)
+  - Database backup procedure
+
+### EOD
+- WORKLOG.md updated
+- RESUME.md updated
+- Git pushed to GitHub (commit `6e28b9c`)
+- GitHub Release v1.0.0 with portable ZIP (62MB)
+
 ## 2026-06-15
 
 ### Material Form — Bug Fixes & Data Cleanup
