@@ -76,8 +76,8 @@ function truncateLabel(s: string, max: number = 18): string {
 export default function ChartBuilderPage() {
   // Config state
   const [source, setSource] = useState("cases");
-  const [xField, setXField] = useState("department");
-  const [stackBy, setStackBy] = useState("");
+  const [xField, setXField] = useState("category");
+  const [stackBy, setStackBy] = useState("purpose");
   const [chartType, setChartType] = useState("bar");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -133,10 +133,13 @@ export default function ChartBuilderPage() {
   // Auto-switch xField when source changes
   useEffect(() => {
     const fields = SOURCE_FIELDS[source] || [];
-    setXField(fields[0] || "");
+    if (source === "cases") { setXField("category"); setStackBy("purpose"); setShowTable(true); }
+    else if (source === "usage") { setXField("case.department"); setStackBy("material.materialName"); setShowTable(true); }
+    else if (source === "materials") { setXField("category"); setStackBy("status"); setShowTable(true); }
+    else if (source === "transactions") { setXField("transactionType"); setStackBy("material.materialName"); setShowTable(true); }
+    else { setXField(fields[0] || ""); setStackBy(""); }
     setFilterField("");
     setFilterValue("");
-    setStackBy("");
   }, [source]);
 
   // Fetch data

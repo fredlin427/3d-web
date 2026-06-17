@@ -117,17 +117,17 @@ export default function DashboardPage() {
 
   // Dynamic table config
   const [presTableSource, setPresTableSource] = useState("cases");
-  const [presTableGroupBy, setPresTableGroupBy] = useState("department");
-  const [presTableSubGroup, setPresTableSubGroup] = useState("category");
+  const [presTableGroupBy, setPresTableGroupBy] = useState("category");
+  const [presTableSubGroup, setPresTableSubGroup] = useState("purpose");
   const [presTableData, setPresTableData] = useState<{ label: string; value: number; children: { label: string; value: number }[] }[]>([]);
   const [presTableTotal, setPresTableTotal] = useState(0);
   const [presTableLoading, setPresTableLoading] = useState(false);
 
   // Auto-reset group-by when source changes
   useEffect(() => {
-    const fields = TABLE_SOURCE_FIELDS[presTableSource] || [];
-    setPresTableGroupBy(fields[0] || "");
-    setPresTableSubGroup(fields[1] || "");
+    if (presTableSource === "cases") { setPresTableGroupBy("category"); setPresTableSubGroup("purpose"); }
+    else if (presTableSource === "usage") { setPresTableGroupBy("case.department"); setPresTableSubGroup("material.materialName"); }
+    else { setPresTableGroupBy(""); setPresTableSubGroup(""); }
   }, [presTableSource]);
 
   // Fetch dynamic table data
