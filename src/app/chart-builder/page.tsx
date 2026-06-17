@@ -467,7 +467,7 @@ export default function ChartBuilderPage() {
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-1.5 pt-4 px-4"><CardTitle className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Sub-group</CardTitle></CardHeader>
             <CardContent className="px-3 pb-3">
-              <Select value={stackBy} onValueChange={(v) => { setStackBy(v || ""); if (v) { setChartType("stacked"); setShowTable(true); } }}>
+              <Select value={stackBy} onValueChange={(v) => { setStackBy(v || ""); if (v) setShowTable(true); }}>
                 <SelectTrigger className="w-full h-9 bg-white text-sm"><SelectValue placeholder="None" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">None (flat)</SelectItem>
