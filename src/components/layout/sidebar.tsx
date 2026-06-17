@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard, FolderOpen, Package, BarChart3, Settings, Box, FileText,
+  LayoutDashboard, FolderOpen, Package, BarChart3, Settings, Box, FileText, PieChart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -15,6 +15,7 @@ const navigation = [
   { name: "Cases", href: "/cases", icon: FolderOpen },
   { name: "Materials", href: "/materials", icon: Package },
   { name: "Reports", href: "/reports", icon: BarChart3 },
+  { name: "Chart Builder", href: "/chart-builder", icon: PieChart },
   { name: "Settings", href: "/settings", icon: Settings },
   { name: "Apply Form", href: "/apply-manage", icon: FileText },
 ];
