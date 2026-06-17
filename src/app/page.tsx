@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LoadingState } from "@/components/shared/loading-state";
 import { toast } from "sonner";
-import { FolderOpen, Clock, CheckCircle2, AlertTriangle, Package, TrendingDown, Download, ImageIcon, ArrowRight, Camera, Presentation, X } from "lucide-react";
+import { FolderOpen, Clock, CheckCircle2, AlertTriangle, Package, TrendingDown, Download, ImageIcon, ArrowRight, Camera, Presentation, X, Database, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { DEPARTMENT_LABELS } from "@/lib/constants";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LabelList } from "recharts";
@@ -16,6 +16,29 @@ import { DEPARTMENTS, CATEGORIES } from "@/lib/constants";
 import * as XLSX from "xlsx";
 
 const CHART_COLORS = ["#4f46e5","#06b6d4","#10b981","#f59e0b","#ef4444","#8b5cf6","#ec4899","#f97316","#84cc16"];
+
+// Dynamic table config (same as chart-builder field registry)
+const TABLE_SOURCE_FIELDS: Record<string, string[]> = {
+  cases: ["department","category","purpose","currentStatus","priority","technician","printingParty","hospital","rank","modelType","requiredService"],
+  usage: ["unit","staffName","printerOrTank","case.department","case.category","case.currentStatus","case.purpose","material.materialName","material.category","material.brand","material.status"],
+};
+const TABLE_FIELD_LABELS: Record<string, string> = {
+  department: "Department", category: "Category", purpose: "Purpose",
+  currentStatus: "Status", priority: "Priority", technician: "Technician",
+  printingParty: "Printing Party", hospital: "Hospital",
+  modelType: "Model Type", requiredService: "Required Service",
+  unit: "Unit", staffName: "Staff", printerOrTank: "Printer/Tank",
+  "case.department": "→ Case Dept", "case.category": "→ Case Category",
+  "case.currentStatus": "→ Case Status", "case.purpose": "→ Case Purpose",
+  "material.materialName": "→ Material", "material.category": "→ Mat Category",
+  "material.brand": "→ Brand", "material.status": "→ Mat Status",
+};
+const TABLE_COLORS_24 = [
+  "#4472C4","#ED7D31","#A5A5A5","#FFC000","#5B9BD5","#70AD47",
+  "#F15C5C","#9B59B6","#1ABC9C","#E67E22","#2E75B6","#C55A11",
+  "#7F7F7F","#A68A00","#3B6FB6","#D44C2B","#8C8C8C","#E5A800",
+  "#4A90D9","#F07020","#B0B0B0","#FFB300","#6BA5DA","#85C056",
+];
 
 interface DashboardData {
   stats: { totalCases: number; casesThisMonth: number; casesInProgress: number; completedCases: number; lowStockItems: number; expiringMaterials: number; materialsOpened: number };
@@ -90,6 +113,64 @@ export default function DashboardPage() {
   const [dismissed, setDismissed] = useState(false);
   const [presMode, setPresMode] = useState(false);
   const [presChart, setPresChart] = useState<"treemap" | "bars" | "table">("treemap");
+
+  // Dynamic table config
+  const [presTableSource, setPresTableSource] = useState("cases");
+  const [presTableGroupBy, setPresTableGroupBy] = useState("department");
+  const [presTableSubGroup, setPresTableSubGroup] = useState("category");
+  const [presTableData, setPresTableData] = useState<{ label: string; value: number; children: { label: string; value: number }[] }[]>([]);
+  const [presTableTotal, setPresTableTotal] = useState(0);
+  const [presTableLoading, setPresTableLoading] = useState(false);
+  const [presExpandedGroups, setPresExpandedGroups] = useState<Set<string>>(new Set());
+
+  // Auto-reset group-by when source changes
+  useEffect(() => {
+    const fields = TABLE_SOURCE_FIELDS[presTableSource] || [];
+    setPresTableGroupBy(fields[0] || "");
+    setPresTableSubGroup(fields[1] || "");
+    setPresExpandedGroups(new Set());
+  }, [presTableSource]);
+
+  // Fetch dynamic table data
+  useEffect(() => {
+    if (!presMode || presChart !== "table") return;
+    const fetchTable = async () => {
+      setPresTableLoading(true);
+      try {
+        const params = new URLSearchParams();
+        params.set("source", presTableSource);
+        params.set("x", presTableGroupBy);
+        params.set("y", "count");
+        params.set("limit", "30");
+        if (presTableSubGroup) params.set("stackBy", presTableSubGroup);
+        if (dateFrom) params.set("dateFrom", dateFrom);
+        if (dateTo) params.set("dateTo", dateTo);
+        if (deptFilter !== "all") params.set("filterField", "department");
+        if (deptFilter !== "all") params.set("filterValue", deptFilter);
+        const res = await fetch(`/api/chart-data?${params}`);
+        const json = await res.json();
+        if (json.success) {
+          if (json.data.stacked) {
+            setPresTableData(json.data.stacked);
+            setPresTableTotal(json.data.total);
+            const first5 = new Set<string>(json.data.stacked.slice(0, 5).map((d: any) => d.label as string));
+            setPresExpandedGroups(first5);
+          } else {
+            setPresTableData(json.data.rows.map((r: any) => ({ label: r.label, value: r.value, children: [] })));
+            setPresTableTotal(json.data.total);
+          }
+        }
+      } catch (e) { console.error(e); }
+      finally { setPresTableLoading(false); }
+    };
+    fetchTable();
+  }, [presMode, presChart, presTableSource, presTableGroupBy, presTableSubGroup, dateFrom, dateTo, deptFilter]);
+
+  const togglePresGroup = (label: string) => {
+    const next = new Set(presExpandedGroups);
+    if (next.has(label)) next.delete(label); else next.add(label);
+    setPresExpandedGroups(next);
+  };
 
   // Check if alerts were dismissed today
   useEffect(() => {
@@ -460,56 +541,113 @@ export default function DashboardPage() {
             )}
 
             {presChart === "table" && (
-              <div className="space-y-6">
-                <Card className="border-0 shadow-sm" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
-                  <CardHeader><CardTitle className="text-base font-bold text-slate-700">Cases by Department</CardTitle></CardHeader>
-                  <CardContent>
-                    <table className="w-full text-sm">
-                      <thead><tr className="border-b border-slate-200"><th className="text-left py-2 px-3 text-xs font-semibold text-slate-400 uppercase">Department</th><th className="text-right py-2 px-3 text-xs font-semibold text-slate-400 uppercase">Cases</th><th className="text-right py-2 px-3 text-xs font-semibold text-slate-400 uppercase">%</th></tr></thead>
-                      <tbody>
-                        {(data?.caseByDepartment || []).map((d: any) => {
-                          const total = (data?.caseByDepartment || []).reduce((s: number, x: any) => s + x.count, 0);
-                          return (
-                            <tr key={d.department} className="border-b border-slate-100 hover:bg-slate-50">
-                              <td className="py-2.5 px-3 font-medium text-slate-700">{d.department}</td>
-                              <td className="py-2.5 px-3 text-right font-bold text-slate-900 tabular-nums">{d.count}</td>
-                              <td className="py-2.5 px-3 text-right text-slate-500 tabular-nums">{total > 0 ? ((d.count / total) * 100).toFixed(1) : 0}%</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </CardContent>
-                </Card>
+              <div className="space-y-4">
+                {/* Config bar */}
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-2 bg-slate-100 rounded-lg p-1">
+                    <button onClick={() => setPresTableSource("cases")}
+                      className={cn("px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-1.5",
+                        presTableSource === "cases" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700")}>
+                      <Database className="h-3 w-3" />Cases
+                    </button>
+                    <button onClick={() => setPresTableSource("usage")}
+                      className={cn("px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-1.5",
+                        presTableSource === "usage" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700")}>
+                      <Database className="h-3 w-3" />Usage
+                    </button>
+                  </div>
+                  <Select value={presTableGroupBy} onValueChange={(v) => { if (v) setPresTableGroupBy(v); }}>
+                    <SelectTrigger className="w-[150px] h-8 bg-white text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {(TABLE_SOURCE_FIELDS[presTableSource] || []).map((f) => (
+                        <SelectItem key={f} value={f}>{TABLE_FIELD_LABELS[f] || f}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-xs text-slate-400">×</span>
+                  <Select value={presTableSubGroup} onValueChange={(v) => { if (v) setPresTableSubGroup(v); }}>
+                    <SelectTrigger className="w-[150px] h-8 bg-white text-xs"><SelectValue placeholder="None" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">None (flat)</SelectItem>
+                      {(TABLE_SOURCE_FIELDS[presTableSource] || []).filter((f) => f !== presTableGroupBy).map((f) => (
+                        <SelectItem key={f} value={f}>{TABLE_FIELD_LABELS[f] || f}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-[11px] text-slate-400">{presTableTotal} records</span>
+                </div>
 
+                {/* Table */}
                 <Card className="border-0 shadow-sm" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
-                  <CardHeader><CardTitle className="text-base font-bold text-slate-700">Cases by Category & Purpose</CardTitle></CardHeader>
-                  <CardContent>
-                    {(["Clinical Use","Rehabilitation","Training/ Education"] as const).map((cat) => {
-                      const catColor = { "Clinical Use": "#70AD47", "Rehabilitation": "#5B9BD5", "Training/ Education": "#FFC000" }[cat];
-                      const subItems = (data?.caseByPurpose || []).filter((p: any) => p.category === cat);
-                      const catTotal = subItems.reduce((s: number, x: any) => s + x.count, 0);
-                      return (
-                        <div key={cat} className="mb-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div style={{ width: 10, height: 10, backgroundColor: catColor, borderRadius: 2 }} />
-                            <span className="text-sm font-bold text-slate-700">{cat}</span>
-                            <span className="text-xs text-slate-400">({catTotal} cases)</span>
-                          </div>
-                          <table className="w-full text-sm ml-4">
-                            <thead><tr className="border-b border-slate-100"><th className="text-left py-1.5 px-2 text-[11px] font-semibold text-slate-400 uppercase">Purpose</th><th className="text-right py-1.5 px-2 text-[11px] font-semibold text-slate-400 uppercase">Count</th></tr></thead>
-                            <tbody>
-                              {subItems.map((p: any) => (
-                                <tr key={p.purpose} className="border-b border-slate-50">
-                                  <td className="py-1.5 px-2 text-slate-600">{p.purpose}</td>
-                                  <td className="py-1.5 px-2 text-right font-bold text-slate-900 tabular-nums">{p.count}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      );
-                    })}
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-bold text-slate-700">
+                      {TABLE_FIELD_LABELS[presTableGroupBy] || presTableGroupBy}
+                      {presTableSubGroup && <> → {TABLE_FIELD_LABELS[presTableSubGroup] || presTableSubGroup}</>}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-0 pb-2">
+                    {presTableLoading ? (
+                      <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 text-indigo-500 animate-spin" /></div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-y border-slate-100 bg-slate-50/50">
+                              <th className="text-left py-2.5 px-5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                {TABLE_FIELD_LABELS[presTableGroupBy] || presTableGroupBy}
+                              </th>
+                              <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider w-20">Count</th>
+                              <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider w-16">%</th>
+                              {presTableSubGroup && <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Sub-items</th>}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {presTableData.flatMap((group, gi) => {
+                              const pct = presTableTotal > 0 ? ((group.value / presTableTotal) * 100).toFixed(1) : "0";
+                              const hasChildren = group.children && group.children.length > 0;
+                              const rows = [
+                                <tr key={`r-${group.label}`}
+                                  className={cn("border-b border-slate-50 hover:bg-slate-50 transition-colors",
+                                    hasChildren && "cursor-pointer", presExpandedGroups.has(group.label) && "bg-indigo-50/30")}
+                                  onClick={() => hasChildren && togglePresGroup(group.label)}>
+                                  <td className="py-2.5 px-5 font-semibold text-slate-800">
+                                    <div className="flex items-center gap-2">
+                                      {hasChildren && (
+                                        presExpandedGroups.has(group.label)
+                                          ? <ChevronDown className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+                                          : <ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+                                      )}
+                                      <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: TABLE_COLORS_24[gi % 24] }} />
+                                      {group.label}
+                                    </div>
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right font-bold text-slate-900 tabular-nums">{group.value}</td>
+                                  <td className="py-2.5 px-3 text-right text-slate-500 tabular-nums">{pct}%</td>
+                                  {presTableSubGroup && <td className="py-2.5 px-3 text-xs text-slate-400">{hasChildren ? `${group.children.length} sub-items` : "—"}</td>}
+                                </tr>,
+                              ];
+                              if (hasChildren && presExpandedGroups.has(group.label)) {
+                                group.children.forEach((child, ci) => {
+                                  const childPct = group.value > 0 ? ((child.value / group.value) * 100).toFixed(1) : "0";
+                                  rows.push(
+                                    <tr key={`${group.label}-${child.label}`} className="border-b border-slate-50 bg-slate-50/30">
+                                      <td className="py-2 pl-12 pr-5 text-sm text-slate-600">
+                                        <span className="inline-block w-2 h-2 rounded-sm shrink-0 mr-2 align-middle" style={{ backgroundColor: TABLE_COLORS_24[ci % 24], opacity: 0.7 }} />
+                                        {child.label}
+                                      </td>
+                                      <td className="py-2 px-3 text-right font-semibold text-slate-700 tabular-nums">{child.value}</td>
+                                      <td className="py-2 px-3 text-right text-xs text-slate-500 tabular-nums">{childPct}%</td>
+                                      {presTableSubGroup && <td className="py-2 px-3 text-xs text-slate-400">{childPct}% of group</td>}
+                                    </tr>
+                                  );
+                                });
+                              }
+                              return rows;
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
