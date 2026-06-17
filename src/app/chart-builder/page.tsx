@@ -11,8 +11,9 @@ import {
   LabelList,
 } from "recharts";
 import {
-  BarChart3, PieChartIcon, TrendingUp, AreaChartIcon, Download, Camera, RefreshCw,
+  BarChart3, PieChartIcon, TrendingUp, AreaChartIcon, Camera, RefreshCw,
   Database, SlidersHorizontal, LayoutGrid, Loader2, Layers,
+  Table2, ChevronDown, ChevronRight, ListTree,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -79,6 +80,8 @@ export default function ChartBuilderPage() {
   const [dateTo, setDateTo] = useState("");
   const [filterField, setFilterField] = useState("");
   const [filterValue, setFilterValue] = useState("");
+  const [showTable, setShowTable] = useState(true);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(800);
 
@@ -131,11 +134,11 @@ export default function ChartBuilderPage() {
     setFilterField("");
     setFilterValue("");
     setStackBy("");
+    setExpandedGroups(new Set());
   }, [source]);
 
   // Fetch data
   const fetchData = useCallback(async () => {
-    // Guard: skip if xField not valid for current source (prevents race with auto-switch)
     const validFields = SOURCE_FIELDS[source] || [];
     if (!validFields.includes(xField) && !validFields.some((f) => f.endsWith(`.${xField}`))) return;
     setLoading(true);
@@ -158,6 +161,9 @@ export default function ChartBuilderPage() {
         if (json.data.stacked) {
           setStackedData(json.data.stacked);
           setChartData([]);
+          // auto-expand first 5 groups
+          const first5 = new Set<string>(json.data.stacked.slice(0, 5).map((d: any) => d.label as string));
+          setExpandedGroups(first5);
         } else {
           setChartData(json.data.rows);
           setStackedData([]);
@@ -176,7 +182,7 @@ export default function ChartBuilderPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Export PNG (wrapped in requestAnimationFrame for reliable SVG capture)
+  // Export PNG
   const exportPNG = () => {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -212,6 +218,12 @@ export default function ChartBuilderPage() {
     });
   };
 
+  const toggleGroup = (label: string) => {
+    const next = new Set(expandedGroups);
+    if (next.has(label)) next.delete(label); else next.add(label);
+    setExpandedGroups(next);
+  };
+
   // ─── Render chart ──────────────────────────────────────────────
   const renderChart = () => {
     const data = chartData.length > 0 ? chartData : stackedData.map((d) => ({ label: d.label, value: d.value }));
@@ -236,7 +248,7 @@ export default function ChartBuilderPage() {
       case "bar":
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} barSize={Math.max(12, Math.min(48, 600 / Math.max(data.length, 1)))}>
+            <BarChart data={data} barSize={Math.max(14, Math.min(48, 600 / Math.max(data.length, 1)))}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f2f6" />
               <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false}
                 angle={data.length > 8 ? -35 : 0} textAnchor={data.length > 8 ? "end" : "middle"} height={data.length > 8 ? 80 : 40}
@@ -244,7 +256,7 @@ export default function ChartBuilderPage() {
               <YAxis tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
               <Tooltip cursor={{ fill: "#f8f9fc" }} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
               <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                {!manyItems && <LabelList dataKey="value" position="top" style={{ fontSize: 11, fontWeight: 600, fill: "#4f46e5" }} />}
+                {!manyItems && <LabelList dataKey="value" position="top" style={{ fontSize: 12, fontWeight: 700, fill: "#475569" }} />}
                 {data.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
               </Bar>
             </BarChart>
@@ -255,14 +267,14 @@ export default function ChartBuilderPage() {
       case "barH":
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} layout="vertical" barSize={Math.max(12, Math.min(36, 500 / Math.max(data.length, 1)))} margin={{ left: 20, right: 60 }}>
+            <BarChart data={data} layout="vertical" barSize={Math.max(14, Math.min(36, 500 / Math.max(data.length, 1)))} margin={{ left: 20, right: 60 }}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f2f6" />
               <XAxis type="number" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
               <YAxis type="category" dataKey="label" width={140} tick={{ fontSize: 12, fontWeight: 500, fill: "#334155" }} axisLine={false} tickLine={false}
                 tickFormatter={(v) => truncateLabel(v)} />
               <Tooltip cursor={{ fill: "#f8f9fc" }} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
               <Bar dataKey="value" radius={[0, 6, 6, 0]}>
-                {!manyItems && <LabelList dataKey="value" position="right" style={{ fontSize: 12, fontWeight: 700 }} />}
+                {!manyItems && <LabelList dataKey="value" position="right" style={{ fontSize: 13, fontWeight: 700 }} />}
                 {data.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
               </Bar>
             </BarChart>
@@ -275,15 +287,16 @@ export default function ChartBuilderPage() {
         return (
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <Pie data={pieData} dataKey="value" nameKey="label" cx="50%" cy="50%" outerRadius={pieRadius}
+              <Pie data={pieData} dataKey="value" nameKey="label" cx="50%" cy="45%" outerRadius={pieRadius}
                 label={({ label, value, percent }: any) => {
-                  if (percent < 0.04) return ""; // skip tiny slices
+                  if (percent < 0.04) return "";
                   return `${truncateLabel(label, 12)} (${value}, ${(percent * 100).toFixed(0)}%)`;
                 }}
                 labelLine={{ stroke: "#cbd5e1" }}>
-                {pieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="#fff" strokeWidth={1} />)}
+                {pieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="#fff" strokeWidth={1.5} />)}
               </Pie>
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
+              <Legend wrapperStyle={{ fontSize: 12, paddingTop: 16 }} />
             </PieChart>
           </ResponsiveContainer>
         );
@@ -296,16 +309,17 @@ export default function ChartBuilderPage() {
         return (
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <Pie data={donutData} dataKey="value" nameKey="label" cx="50%" cy="50%"
+              <Pie data={donutData} dataKey="value" nameKey="label" cx="50%" cy="45%"
                 innerRadius={donutRadius * 0.42} outerRadius={donutRadius}
                 label={({ label, value, percent }: any) => {
                   if (percent < 0.04) return "";
                   return `${truncateLabel(label, 12)} (${value}, ${(percent * 100).toFixed(0)}%)`;
                 }}
                 labelLine={{ stroke: "#cbd5e1" }}>
-                {donutData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="#fff" strokeWidth={1} />)}
+                {donutData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="#fff" strokeWidth={1.5} />)}
               </Pie>
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
+              <Legend wrapperStyle={{ fontSize: 12, paddingTop: 16 }} />
             </PieChart>
           </ResponsiveContainer>
         );
@@ -322,8 +336,8 @@ export default function ChartBuilderPage() {
                 tickFormatter={(v) => truncateLabel(v)} />
               <YAxis tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              <Line type="monotone" dataKey="value" stroke="#4f46e5" strokeWidth={3} dot={{ fill: "#4f46e5", r: 4 }} activeDot={{ r: 7 }}>
-                {!manyItems && <LabelList dataKey="value" position="top" style={{ fontSize: 11, fontWeight: 600 }} />}
+              <Line type="monotone" dataKey="value" stroke="#4f46e5" strokeWidth={3} dot={{ fill: "#4f46e5", r: 5 }} activeDot={{ r: 7 }}>
+                {!manyItems && <LabelList dataKey="value" position="top" style={{ fontSize: 12, fontWeight: 600 }} />}
               </Line>
             </LineChart>
           </ResponsiveContainer>
@@ -355,16 +369,17 @@ export default function ChartBuilderPage() {
         });
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={flatData} barSize={Math.max(20, Math.min(60, 600 / Math.max(stackedData.length, 1)))}>
+            <BarChart data={flatData} barSize={Math.max(24, Math.min(56, 600 / Math.max(stackedData.length, 1)))}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f2f6" />
               <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false}
                 angle={stackedData.length > 6 ? -35 : 0} textAnchor={stackedData.length > 6 ? "end" : "middle"} height={stackedData.length > 6 ? 80 : 40}
                 tickFormatter={(v) => truncateLabel(v)} />
               <YAxis tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} />
+              <Legend wrapperStyle={{ fontSize: 12, paddingTop: 14 }} />
               {stackKeys.map((key, i) => (
-                <Bar key={key} dataKey={key} stackId="a" fill={stackColors[i % stackColors.length]} name={key} />
+                <Bar key={key} dataKey={key} stackId="a" fill={stackColors[i % stackColors.length]} name={key}
+                  radius={i === stackKeys.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]} />
               ))}
             </BarChart>
           </ResponsiveContainer>
@@ -378,13 +393,16 @@ export default function ChartBuilderPage() {
 
   const fields = SOURCE_FIELDS[source] || [];
   const title = `${FIELD_LABELS[xField] || xField} by ${source === "cases" ? "Cases" : source === "materials" ? "Materials" : source === "usage" ? "Material Usage" : "Transactions"}`;
+  const hasStacked = stackedData.length > 0;
+  const flatTotal = total;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-[1400px] mx-auto">
+      {/* ─── Header ──────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">Chart Builder</h2>
-          <p className="text-sm text-slate-500 mt-1">Select data source, fields, and chart type to generate custom charts</p>
+          <p className="text-sm text-slate-500 mt-1">Build custom charts for meeting presentations</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" className="h-9 gap-2" onClick={fetchData} disabled={loading}>
@@ -396,19 +414,19 @@ export default function ChartBuilderPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* ─── Left: Configuration Panel ─────────────────────────── */}
-        <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {/* ─── Left: Configuration Panel (1/5) ────────────────── */}
+        <div className="space-y-3 lg:col-span-1">
           {/* Source */}
           <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold flex items-center gap-2"><Database className="h-4 w-4 text-indigo-500" />Data Source</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
+            <CardHeader className="pb-1.5 pt-4 px-4"><CardTitle className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Data Source</CardTitle></CardHeader>
+            <CardContent className="space-y-1 px-3 pb-3">
               {SOURCES.map((s) => (
                 <button key={s.key} onClick={() => setSource(s.key)}
-                  className={cn("w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center gap-3",
-                    source === s.key ? "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200" : "text-slate-600 hover:bg-slate-50")}>
-                  <s.icon className="h-4 w-4 shrink-0" />
-                  <div><span>{s.label}</span><p className="text-[11px] text-slate-400 font-normal">{s.desc}</p></div>
+                  className={cn("w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center gap-2.5",
+                    source === s.key ? "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200 font-semibold" : "text-slate-600 hover:bg-slate-50 font-medium")}>
+                  <s.icon className="h-3.5 w-3.5 shrink-0" />
+                  {s.label}
                 </button>
               ))}
             </CardContent>
@@ -416,27 +434,26 @@ export default function ChartBuilderPage() {
 
           {/* Chart Type */}
           <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold flex items-center gap-2"><LayoutGrid className="h-4 w-4 text-indigo-500" />Chart Type</CardTitle></CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-1.5">
+            <CardHeader className="pb-1.5 pt-4 px-4"><CardTitle className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Chart Type</CardTitle></CardHeader>
+            <CardContent className="px-3 pb-3">
+              <div className="grid grid-cols-3 gap-1">
                 {CHART_TYPES.map((t) => (
                   <button key={t.key} onClick={() => setChartType(t.key)}
-                    className={cn("flex flex-col items-center gap-1 p-2.5 rounded-lg text-xs font-medium transition-all",
+                    className={cn("flex flex-col items-center gap-0.5 p-2 rounded-lg text-[11px] font-medium transition-all",
                       chartType === t.key ? "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200" : "text-slate-500 hover:bg-slate-50")}>
-                    <t.icon className="h-5 w-5" />
-                    {t.label}
+                    <t.icon className="h-4 w-4" />{t.label}
                   </button>
                 ))}
               </div>
             </CardContent>
           </Card>
 
-          {/* X Axis Field */}
+          {/* X Axis */}
           <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold flex items-center gap-2"><SlidersHorizontal className="h-4 w-4 text-indigo-500" />Group By (X Axis)</CardTitle></CardHeader>
-            <CardContent>
+            <CardHeader className="pb-1.5 pt-4 px-4"><CardTitle className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Group By</CardTitle></CardHeader>
+            <CardContent className="px-3 pb-3">
               <Select value={xField} onValueChange={(v) => { if (v) setXField(v); }}>
-                <SelectTrigger className="w-full h-9 bg-white"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-full h-9 bg-white text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {fields.map((f) => (
                     <SelectItem key={f} value={f}>{FIELD_LABELS[f] || f}</SelectItem>
@@ -446,12 +463,12 @@ export default function ChartBuilderPage() {
             </CardContent>
           </Card>
 
-          {/* Stack By (now available for ALL sources) */}
+          {/* Stack By */}
           <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold flex items-center gap-2"><Layers className="h-4 w-4 text-indigo-500" />Stack By (sub-group)</CardTitle></CardHeader>
-            <CardContent>
-              <Select value={stackBy} onValueChange={(v) => { setStackBy(v || ""); if (v) setChartType("stacked"); }}>
-                <SelectTrigger className="w-full h-9 bg-white"><SelectValue placeholder="None (flat)" /></SelectTrigger>
+            <CardHeader className="pb-1.5 pt-4 px-4"><CardTitle className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Sub-group</CardTitle></CardHeader>
+            <CardContent className="px-3 pb-3">
+              <Select value={stackBy} onValueChange={(v) => { setStackBy(v || ""); if (v) { setChartType("stacked"); setShowTable(true); } }}>
+                <SelectTrigger className="w-full h-9 bg-white text-sm"><SelectValue placeholder="None" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">None (flat)</SelectItem>
                   {fields.filter((f) => f !== xField).map((f) => (
@@ -464,20 +481,15 @@ export default function ChartBuilderPage() {
 
           {/* Filters */}
           <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Filters</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium text-slate-400">Date From</label>
-                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full h-9 text-sm border rounded-lg px-3 py-1.5 bg-white" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium text-slate-400">Date To</label>
-                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full h-9 text-sm border rounded-lg px-3 py-1.5 bg-white" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium text-slate-400">Filter Field</label>
+            <CardHeader className="pb-1.5 pt-4 px-4"><CardTitle className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Filters</CardTitle></CardHeader>
+            <CardContent className="space-y-2.5 px-3 pb-3">
+              <div><label className="text-[11px] font-medium text-slate-400">From</label>
+                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full h-8 text-xs border rounded-md px-2 py-1 bg-white mt-0.5" /></div>
+              <div><label className="text-[11px] font-medium text-slate-400">To</label>
+                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full h-8 text-xs border rounded-md px-2 py-1 bg-white mt-0.5" /></div>
+              <div>
                 <Select value={filterField} onValueChange={(v) => { setFilterField(v || ""); setFilterValue(""); }}>
-                  <SelectTrigger className="w-full h-9 bg-white"><SelectValue placeholder="None" /></SelectTrigger>
+                  <SelectTrigger className="w-full h-8 bg-white text-xs"><SelectValue placeholder="Filter field..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">None</SelectItem>
                     {fields.map((f) => <SelectItem key={f} value={f}>{FIELD_LABELS[f] || f}</SelectItem>)}
@@ -485,32 +497,34 @@ export default function ChartBuilderPage() {
                 </Select>
               </div>
               {filterField && (
-                <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-slate-400">Filter Value</label>
-                  <Select value={filterValue} onValueChange={(v) => { if (v) setFilterValue(v); }}>
-                    <SelectTrigger className="w-full h-9 bg-white"><SelectValue placeholder="Select..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">All</SelectItem>
-                      {(filterOptions[filterField] || []).map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Select value={filterValue} onValueChange={(v) => { if (v) setFilterValue(v); }}>
+                  <SelectTrigger className="w-full h-8 bg-white text-xs"><SelectValue placeholder="Value..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All</SelectItem>
+                    {(filterOptions[filterField] || []).map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               )}
             </CardContent>
           </Card>
         </div>
 
-        {/* ─── Right: Chart Preview ──────────────────────────────── */}
-        <div className="lg:col-span-3">
-          <Card className="border-0 shadow-sm h-full">
-            <CardHeader className="flex flex-row items-center justify-between">
+        {/* ─── Right: Chart + Table (4/5) ─────────────────────── */}
+        <div className="lg:col-span-4 space-y-4">
+          {/* Chart */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between pb-1 pt-5 px-5">
               <div>
-                <CardTitle className="text-base font-bold">{title}</CardTitle>
-                <p className="text-xs text-slate-400 mt-0.5">{chartData.length || stackedData.length} groups · {total} total</p>
+                <CardTitle className="text-base font-bold text-slate-800">{title}</CardTitle>
+                <p className="text-xs text-slate-400 mt-0.5">{hasStacked ? `${stackedData.length} groups, ${stackKeys.length} sub-groups` : `${chartData.length} groups`} · {flatTotal} total records</p>
               </div>
+              <Button variant="ghost" size="sm" className={cn("h-8 gap-1.5 text-xs", showTable && "text-indigo-600")}
+                onClick={() => setShowTable(!showTable)}>
+                <Table2 className="h-3.5 w-3.5" />{showTable ? "Hide Table" : "Show Table"}
+              </Button>
             </CardHeader>
-            <CardContent>
-              <div id="chart-builder-preview" ref={containerRef} className="w-full" style={{ height: 520 }}>
+            <CardContent className="px-2 pb-4">
+              <div id="chart-builder-preview" ref={containerRef} className="w-full" style={{ height: showTable ? 400 : 500 }}>
                 {loading ? (
                   <div className="flex items-center justify-center h-full">
                     <Loader2 className="h-8 w-8 text-indigo-500 animate-spin" />
@@ -519,6 +533,108 @@ export default function ChartBuilderPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* ─── Breakdown Table ────────────────────────────── */}
+          {showTable && hasStacked && (
+            <Card className="border-0 shadow-sm">
+              <CardHeader className="pb-2 pt-4 px-5">
+                <CardTitle className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                  <ListTree className="h-4 w-4 text-indigo-500" />
+                  Breakdown: {FIELD_LABELS[xField] || xField} → {FIELD_LABELS[stackBy] || stackBy}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-0 pb-2">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-y border-slate-100 bg-slate-50/50">
+                        <th className="text-left py-2.5 px-5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Group</th>
+                        <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider w-20">Total</th>
+                        <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Sub-items</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {stackedData.map((group, gi) => (
+                        <>
+                          <tr key={group.label}
+                            className={cn("border-b border-slate-50 cursor-pointer hover:bg-slate-50 transition-colors",
+                              expandedGroups.has(group.label) && "bg-indigo-50/30")}
+                            onClick={() => toggleGroup(group.label)}>
+                            <td className="py-2.5 px-5 font-semibold text-slate-800 flex items-center gap-2">
+                              <span className="text-slate-300">{expandedGroups.has(group.label) ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}</span>
+                              <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: CHART_COLORS[gi % CHART_COLORS.length] }} />
+                              {group.label}
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-bold text-slate-900 tabular-nums">{group.value}</td>
+                            <td className="py-2.5 px-3 text-xs text-slate-400">{group.children.length} sub-items</td>
+                          </tr>
+                          {expandedGroups.has(group.label) && group.children.map((child, ci) => (
+                            <tr key={`${group.label}-${child.label}`} className="border-b border-slate-50 bg-slate-50/30">
+                              <td className="py-2 pl-12 pr-5 text-sm text-slate-600">
+                                <span className="inline-block w-2 h-2 rounded-sm shrink-0 mr-2" style={{ backgroundColor: CHART_COLORS[ci % CHART_COLORS.length], opacity: 0.7 }} />
+                                {child.label}
+                              </td>
+                              <td className="py-2 px-3 text-right font-semibold text-slate-700 tabular-nums">{child.value}</td>
+                              <td className="py-2 px-3 text-xs text-slate-400">
+                                {group.value > 0 ? ((child.value / group.value) * 100).toFixed(1) : 0}% of group
+                              </td>
+                            </tr>
+                          ))}
+                        </>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Flat data table (non-stacked) */}
+          {showTable && !hasStacked && chartData.length > 0 && (
+            <Card className="border-0 shadow-sm">
+              <CardHeader className="pb-2 pt-4 px-5">
+                <CardTitle className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                  <Table2 className="h-4 w-4 text-indigo-500" />
+                  Data Table
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-0 pb-2">
+                <div className="overflow-x-auto max-h-80 overflow-y-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-y border-slate-100 bg-slate-50/50 sticky top-0">
+                        <th className="text-left py-2.5 px-5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">#</th>
+                        <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                          {FIELD_LABELS[xField] || xField}
+                        </th>
+                        <th className="text-right py-2.5 px-5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Count</th>
+                        <th className="text-right py-2.5 px-5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">%</th>
+                        <th className="py-2.5 px-3" /> {/* bar */}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {chartData.map((d, i) => {
+                        const pct = flatTotal > 0 ? ((d.value / flatTotal) * 100).toFixed(1) : "0";
+                        return (
+                          <tr key={d.label} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                            <td className="py-2.5 px-5 text-xs text-slate-400 tabular-nums">{i + 1}</td>
+                            <td className="py-2.5 px-3 font-medium text-slate-700">{d.label}</td>
+                            <td className="py-2.5 px-5 text-right font-bold text-slate-900 tabular-nums">{d.value}</td>
+                            <td className="py-2.5 px-5 text-right text-slate-500 tabular-nums">{pct}%</td>
+                            <td className="py-2.5 px-3">
+                              <div className="w-full bg-slate-100 rounded-full h-1.5 max-w-[120px]">
+                                <div className="h-1.5 rounded-full" style={{ width: `${pct}%`, backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
