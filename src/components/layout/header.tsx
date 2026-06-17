@@ -26,7 +26,7 @@ export function Header() {
       <div className="flex items-center gap-4">
         {/* QEH 3D Logo */}
         <img
-          src="https://cvpne3c5eklxbqdotarwkn3tyk53bzu.remote.ha.org.hk/userweb/3dprint/intranet/assets/img/logo/QE3D-bi.png"
+          src="/logo.png"
           alt="QEH 3D Printing Office"
           className="h-10 object-contain"
           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}

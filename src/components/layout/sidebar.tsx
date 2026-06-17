@@ -44,7 +44,7 @@ export function Sidebar() {
         ) : (
           <>
             <img
-              src="https://cvpne3c5eklxbqdotarwkn3tyk53bzu.remote.ha.org.hk/userweb/3dprint/intranet/assets/img/logo/QE3D-bi.png"
+              src="/logo.png"
               alt="QEH 3D Printing Office"
               className="h-7 object-contain shrink-0"
             />
