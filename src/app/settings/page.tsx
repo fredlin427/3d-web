@@ -244,7 +244,7 @@ export default function SettingsPage() {
         {/* Group cards — left */}
         <div className="lg:col-span-2 space-y-4">
           {filteredGroups.map((group) => (
-            <Card key={group.label} className="shadow-sm border-0">
+            <Card key={group.label} className="border border-0">
               <button
                 type="button"
                 onClick={() => toggleGroup(group.label)}
@@ -293,7 +293,7 @@ export default function SettingsPage() {
         {/* Editor panel — right */}
         <div className="lg:col-span-3">
           {activeItem && (
-            <Card className="shadow-sm border-0 sticky top-8">
+            <Card className="border border-0 sticky top-8">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm">{activeItem.title}</CardTitle>

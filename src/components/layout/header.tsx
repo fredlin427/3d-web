@@ -28,8 +28,7 @@ export function Header() {
         <img
           src="/logo.png"
           alt="QEH 3D Printing Office"
-          className="h-10 object-contain"
-          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          className="h-10 w-auto object-contain max-w-[200px]"
         />
         <div>
           <h1 className="text-base font-semibold tracking-tight text-slate-800">{title}</h1>

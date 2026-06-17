@@ -302,7 +302,7 @@ export default function ReportsPage() {
                     "text-left p-4 rounded-xl border-2 transition-all duration-150",
                     reportType === r.key
                       ? "border-blue-500 bg-accent shadow-sm"
-                      : "border-transparent bg-white shadow-sm hover:border-slate-200 hover:shadow"
+                      : "border-transparent bg-white border hover:border-slate-200 hover:shadow"
                   )}
                 >
                   <r.icon className={cn("h-6 w-6 mb-2", reportType === r.key ? "text-primary" : "text-slate-400")} />

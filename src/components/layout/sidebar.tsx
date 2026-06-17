@@ -34,25 +34,19 @@ export function Sidebar() {
     >
       {/* Logo */}
       <div className={cn(
-        "flex items-center border-b border-white/[0.06] overflow-hidden",
-        collapsed ? "h-16 justify-center px-3" : "h-16 px-5 gap-3"
+        "flex items-center border-b border-white/[0.06]",
+        collapsed ? "h-16 justify-center px-3" : "h-16 px-4"
       )}>
         {collapsed ? (
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/15">
             <Box className="h-5 w-5 text-white" />
           </div>
         ) : (
-          <>
-            <img
-              src="/logo.png"
-              alt="QEH 3D Printing Office"
-              className="h-7 object-contain shrink-0"
-            />
-            <div className="flex flex-col leading-tight min-w-0">
-              <span className="text-[14px] font-semibold text-white tracking-tight">QEH 3D Print</span>
-              <span className="text-[11px] text-white/50 font-medium">Office Manager</span>
-            </div>
-          </>
+          <img
+            src="/logo.png"
+            alt="QEH 3D Printing Office"
+            className="h-10 w-auto object-contain max-w-[180px]"
+          />
         )}
         <Button
           variant="ghost" size="icon"

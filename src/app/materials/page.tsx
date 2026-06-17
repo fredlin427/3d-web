@@ -201,7 +201,7 @@ export default function MaterialsPage() {
           { label: "Expiring Soon", value: stats.expiringSoon, icon: Clock, color: "#f97316", bg: "#fff7ed" },
           { label: "Total Remain", value: `${stats.totalRemain}`, icon: Package, color: "#8b5cf6", bg: "#f5f3ff", suffix: "" },
         ].map((s) => (
-          <Card key={s.label} className="border-0 shadow-sm overflow-hidden">
+          <Card key={s.label} className="border-0 border overflow-hidden">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg shrink-0" style={{ backgroundColor: s.bg }}>

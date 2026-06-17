@@ -93,7 +93,7 @@ function exportChartImageFile(chartId: string, filename: string) {
 }
 
 const statDefs = [
-  { key: "totalCases", title: "Total Cases", icon: FolderOpen, color: "#003d7c", bg: "#e6edf5" },
+  { key: "totalCases", title: "Total Cases", icon: FolderOpen, color: "#0077c8", bg: "#e6f4fc" },
   { key: "casesThisMonth", title: "This Month", icon: Clock, color: "#06b6d4", bg: "#ecfeff" },
   { key: "casesInProgress", title: "In Progress", icon: Clock, color: "#f59e0b", bg: "#fffbeb" },
   { key: "completedCases", title: "Completed", icon: CheckCircle2, color: "#10b981", bg: "#ecfdf5" },
@@ -280,7 +280,7 @@ export default function DashboardPage() {
       {/* Stat Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
         {statDefs.map((s) => (
-          <Card key={s.key} className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
+          <Card key={s.key} className="border-0 border hover:shadow-md transition-shadow duration-200 overflow-hidden">
             <CardContent className="p-5">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ backgroundColor: s.bg }}>
@@ -306,7 +306,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {recentCases.map((c: any) => (
               <Link key={c.id} href={`/cases/${c.id}`}>
-                <Card className="border-0 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 cursor-pointer overflow-hidden h-full">
+                <Card className="border-0 border hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 cursor-pointer overflow-hidden h-full">
                   {/* Mini image */}
                   <div className="h-24 bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center">
                     {c.modelImageUrl ? (
@@ -415,7 +415,7 @@ export default function DashboardPage() {
               { label: "In Progress", value: data.stats.casesInProgress, color: "#f59e0b" },
               { label: "Completed", value: data.stats.completedCases, color: "#10b981" },
             ].map((s) => (
-              <Card key={s.label} className="border-0 shadow-sm text-center">
+              <Card key={s.label} className="border-0 border text-center">
                 <CardContent className="p-4">
                   <p className="text-2xl font-bold tabular-nums" style={{ color: s.color }}>{s.value}</p>
                   <p className="text-[11px] text-slate-400 mt-0.5">{s.label}</p>
