@@ -76,7 +76,12 @@ export async function GET(request: NextRequest) {
     const validX = finalIsText || finalIsNum || finalIsJoin;
 
     if (!validX && resolvedX !== "auto") {
-      return NextResponse.json({ success: false, error: `Field "${xField}" not available for source "${source}"` }, { status: 400 });
+      const available = [...config.textFields, ...config.numFields, ...(config.joinFields || []).map((jf) => jf.replace(/^(case|material)\./, ""))];
+      return NextResponse.json({
+        success: false,
+        error: `Field "${xField}" not available for source "${source}"`,
+        availableFields: [...new Set(available)].sort(),
+      }, { status: 400 });
     }
 
     // Get data

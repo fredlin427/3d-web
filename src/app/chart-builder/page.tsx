@@ -108,6 +108,7 @@ export default function ChartBuilderPage() {
     setXField(fields[0] || "");
     setFilterField("");
     setFilterValue("");
+    setStackBy("");
   }, [source]);
 
   // Fetch data
