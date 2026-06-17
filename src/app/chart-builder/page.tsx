@@ -239,19 +239,24 @@ export default function ChartBuilderPage() {
     clone.setAttribute("height", String(h));
     clone.setAttribute("viewBox", `0 0 ${w} ${h}`);
 
-    // Collect ALL CSS rules from the document and embed in the clone
-    let cssText = "";
+    // Collect only Recharts-related CSS rules (not the entire Tailwind stylesheet)
+    let cssText = "svg { background: white; }";
     try {
       for (const sheet of Array.from(document.styleSheets)) {
         try {
           for (const rule of Array.from(sheet.cssRules || [])) {
-            cssText += rule.cssText + "\n";
+            const text = rule.cssText;
+            // Only include rules relevant to SVG rendering
+            if (text.includes("recharts") || text.includes(".recharts") ||
+                text.includes("svg") || text.includes("fill:") || text.includes("stroke:") ||
+                text.includes("text {") || text.includes("path {") || text.includes("rect {") ||
+                text.includes("font-") || text.includes("dominant-baseline") || text.includes("text-anchor")) {
+              cssText += text + "\n";
+            }
           }
-        } catch (_) { /* cross-origin stylesheet, skip */ }
+        } catch (_) { /* cross-origin, skip */ }
       }
     } catch (_) { /* ignore */ }
-    // Also add explicit white background
-    cssText += "svg { background: white; }";
 
     const styleEl = document.createElementNS("http://www.w3.org/2000/svg", "style");
     styleEl.textContent = cssText;
@@ -279,7 +284,8 @@ export default function ChartBuilderPage() {
       }, "image/png");
     };
     img.onerror = () => toast.error("Export failed — try refreshing the chart first");
-    const base64 = btoa(String.fromCharCode(...new TextEncoder().encode(svgData)));
+    // Safe UTF-8 base64 without stack overflow (avoids spreading large arrays)
+    const base64 = btoa(unescape(encodeURIComponent(svgData)));
     img.src = `data:image/svg+xml;base64,${base64}`;
   };
 
