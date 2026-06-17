@@ -23,9 +23,18 @@ export function Header() {
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-[var(--border)] bg-white px-8">
-      <div>
-        <h1 className="text-base font-semibold tracking-tight text-slate-800">{title}</h1>
-        <p className="text-xs text-slate-400 mt-0.5">QEH 3D Printing Office</p>
+      <div className="flex items-center gap-4">
+        {/* QEH 3D Logo */}
+        <img
+          src="https://cvpne3c5eklxbqdotarwkn3tyk53bzu.remote.ha.org.hk/userweb/3dprint/intranet/assets/img/logo/QE3D-bi.png"
+          alt="QEH 3D Printing Office"
+          className="h-10 object-contain"
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+        />
+        <div>
+          <h1 className="text-base font-semibold tracking-tight text-slate-800">{title}</h1>
+          <p className="text-xs text-slate-400 mt-0.5">QEH 3D Printing Office</p>
+        </div>
       </div>
       <div className="flex items-center gap-3">
         <div className="text-right">
