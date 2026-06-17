@@ -20,13 +20,34 @@ import { HierarchicalTable } from "@/components/charts/hierarchical-table";
 import type { StackedRow } from "@/components/charts/hierarchical-table";
 import { DrillDownPanel } from "@/components/charts/drill-down-panel";
 
-// ─── 24-color Excel-style palette ─────────────────────────────────
-const CHART_COLORS = [
-  "#4472C4","#ED7D31","#A5A5A5","#FFC000","#5B9BD5","#70AD47",
-  "#F15C5C","#9B59B6","#1ABC9C","#E67E22","#2E75B6","#C55A11",
-  "#7F7F7F","#A68A00","#3B6FB6","#D44C2B","#8C8C8C","#E5A800",
-  "#4A90D9","#F07020","#B0B0B0","#FFB300","#6BA5DA","#85C056",
-];
+// ─── Color palettes ─────────────────────────────────────────────
+const COLOR_PALETTES: Record<string, string[]> = {
+  "Excel": [
+    "#4472C4","#ED7D31","#A5A5A5","#FFC000","#5B9BD5","#70AD47",
+    "#F15C5C","#9B59B6","#1ABC9C","#E67E22","#2E75B6","#C55A11",
+    "#7F7F7F","#A68A00","#3B6FB6","#D44C2B","#8C8C8C","#E5A800",
+    "#4A90D9","#F07020","#B0B0B0","#FFB300","#6BA5DA","#85C056",
+  ],
+  "Vivid": [
+    "#E6194B","#3CB44B","#FFE119","#4363D8","#F58231","#911EB4",
+    "#46F0F0","#F032E6","#BCF60C","#FABEBE","#008080","#E6BEFF",
+    "#9A6324","#FFFAC8","#800000","#AAFFC3","#808000","#FFD8B1",
+    "#000075","#808080","#A9A9A9","#DCBEFF","#FF6F61","#92A8D1",
+  ],
+  "Dark": [
+    "#1B2A4A","#8B1E1E","#2D5A27","#7A5C00","#1E3A6E","#3D6B35",
+    "#9B2335","#5B2C8E","#0E6B5E","#8B4513","#2C3E8C","#7C3A00",
+    "#4A4A4A","#6B5B00","#2E5090","#A04020","#5C5C5C","#C68600",
+    "#3A6FC0","#D05030","#7A7A7A","#D09020","#5080CC","#60A040",
+  ],
+  "Pastel": [
+    "#A8C8F0","#F4B183","#C8C8C8","#FFE080","#A8C8E8","#B0D888",
+    "#F0A0A0","#C0A0E0","#90D8C8","#F0C080","#A0C0F0","#E8A870",
+    "#B8B8B8","#D8C860","#A8C8F8","#E0A878","#C0C0C0","#F0C860",
+    "#B8D4F4","#ECB088","#D0D0D0","#F8D0A0","#B8D8F8","#C0E0A0",
+  ],
+};
+const DEFAULT_PALETTE = "Excel";
 
 // ─── Config ────────────────────────────────────────────────────
 const SOURCES = [
@@ -73,11 +94,18 @@ function truncateLabel(s: string, max: number = 18): string {
   return s.length > max ? s.slice(0, max) + "…" : s;
 }
 
-function lighten(hex: string, amount: number): string {
+// Generate a distinct shade by shifting hue slightly and adjusting saturation
+// Keeps colors visible (avoids white-out from naive lighten)
+function shadeColor(hex: string, step: number, total: number): string {
   const num = parseInt(hex.replace("#", ""), 16);
-  const r = Math.min(255, (num >> 16) + Math.round(255 * amount));
-  const g = Math.min(255, ((num >> 8) & 0x00FF) + Math.round(255 * amount));
-  const b = Math.min(255, (num & 0x0000FF) + Math.round(255 * amount));
+  let r = (num >> 16) & 0xFF;
+  let g = (num >> 8) & 0xFF;
+  let b = num & 0xFF;
+  // Mix with white for lighter variants, but cap at 40% white max
+  const mix = Math.min(0.4, step / (total + 2));
+  r = Math.round(r + (255 - r) * mix);
+  g = Math.round(g + (255 - g) * mix);
+  b = Math.round(b + (255 - b) * mix);
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
 }
 
@@ -92,6 +120,8 @@ export default function ChartBuilderPage() {
   const [filterField, setFilterField] = useState("");
   const [filterValue, setFilterValue] = useState("");
   const [showTable, setShowTable] = useState(true);
+  const [paletteKey, setPaletteKey] = useState(DEFAULT_PALETTE);
+  const CHART_COLORS = COLOR_PALETTES[paletteKey] || COLOR_PALETTES[DEFAULT_PALETTE];
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(800);
 
@@ -320,46 +350,37 @@ export default function ChartBuilderPage() {
       // ── PIE (single-level or two-level donut) ────────────────
       case "pie": {
         if (hasStack) {
-          // ── Two-level composite donut: inner=primary, outer=sub-items ──
+          // ── Two-level composite donut ──
           const outerData: any[] = [];
           stackedData.forEach((group, gi) => {
             group.children.forEach((child, ci) => {
-              outerData.push({
-                name: child.label,
-                value: child.value,
-                parent: group.label,
-                parentIdx: gi,
-                childIdx: ci,
-              });
+              outerData.push({ name: child.label, value: child.value, parent: group.label, parentIdx: gi, childIdx: ci });
             });
           });
-          // Generate shades for each primary group
-          const groupShades: Record<number, string[]> = {};
-          stackedData.forEach((_, gi) => {
-            const base = CHART_COLORS[gi % CHART_COLORS.length];
-            groupShades[gi] = [base, lighten(base, 0.15), lighten(base, 0.3), lighten(base, 0.45), lighten(base, 0.6)];
-          });
           const r = pieRadius;
-          const innerR = r * 0.55;
-          const outerR = r * 1.15;
+          // All rings fit within r (no overflow)
+          const hole = r * 0.28;
+          const innerOuter = r * 0.58;
+          const outerInner = r * 0.62;
+          const outerOuter = r;
           return (
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart margin={{ top: 10, right: 50, bottom: 10, left: 50 }}>
+              <PieChart margin={{ top: 10, right: 60, bottom: 10, left: 60 }}>
                 {/* Inner ring: primary groups */}
-                <Pie data={flatData} dataKey="value" nameKey="label" cx="50%" cy="50%"
-                  innerRadius={innerR * 0.35} outerRadius={innerR} stroke="#fff" strokeWidth={1.5}
+                <Pie data={flatData} dataKey="value" nameKey="label" cx="50%" cy="48%"
+                  innerRadius={hole} outerRadius={innerOuter} stroke="#fff" strokeWidth={2}
                   label={({ index }: any) => {
                     const d = flatData[index ?? -1];
                     return d ? d.label : "";
                   }} labelLine={false}>
                   {flatData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                 </Pie>
-                {/* Outer ring: sub-items, colored by parent */}
-                <Pie data={outerData} dataKey="value" nameKey="name" cx="50%" cy="50%"
-                  innerRadius={innerR + 4} outerRadius={outerR} stroke="#fff" strokeWidth={1}
+                {/* Outer ring: sub-items */}
+                <Pie data={outerData} dataKey="value" nameKey="name" cx="50%" cy="48%"
+                  innerRadius={outerInner} outerRadius={outerOuter} stroke="#fff" strokeWidth={0.5}
                   label={({ name, percent }: any) => {
-                    if (percent < 0.03) return "";
-                    return `${truncateLabel(name || "", 14)} (${(percent * 100).toFixed(0)}%)`;
+                    if (percent < 0.04) return "";
+                    return `${truncateLabel(name || "", 12)} (${(percent * 100).toFixed(0)}%)`;
                   }}
                   labelLine={{ stroke: "#cbd5e1", strokeWidth: 0.5 }}
                   onClick={(d: any) => {
@@ -368,8 +389,9 @@ export default function ChartBuilderPage() {
                   }}
                   style={{ cursor: "pointer" }}>
                   {outerData.map((d, i) => {
-                    const shades = groupShades[d.parentIdx] || [CHART_COLORS[d.parentIdx % CHART_COLORS.length]];
-                    return <Cell key={i} fill={shades[d.childIdx % shades.length]} />;
+                    const base = CHART_COLORS[d.parentIdx % CHART_COLORS.length];
+                    const totalKids = stackedData[d.parentIdx]?.children.length || 1;
+                    return <Cell key={i} fill={shadeColor(base, d.childIdx, totalKids)} />;
                   })}
                 </Pie>
                 <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
@@ -401,37 +423,34 @@ export default function ChartBuilderPage() {
       // ── DONUT (single-level or two-level) ────────────────────
       case "donut": {
         if (hasStack) {
-          // Two-level composite donut (same as pie but donut style)
+          // Two-level composite donut
           const outerData: any[] = [];
           stackedData.forEach((group, gi) => {
             group.children.forEach((child, ci) => {
               outerData.push({ name: child.label, value: child.value, parent: group.label, parentIdx: gi, childIdx: ci });
             });
           });
-          const groupShades: Record<number, string[]> = {};
-          stackedData.forEach((_, gi) => {
-            const base = CHART_COLORS[gi % CHART_COLORS.length];
-            groupShades[gi] = [base, lighten(base, 0.15), lighten(base, 0.3), lighten(base, 0.45), lighten(base, 0.6)];
-          });
           const r = pieRadius;
-          const innerR = r * 0.55;
-          const outerR = r * 1.15;
+          const hole = r * 0.28;
+          const innerOuter = r * 0.58;
+          const outerInner = r * 0.62;
+          const outerOuter = r;
           return (
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart margin={{ top: 10, right: 50, bottom: 10, left: 50 }}>
-                <Pie data={flatData} dataKey="value" nameKey="label" cx="50%" cy="50%"
-                  innerRadius={innerR * 0.35} outerRadius={innerR} stroke="#fff" strokeWidth={1.5}
+              <PieChart margin={{ top: 10, right: 60, bottom: 10, left: 60 }}>
+                <Pie data={flatData} dataKey="value" nameKey="label" cx="50%" cy="48%"
+                  innerRadius={hole} outerRadius={innerOuter} stroke="#fff" strokeWidth={2}
                   label={({ index }: any) => {
                     const d = flatData[index ?? -1];
                     return d ? d.label : "";
                   }} labelLine={false}>
                   {flatData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                 </Pie>
-                <Pie data={outerData} dataKey="value" nameKey="name" cx="50%" cy="50%"
-                  innerRadius={innerR + 4} outerRadius={outerR} stroke="#fff" strokeWidth={1}
+                <Pie data={outerData} dataKey="value" nameKey="name" cx="50%" cy="48%"
+                  innerRadius={outerInner} outerRadius={outerOuter} stroke="#fff" strokeWidth={0.5}
                   label={({ name, percent }: any) => {
-                    if (percent < 0.03) return "";
-                    return `${truncateLabel(name || "", 14)} (${(percent * 100).toFixed(0)}%)`;
+                    if (percent < 0.04) return "";
+                    return `${truncateLabel(name || "", 12)} (${(percent * 100).toFixed(0)}%)`;
                   }}
                   labelLine={{ stroke: "#cbd5e1", strokeWidth: 0.5 }}
                   onClick={(d: any) => {
@@ -440,8 +459,9 @@ export default function ChartBuilderPage() {
                   }}
                   style={{ cursor: "pointer" }}>
                   {outerData.map((d, i) => {
-                    const shades = groupShades[d.parentIdx] || [CHART_COLORS[d.parentIdx % CHART_COLORS.length]];
-                    return <Cell key={i} fill={shades[d.childIdx % shades.length]} />;
+                    const base = CHART_COLORS[d.parentIdx % CHART_COLORS.length];
+                    const totalKids = stackedData[d.parentIdx]?.children.length || 1;
+                    return <Cell key={i} fill={shadeColor(base, d.childIdx, totalKids)} />;
                   })}
                 </Pie>
                 <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
@@ -598,6 +618,30 @@ export default function ChartBuilderPage() {
                   </button>
                 ))}
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Color Palette */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-1.5 pt-4 px-4"><CardTitle className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Colors</CardTitle></CardHeader>
+            <CardContent className="px-3 pb-3">
+              <Select value={paletteKey} onValueChange={(v) => { if (v) setPaletteKey(v); }}>
+                <SelectTrigger className="w-full h-8 bg-white text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.keys(COLOR_PALETTES).map((k) => (
+                    <SelectItem key={k} value={k}>
+                      <div className="flex items-center gap-1.5">
+                        <span>{k}</span>
+                        <span className="flex gap-0.5">
+                          {(COLOR_PALETTES[k] || []).slice(0, 5).map((c, i) => (
+                            <span key={i} className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: c }} />
+                          ))}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </CardContent>
           </Card>
 
