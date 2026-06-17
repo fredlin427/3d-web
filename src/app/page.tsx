@@ -7,8 +7,9 @@ import { formatDate, getStatusBadgeVariant, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LoadingState } from "@/components/shared/loading-state";
+import { HierarchicalTable } from "@/components/charts/hierarchical-table";
 import { toast } from "sonner";
-import { FolderOpen, Clock, CheckCircle2, AlertTriangle, Package, TrendingDown, Download, ImageIcon, ArrowRight, Camera, Presentation, X, Database, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { FolderOpen, Clock, CheckCircle2, AlertTriangle, Package, TrendingDown, Download, ImageIcon, ArrowRight, Camera, Presentation, X, Database, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { DEPARTMENT_LABELS } from "@/lib/constants";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LabelList } from "recharts";
@@ -121,14 +122,12 @@ export default function DashboardPage() {
   const [presTableData, setPresTableData] = useState<{ label: string; value: number; children: { label: string; value: number }[] }[]>([]);
   const [presTableTotal, setPresTableTotal] = useState(0);
   const [presTableLoading, setPresTableLoading] = useState(false);
-  const [presExpandedGroups, setPresExpandedGroups] = useState<Set<string>>(new Set());
 
   // Auto-reset group-by when source changes
   useEffect(() => {
     const fields = TABLE_SOURCE_FIELDS[presTableSource] || [];
     setPresTableGroupBy(fields[0] || "");
     setPresTableSubGroup(fields[1] || "");
-    setPresExpandedGroups(new Set());
   }, [presTableSource]);
 
   // Fetch dynamic table data
@@ -153,8 +152,6 @@ export default function DashboardPage() {
           if (json.data.stacked) {
             setPresTableData(json.data.stacked);
             setPresTableTotal(json.data.total);
-            const first5 = new Set<string>(json.data.stacked.slice(0, 5).map((d: any) => d.label as string));
-            setPresExpandedGroups(first5);
           } else {
             setPresTableData(json.data.rows.map((r: any) => ({ label: r.label, value: r.value, children: [] })));
             setPresTableTotal(json.data.total);
@@ -165,12 +162,6 @@ export default function DashboardPage() {
     };
     fetchTable();
   }, [presMode, presChart, presTableSource, presTableGroupBy, presTableSubGroup, dateFrom, dateTo, deptFilter]);
-
-  const togglePresGroup = (label: string) => {
-    const next = new Set(presExpandedGroups);
-    if (next.has(label)) next.delete(label); else next.add(label);
-    setPresExpandedGroups(next);
-  };
 
   // Check if alerts were dismissed today
   useEffect(() => {
@@ -585,61 +576,18 @@ export default function DashboardPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="px-0 pb-2">
-                    {presTableLoading ? (
-                      <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 text-indigo-500 animate-spin" /></div>
-                    ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-y border-slate-100 bg-slate-50/50"><th className="text-left py-2.5 px-5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">{TABLE_FIELD_LABELS[presTableGroupBy] || presTableGroupBy}</th><th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider w-20">Count</th><th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider w-16">%</th>{presTableSubGroup ? <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Sub-items</th> : null}</tr>
-                          </thead>
-                          <tbody>
-                            {presTableData.flatMap((group, gi) => {
-                              const pct = presTableTotal > 0 ? ((group.value / presTableTotal) * 100).toFixed(1) : "0";
-                              const hasChildren = group.children && group.children.length > 0;
-                              const rows = [
-                                <tr key={`r-${group.label}`}
-                                  className={cn("border-b border-slate-50 hover:bg-slate-50 transition-colors",
-                                    hasChildren && "cursor-pointer", presExpandedGroups.has(group.label) && "bg-indigo-50/30")}
-                                  onClick={() => hasChildren && togglePresGroup(group.label)}>
-                                  <td className="py-2.5 px-5 font-semibold text-slate-800">
-                                    <div className="flex items-center gap-2">
-                                      {hasChildren && (
-                                        presExpandedGroups.has(group.label)
-                                          ? <ChevronDown className="h-3.5 w-3.5 text-slate-300 shrink-0" />
-                                          : <ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" />
-                                      )}
-                                      <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: TABLE_COLORS_24[gi % 24] }} />
-                                      {group.label}
-                                    </div>
-                                  </td>
-                                  <td className="py-2.5 px-3 text-right font-bold text-slate-900 tabular-nums">{group.value}</td>
-                                  <td className="py-2.5 px-3 text-right text-slate-500 tabular-nums">{pct}%</td>
-                                  {presTableSubGroup ? <td className="py-2.5 px-3 text-xs text-slate-400">{hasChildren ? `${group.children.length} sub-items` : "—"}</td> : null}
-                                </tr>,
-                              ];
-                              if (hasChildren && presExpandedGroups.has(group.label)) {
-                                group.children.forEach((child, ci) => {
-                                  const childPct = group.value > 0 ? ((child.value / group.value) * 100).toFixed(1) : "0";
-                                  rows.push(
-                                    <tr key={`${group.label}-${child.label}`} className="border-b border-slate-50 bg-slate-50/30">
-                                      <td className="py-2 pl-12 pr-5 text-sm text-slate-600">
-                                        <span className="inline-block w-2 h-2 rounded-sm shrink-0 mr-2 align-middle" style={{ backgroundColor: TABLE_COLORS_24[ci % 24], opacity: 0.7 }} />
-                                        {child.label}
-                                      </td>
-                                      <td className="py-2 px-3 text-right font-semibold text-slate-700 tabular-nums">{child.value}</td>
-                                      <td className="py-2 px-3 text-right text-xs text-slate-500 tabular-nums">{childPct}%</td>
-                                      {presTableSubGroup ? <td className="py-2 px-3 text-xs text-slate-400">{childPct}% of group</td> : null}
-                                    </tr>
-                                  );
-                                });
-                              }
-                              return rows;
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
+                    <div className="px-2">
+                      {presTableLoading ? (
+                        <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 text-indigo-500 animate-spin" /></div>
+                      ) : (
+                        <HierarchicalTable
+                          data={presTableData}
+                          total={presTableTotal}
+                          primaryLabel={TABLE_FIELD_LABELS[presTableGroupBy] || presTableGroupBy}
+                          secondaryLabel={presTableSubGroup ? TABLE_FIELD_LABELS[presTableSubGroup] || presTableSubGroup : ""}
+                          colors={TABLE_COLORS_24} />
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               </div>

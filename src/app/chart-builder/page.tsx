@@ -13,9 +13,12 @@ import {
 import {
   BarChart3, PieChartIcon, TrendingUp, AreaChartIcon, Camera, RefreshCw,
   Database, SlidersHorizontal, LayoutGrid, Loader2, Layers,
-  Table2, ChevronDown, ChevronRight, ListTree,
+  Table2, ListTree,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { HierarchicalTable } from "@/components/charts/hierarchical-table";
+import type { StackedRow } from "@/components/charts/hierarchical-table";
+import { DrillDownPanel } from "@/components/charts/drill-down-panel";
 
 // ─── 24-color Excel-style palette ─────────────────────────────────
 const CHART_COLORS = [
@@ -81,7 +84,6 @@ export default function ChartBuilderPage() {
   const [filterField, setFilterField] = useState("");
   const [filterValue, setFilterValue] = useState("");
   const [showTable, setShowTable] = useState(true);
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(800);
 
@@ -90,6 +92,7 @@ export default function ChartBuilderPage() {
   const [stackedData, setStackedData] = useState<{ label: string; value: number; children: { label: string; value: number }[] }[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
+  const [drillGroup, setDrillGroup] = useState<StackedRow | null>(null);
 
   const stackKeys = useMemo(() => {
     const s = new Set<string>();
@@ -134,7 +137,6 @@ export default function ChartBuilderPage() {
     setFilterField("");
     setFilterValue("");
     setStackBy("");
-    setExpandedGroups(new Set());
   }, [source]);
 
   // Fetch data
@@ -161,9 +163,6 @@ export default function ChartBuilderPage() {
         if (json.data.stacked) {
           setStackedData(json.data.stacked);
           setChartData([]);
-          // auto-expand first 5 groups
-          const first5 = new Set<string>(json.data.stacked.slice(0, 5).map((d: any) => d.label as string));
-          setExpandedGroups(first5);
         } else {
           setChartData(json.data.rows);
           setStackedData([]);
@@ -218,12 +217,6 @@ export default function ChartBuilderPage() {
     });
   };
 
-  const toggleGroup = (label: string) => {
-    const next = new Set(expandedGroups);
-    if (next.has(label)) next.delete(label); else next.add(label);
-    setExpandedGroups(next);
-  };
-
   // ─── Render chart ──────────────────────────────────────────────
   // Pre-computed grouped data for non-stacked charts with sub-groups
   const groupedFlatData = useMemo(() => {
@@ -271,7 +264,13 @@ export default function ChartBuilderPage() {
               <Tooltip cursor={{ fill: "#f8f9fc" }} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
               {hasStack && <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />}
               {barKeys.map((key, i) => (
-                <Bar key={key} dataKey={key} fill={CHART_COLORS[i % CHART_COLORS.length]} name={key} radius={[6, 6, 0, 0]}>
+                <Bar key={key} dataKey={key} fill={CHART_COLORS[i % CHART_COLORS.length]} name={key} radius={[6, 6, 0, 0]}
+                  onClick={(d: any) => {
+                    if (!hasStack || !d?.label) return;
+                    const group = stackedData.find((s) => s.label === d.label);
+                    if (group && group.children.length > 0) setDrillGroup(group);
+                  }}
+                  cursor={hasStack ? "pointer" : "default"}>
                   {!hasStack && !manyItems && <LabelList dataKey="value" position="top" style={{ fontSize: 12, fontWeight: 700, fill: "#475569" }} />}
                 </Bar>
               ))}
@@ -294,7 +293,13 @@ export default function ChartBuilderPage() {
               <Tooltip cursor={{ fill: "#f8f9fc" }} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
               {hasStack && <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />}
               {barKeys.map((key, i) => (
-                <Bar key={key} dataKey={key} fill={CHART_COLORS[i % CHART_COLORS.length]} name={key} radius={[0, 6, 6, 0]} />
+                <Bar key={key} dataKey={key} fill={CHART_COLORS[i % CHART_COLORS.length]} name={key} radius={[0, 6, 6, 0]}
+                  onClick={(d: any) => {
+                    if (!hasStack || !d?.label) return;
+                    const group = stackedData.find((s) => s.label === d.label);
+                    if (group && group.children.length > 0) setDrillGroup(group);
+                  }}
+                  cursor={hasStack ? "pointer" : "default"} />
               ))}
             </BarChart>
           </ResponsiveContainer>
@@ -312,7 +317,13 @@ export default function ChartBuilderPage() {
                   if (percent < 0.04) return "";
                   return `${truncateLabel(label, 12)} (${value}, ${(percent * 100).toFixed(0)}%)`;
                 }}
-                labelLine={{ stroke: "#cbd5e1" }}>
+                labelLine={{ stroke: "#cbd5e1" }}
+                onClick={(d: any) => {
+                  if (!hasStack || !d?.label) return;
+                  const group = stackedData.find((s) => s.label === d.label);
+                  if (group && group.children.length > 0) setDrillGroup(group);
+                }}
+                style={{ cursor: hasStack ? "pointer" : "default" }}>
                 {pieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="#fff" strokeWidth={1.5} />)}
               </Pie>
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
@@ -334,7 +345,13 @@ export default function ChartBuilderPage() {
                   if (percent < 0.04) return "";
                   return `${truncateLabel(label, 12)} (${value}, ${(percent * 100).toFixed(0)}%)`;
                 }}
-                labelLine={{ stroke: "#cbd5e1" }}>
+                labelLine={{ stroke: "#cbd5e1" }}
+                onClick={(d: any) => {
+                  if (!hasStack || !d?.label) return;
+                  const group = stackedData.find((s) => s.label === d.label);
+                  if (group && group.children.length > 0) setDrillGroup(group);
+                }}
+                style={{ cursor: hasStack ? "pointer" : "default" }}>
                 {donutData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="#fff" strokeWidth={1.5} />)}
               </Pie>
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
@@ -560,7 +577,7 @@ export default function ChartBuilderPage() {
             </CardContent>
           </Card>
 
-          {/* ─── Breakdown Table ────────────────────────────── */}
+          {/* ─── Hierarchical Breakdown Table (always expanded) ─── */}
           {showTable && hasStacked && (
             <Card className="border-0 shadow-sm">
               <CardHeader className="pb-2 pt-4 px-5">
@@ -569,57 +586,11 @@ export default function ChartBuilderPage() {
                   Breakdown: {FIELD_LABELS[xField] || xField} → {FIELD_LABELS[stackBy] || stackBy}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="px-0 pb-2">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-y border-slate-100 bg-slate-50/50">
-                        <th className="text-left py-2.5 px-5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Group</th>
-                        <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider w-20">Total</th>
-                        <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Sub-items</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {stackedData.flatMap((group, gi) => {
-                        const rows = [
-                          <tr key={`g-${group.label}`}
-                            className={cn("border-b border-slate-50 cursor-pointer hover:bg-slate-50 transition-colors",
-                              expandedGroups.has(group.label) && "bg-indigo-50/30")}
-                            onClick={() => toggleGroup(group.label)}>
-                            <td className="py-2.5 px-5 font-semibold text-slate-800">
-                              <div className="flex items-center gap-2">
-                                {expandedGroups.has(group.label)
-                                  ? <ChevronDown className="h-3.5 w-3.5 text-slate-300" />
-                                  : <ChevronRight className="h-3.5 w-3.5 text-slate-300" />}
-                                <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: CHART_COLORS[gi % CHART_COLORS.length] }} />
-                                {group.label}
-                              </div>
-                            </td>
-                            <td className="py-2.5 px-3 text-right font-bold text-slate-900 tabular-nums">{group.value}</td>
-                            <td className="py-2.5 px-3 text-xs text-slate-400">{group.children.length} sub-items</td>
-                          </tr>,
-                        ];
-                        if (expandedGroups.has(group.label)) {
-                          group.children.forEach((child, ci) => {
-                            rows.push(
-                              <tr key={`${group.label}-${child.label}`} className="border-b border-slate-50 bg-slate-50/30">
-                                <td className="py-2 pl-12 pr-5 text-sm text-slate-600">
-                                  <span className="inline-block w-2 h-2 rounded-sm shrink-0 mr-2 align-middle" style={{ backgroundColor: CHART_COLORS[ci % CHART_COLORS.length], opacity: 0.7 }} />
-                                  {child.label}
-                                </td>
-                                <td className="py-2 px-3 text-right font-semibold text-slate-700 tabular-nums">{child.value}</td>
-                                <td className="py-2 px-3 text-xs text-slate-400">
-                                  {group.value > 0 ? ((child.value / group.value) * 100).toFixed(1) : 0}% of group
-                                </td>
-                              </tr>
-                            );
-                          });
-                        }
-                        return rows;
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+              <CardContent className="px-2 pb-4">
+                <HierarchicalTable data={stackedData} total={total}
+                  primaryLabel={FIELD_LABELS[xField] || xField}
+                  secondaryLabel={FIELD_LABELS[stackBy] || stackBy}
+                  colors={CHART_COLORS} />
               </CardContent>
             </Card>
           )}
@@ -629,46 +600,33 @@ export default function ChartBuilderPage() {
             <Card className="border-0 shadow-sm">
               <CardHeader className="pb-2 pt-4 px-5">
                 <CardTitle className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                  <Table2 className="h-4 w-4 text-indigo-500" />
-                  Data Table
+                  <Table2 className="h-4 w-4 text-indigo-500" />Data Table
                 </CardTitle>
               </CardHeader>
-              <CardContent className="px-0 pb-2">
-                <div className="overflow-x-auto max-h-80 overflow-y-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-y border-slate-100 bg-slate-50/50 sticky top-0">
-                        <th className="text-left py-2.5 px-5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">#</th>
-                        <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                          {FIELD_LABELS[xField] || xField}
-                        </th>
-                        <th className="text-right py-2.5 px-5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Count</th>
-                        <th className="text-right py-2.5 px-5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">%</th>
-                        <th className="py-2.5 px-3" /> {/* bar */}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {chartData.map((d, i) => {
-                        const pct = flatTotal > 0 ? ((d.value / flatTotal) * 100).toFixed(1) : "0";
-                        return (
-                          <tr key={d.label} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                            <td className="py-2.5 px-5 text-xs text-slate-400 tabular-nums">{i + 1}</td>
-                            <td className="py-2.5 px-3 font-medium text-slate-700">{d.label}</td>
-                            <td className="py-2.5 px-5 text-right font-bold text-slate-900 tabular-nums">{d.value}</td>
-                            <td className="py-2.5 px-5 text-right text-slate-500 tabular-nums">{pct}%</td>
-                            <td className="py-2.5 px-3">
-                              <div className="w-full bg-slate-100 rounded-full h-1.5 max-w-[120px]">
-                                <div className="h-1.5 rounded-full" style={{ width: `${pct}%`, backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+              <CardContent className="px-2 pb-4">
+                <HierarchicalTable
+                  data={chartData.map((d) => ({ label: d.label, value: d.value, children: [] }))}
+                  total={flatTotal}
+                  primaryLabel={FIELD_LABELS[xField] || xField}
+                  secondaryLabel=""
+                  colors={CHART_COLORS} />
               </CardContent>
             </Card>
+          )}
+
+          {/* ─── Drill-Down Panel ───────────────────────────── */}
+          {drillGroup && (
+            <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-black/20 backdrop-blur-sm" onClick={() => setDrillGroup(null)}>
+              <div className="w-full max-w-lg mx-4" onClick={(e) => e.stopPropagation()}>
+                <DrillDownPanel
+                  title={drillGroup.label}
+                  groupTotal={drillGroup.value}
+                  grandTotal={total}
+                  children={drillGroup.children}
+                  onClose={() => setDrillGroup(null)}
+                  colors={CHART_COLORS} />
+              </div>
+            </div>
           )}
         </div>
       </div>
