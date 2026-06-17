@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,6 +15,14 @@ import {
   Database, SlidersHorizontal, LayoutGrid, Loader2, Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// ─── 24-color Excel-style palette ─────────────────────────────────
+const CHART_COLORS = [
+  "#4472C4","#ED7D31","#A5A5A5","#FFC000","#5B9BD5","#70AD47",
+  "#F15C5C","#9B59B6","#1ABC9C","#E67E22","#2E75B6","#C55A11",
+  "#7F7F7F","#A68A00","#3B6FB6","#D44C2B","#8C8C8C","#E5A800",
+  "#4A90D9","#F07020","#B0B0B0","#FFB300","#6BA5DA","#85C056",
+];
 
 // ─── Config ────────────────────────────────────────────────────
 const SOURCES = [
@@ -49,8 +57,6 @@ const FIELD_LABELS: Record<string, string> = {
   "material.brand": "→ Material Brand", "material.status": "→ Material Status",
 };
 
-const CHART_COLORS = ["#4f46e5","#06b6d4","#10b981","#f59e0b","#ef4444","#8b5cf6","#ec4899","#f97316","#84cc16","#6366f1","#14b8a6","#d946ef"];
-
 // ─── Source-specific field lists ────────────────────────────────
 const SOURCE_FIELDS: Record<string, string[]> = {
   cases: ["department","category","purpose","currentStatus","priority","technician","printingParty","hospital","rank","modelType","requiredService"],
@@ -58,6 +64,10 @@ const SOURCE_FIELDS: Record<string, string[]> = {
   usage: ["unit","staffName","printerOrTank","case.department","case.category","case.currentStatus","case.purpose","material.materialName","material.category","material.brand","material.status"],
   transactions: ["transactionType","staffName","material.materialName","material.category","material.brand","material.status"],
 };
+
+function truncateLabel(s: string, max: number = 18): string {
+  return s.length > max ? s.slice(0, max) + "…" : s;
+}
 
 export default function ChartBuilderPage() {
   // Config state
@@ -69,21 +79,33 @@ export default function ChartBuilderPage() {
   const [dateTo, setDateTo] = useState("");
   const [filterField, setFilterField] = useState("");
   const [filterValue, setFilterValue] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(800);
 
   // Data state
   const [chartData, setChartData] = useState<{ label: string; value: number }[]>([]);
   const [stackedData, setStackedData] = useState<{ label: string; value: number; children: { label: string; value: number }[] }[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
+
   const stackKeys = useMemo(() => {
     const s = new Set<string>();
     stackedData.forEach((d) => d.children.forEach((c) => s.add(c.label)));
     return Array.from(s);
   }, [stackedData]);
 
+  // Measure container width for adaptive chart sizing
+  useEffect(() => {
+    const measure = () => {
+      if (containerRef.current) setContainerWidth(containerRef.current.offsetWidth);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
   // Filter options (loaded from settings)
   const [filterOptions, setFilterOptions] = useState<Record<string, string[]>>({});
-
   useEffect(() => {
     fetch("/api/settings")
       .then((r) => r.json())
@@ -112,7 +134,7 @@ export default function ChartBuilderPage() {
   }, [source]);
 
   // Fetch data
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -147,47 +169,53 @@ export default function ChartBuilderPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [source, xField, stackBy, dateFrom, dateTo, filterField, filterValue]);
 
-  // Auto-fetch on config change
-  useEffect(() => { fetchData(); }, [source, xField, stackBy, dateFrom, dateTo, filterField, filterValue]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Export PNG
+  // Export PNG (wrapped in requestAnimationFrame for reliable SVG capture)
   const exportPNG = () => {
-    const container = document.getElementById("chart-builder-preview");
-    const svg = container?.querySelector("svg");
-    if (!svg) { toast.error("No chart to export"); return; }
-    const clone = svg.cloneNode(true) as SVGElement;
-    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-    const rect = svg.getBoundingClientRect();
-    const w = rect.width || 800;
-    const h = rect.height || 500;
-    const svgData = new XMLSerializer().serializeToString(clone);
-    const canvas = document.createElement("canvas");
-    canvas.width = w * 2; canvas.height = h * 2;
-    const ctx = canvas.getContext("2d")!;
-    ctx.scale(2, 2);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, w, h);
-    const img = new Image();
-    img.onload = () => {
-      ctx.drawImage(img, 0, 0, w, h);
-      canvas.toBlob((blob) => {
-        if (!blob) return;
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url; a.download = `chart-${source}-${xField}.png`;
-        a.click(); URL.revokeObjectURL(url);
-        toast.success("Chart exported");
-      }, "image/png");
-    };
-    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const container = document.getElementById("chart-builder-preview");
+        const svg = container?.querySelector("svg");
+        if (!svg) { toast.error("No chart to export — try again"); return; }
+        const clone = svg.cloneNode(true) as SVGElement;
+        clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+        const rect = svg.getBoundingClientRect();
+        const w = rect.width || 800;
+        const h = rect.height || 500;
+        const svgData = new XMLSerializer().serializeToString(clone);
+        const canvas = document.createElement("canvas");
+        canvas.width = w * 2; canvas.height = h * 2;
+        const ctx = canvas.getContext("2d")!;
+        ctx.scale(2, 2);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, w, h);
+        const img = new Image();
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0, w, h);
+          canvas.toBlob((blob) => {
+            if (!blob) return;
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url; a.download = `chart-${source}-${xField}.png`;
+            a.click(); URL.revokeObjectURL(url);
+            toast.success("Chart exported");
+          }, "image/png");
+        };
+        img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+      });
+    });
   };
 
   // ─── Render chart ──────────────────────────────────────────────
   const renderChart = () => {
     const data = chartData.length > 0 ? chartData : stackedData.map((d) => ({ label: d.label, value: d.value }));
     const hasData = chartData.length > 0 || stackedData.length > 0;
+    const manyItems = data.length > 15;
+    const pieRadius = Math.min(containerWidth * 0.35, 240);
+
     if (!hasData) {
       return (
         <div className="flex items-center justify-center h-full">
@@ -201,92 +229,122 @@ export default function ChartBuilderPage() {
     }
 
     switch (chartType) {
+      // ── BAR ──────────────────────────────────────────────────
       case "bar":
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} barSize={Math.max(16, Math.min(48, 600 / data.length))}>
+            <BarChart data={data} barSize={Math.max(12, Math.min(48, 600 / Math.max(data.length, 1)))}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f2f6" />
-              <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} angle={data.length > 8 ? -35 : 0} textAnchor={data.length > 8 ? "end" : "middle"} height={data.length > 8 ? 80 : 40} />
+              <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false}
+                angle={data.length > 8 ? -35 : 0} textAnchor={data.length > 8 ? "end" : "middle"} height={data.length > 8 ? 80 : 40}
+                tickFormatter={(v) => truncateLabel(v)} />
               <YAxis tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
               <Tooltip cursor={{ fill: "#f8f9fc" }} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
               <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                <LabelList dataKey="value" position="top" style={{ fontSize: 12, fontWeight: 600, fill: "#4f46e5" }} />
+                {!manyItems && <LabelList dataKey="value" position="top" style={{ fontSize: 11, fontWeight: 600, fill: "#4f46e5" }} />}
                 {data.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         );
 
+      // ── BAR HORIZONTAL ───────────────────────────────────────
       case "barH":
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} layout="vertical" barSize={Math.max(16, Math.min(36, 500 / data.length))} margin={{ left: 20, right: 50 }}>
+            <BarChart data={data} layout="vertical" barSize={Math.max(12, Math.min(36, 500 / Math.max(data.length, 1)))} margin={{ left: 20, right: 60 }}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f2f6" />
               <XAxis type="number" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
-              <YAxis type="category" dataKey="label" width={140} tick={{ fontSize: 12, fontWeight: 500, fill: "#334155" }} axisLine={false} tickLine={false} />
-              <Tooltip cursor={{ fill: "#f8f9fc" }} />
+              <YAxis type="category" dataKey="label" width={140} tick={{ fontSize: 12, fontWeight: 500, fill: "#334155" }} axisLine={false} tickLine={false}
+                tickFormatter={(v) => truncateLabel(v)} />
+              <Tooltip cursor={{ fill: "#f8f9fc" }} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
               <Bar dataKey="value" radius={[0, 6, 6, 0]}>
-                <LabelList dataKey="value" position="right" style={{ fontSize: 12, fontWeight: 700 }} />
+                {!manyItems && <LabelList dataKey="value" position="right" style={{ fontSize: 12, fontWeight: 700 }} />}
                 {data.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         );
 
-      case "pie":
+      // ── PIE ──────────────────────────────────────────────────
+      case "pie": {
+        const pieData = data.map((d) => ({ ...d, pctLabel: `${((d.value / Math.max(total, 1)) * 100).toFixed(0)}%` }));
         return (
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <Pie data={data} dataKey="value" nameKey="label" cx="50%" cy="50%" outerRadius={200} label={({ label, value, percent }: any) => `${label} (${(percent * 100).toFixed(0)}%)`} labelLine={{ stroke: "#cbd5e1" }}>
-                {data.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+              <Pie data={pieData} dataKey="value" nameKey="label" cx="50%" cy="50%" outerRadius={pieRadius}
+                label={({ label, value, percent }: any) => {
+                  if (percent < 0.04) return ""; // skip tiny slices
+                  return `${truncateLabel(label, 12)} (${value}, ${(percent * 100).toFixed(0)}%)`;
+                }}
+                labelLine={{ stroke: "#cbd5e1" }}>
+                {pieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="#fff" strokeWidth={1} />)}
               </Pie>
-              <Tooltip />
+              <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
             </PieChart>
           </ResponsiveContainer>
         );
+      }
 
-      case "donut":
+      // ── DONUT ────────────────────────────────────────────────
+      case "donut": {
+        const donutData = data.map((d) => ({ ...d, pctLabel: `${((d.value / Math.max(total, 1)) * 100).toFixed(0)}%` }));
+        const donutRadius = pieRadius;
         return (
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <Pie data={data} dataKey="value" nameKey="label" cx="50%" cy="50%" innerRadius={85} outerRadius={200} label={({ label, value, percent }: any) => `${label}: ${value} (${(percent * 100).toFixed(0)}%)`} labelLine={{ stroke: "#cbd5e1" }}>
-                {data.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+              <Pie data={donutData} dataKey="value" nameKey="label" cx="50%" cy="50%"
+                innerRadius={donutRadius * 0.42} outerRadius={donutRadius}
+                label={({ label, value, percent }: any) => {
+                  if (percent < 0.04) return "";
+                  return `${truncateLabel(label, 12)} (${value}, ${(percent * 100).toFixed(0)}%)`;
+                }}
+                labelLine={{ stroke: "#cbd5e1" }}>
+                {donutData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="#fff" strokeWidth={1} />)}
               </Pie>
-              <Tooltip />
+              <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
             </PieChart>
           </ResponsiveContainer>
         );
+      }
 
+      // ── LINE ─────────────────────────────────────────────────
       case "line":
         return (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f2f6" />
-              <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} angle={data.length > 8 ? -35 : 0} textAnchor={data.length > 8 ? "end" : "middle"} height={data.length > 8 ? 80 : 40} />
+              <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false}
+                angle={data.length > 8 ? -35 : 0} textAnchor={data.length > 8 ? "end" : "middle"} height={data.length > 8 ? 80 : 40}
+                tickFormatter={(v) => truncateLabel(v)} />
               <YAxis tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
-              <Tooltip />
-              <Line type="monotone" dataKey="value" stroke="#4f46e5" strokeWidth={3} dot={{ fill: "#4f46e5", r: 5 }} activeDot={{ r: 7 }}>
-                <LabelList dataKey="value" position="top" style={{ fontSize: 11, fontWeight: 600 }} />
+              <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
+              <Line type="monotone" dataKey="value" stroke="#4f46e5" strokeWidth={3} dot={{ fill: "#4f46e5", r: 4 }} activeDot={{ r: 7 }}>
+                {!manyItems && <LabelList dataKey="value" position="top" style={{ fontSize: 11, fontWeight: 600 }} />}
               </Line>
             </LineChart>
           </ResponsiveContainer>
         );
 
+      // ── AREA ─────────────────────────────────────────────────
       case "area":
         return (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f2f6" />
-              <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} angle={data.length > 8 ? -35 : 0} textAnchor={data.length > 8 ? "end" : "middle"} height={data.length > 8 ? 80 : 40} />
+              <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false}
+                angle={data.length > 8 ? -35 : 0} textAnchor={data.length > 8 ? "end" : "middle"} height={data.length > 8 ? 80 : 40}
+                tickFormatter={(v) => truncateLabel(v)} />
               <YAxis tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
-              <Tooltip />
+              <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
               <Area type="monotone" dataKey="value" stroke="#4f46e5" strokeWidth={2} fill="#4f46e5" fillOpacity={0.12} />
             </AreaChart>
           </ResponsiveContainer>
         );
 
+      // ── STACKED ──────────────────────────────────────────────
       case "stacked": {
-        const colors = ["#4f46e5","#06b6d4","#10b981","#f59e0b","#ef4444","#8b5cf6","#ec4899","#f97316","#84cc16","#6366f1"];
+        const stackColors = CHART_COLORS;
         const flatData = stackedData.map((d) => {
           const row: Record<string, unknown> = { label: d.label };
           d.children.forEach((c) => { row[c.label] = c.value; });
@@ -296,11 +354,14 @@ export default function ChartBuilderPage() {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={flatData} barSize={Math.max(20, Math.min(60, 600 / Math.max(stackedData.length, 1)))}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f2f6" />
-              <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} angle={stackedData.length > 6 ? -35 : 0} textAnchor={stackedData.length > 6 ? "end" : "middle"} height={stackedData.length > 6 ? 80 : 40} />
+              <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false}
+                angle={stackedData.length > 6 ? -35 : 0} textAnchor={stackedData.length > 6 ? "end" : "middle"} height={stackedData.length > 6 ? 80 : 40}
+                tickFormatter={(v) => truncateLabel(v)} />
               <YAxis tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
-              <Tooltip />
+              <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
+              <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} />
               {stackKeys.map((key, i) => (
-                <Bar key={key} dataKey={key} stackId="a" fill={colors[i % colors.length]} name={key} />
+                <Bar key={key} dataKey={key} stackId="a" fill={stackColors[i % stackColors.length]} name={key} />
               ))}
             </BarChart>
           </ResponsiveContainer>
@@ -382,23 +443,21 @@ export default function ChartBuilderPage() {
             </CardContent>
           </Card>
 
-          {/* Stack By (second level) */}
-          {["usage","transactions"].includes(source) && (
-            <Card className="border-0 shadow-sm">
-              <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold flex items-center gap-2"><Layers className="h-4 w-4 text-indigo-500" />Stack By (sub-group)</CardTitle></CardHeader>
-              <CardContent>
-                <Select value={stackBy} onValueChange={(v) => { setStackBy(v || ""); if (v) setChartType("stacked"); }}>
-                  <SelectTrigger className="w-full h-9 bg-white"><SelectValue placeholder="None (flat)" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">None (flat)</SelectItem>
-                    {fields.filter((f) => f !== xField).map((f) => (
-                      <SelectItem key={f} value={f}>{FIELD_LABELS[f] || f}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </CardContent>
-            </Card>
-          )}
+          {/* Stack By (now available for ALL sources) */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold flex items-center gap-2"><Layers className="h-4 w-4 text-indigo-500" />Stack By (sub-group)</CardTitle></CardHeader>
+            <CardContent>
+              <Select value={stackBy} onValueChange={(v) => { setStackBy(v || ""); if (v) setChartType("stacked"); }}>
+                <SelectTrigger className="w-full h-9 bg-white"><SelectValue placeholder="None (flat)" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None (flat)</SelectItem>
+                  {fields.filter((f) => f !== xField).map((f) => (
+                    <SelectItem key={f} value={f}>{FIELD_LABELS[f] || f}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
 
           {/* Filters */}
           <Card className="border-0 shadow-sm">
@@ -444,11 +503,11 @@ export default function ChartBuilderPage() {
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-base font-bold">{title}</CardTitle>
-                <p className="text-xs text-slate-400 mt-0.5">{chartData.length} groups · {total} total</p>
+                <p className="text-xs text-slate-400 mt-0.5">{chartData.length || stackedData.length} groups · {total} total</p>
               </div>
             </CardHeader>
             <CardContent>
-              <div id="chart-builder-preview" className="w-full" style={{ height: 520 }}>
+              <div id="chart-builder-preview" ref={containerRef} className="w-full" style={{ height: 520 }}>
                 {loading ? (
                   <div className="flex items-center justify-center h-full">
                     <Loader2 className="h-8 w-8 text-indigo-500 animate-spin" />

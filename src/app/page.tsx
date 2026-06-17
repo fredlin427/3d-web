@@ -89,7 +89,7 @@ export default function DashboardPage() {
   const [alerts, setAlerts] = useState<any[]>([]);
   const [dismissed, setDismissed] = useState(false);
   const [presMode, setPresMode] = useState(false);
-  const [presChart, setPresChart] = useState<"sunburst" | "bars" | "table">("sunburst");
+  const [presChart, setPresChart] = useState<"treemap" | "bars" | "table">("treemap");
 
   // Check if alerts were dismissed today
   useEffect(() => {
@@ -319,7 +319,7 @@ export default function DashboardPage() {
               {/* Chart type tabs */}
               <div className="flex bg-slate-100 rounded-lg p-1 mr-2">
                 {([
-                  { key: "sunburst" as const, label: "Sunburst" },
+                  { key: "treemap" as const, label: "Treemap" },
                   { key: "bars" as const, label: "Grouped Bars" },
                   { key: "table" as const, label: "Table" },
                 ]).map((t) => (
@@ -354,145 +354,50 @@ export default function DashboardPage() {
 
           {/* ─── MAIN CHART AREA ──────────────────────────────────── */}
           <div id="pres-main-chart">
-            {presChart === "sunburst" && (
+            {presChart === "treemap" && (
               <div className="space-y-6">
-                {/* Chart A: Departments — Black pie with bold labels */}
-                <div className="rounded-xl overflow-hidden" style={{ background: "#000000" }}>
-                  <div style={{ fontFamily: "Calibri, Arial, sans-serif", background: "#000000", padding: 24 }}>
-                    <div style={{ textAlign: "center", fontSize: 28, fontWeight: 700, color: "#595959", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>
-                      Cases by Department
-                    </div>
-                    <ResponsiveContainer width="100%" height={480}>
-                      <PieChart>
-                        <Pie data={data?.caseByDepartment || []} dataKey="count" nameKey="department" cx="62%" cy="55%" outerRadius={190} startAngle={90} endAngle={-270} stroke="none"
-                          label={({ cx, cy, midAngle, outerRadius, payload, percent }: any) => {
-                            const ma = midAngle || 0; const r = (outerRadius || 190) + 45;
-                            const x = (cx || 0) + r * Math.cos(-ma * Math.PI / 180);
-                            const y = (cy || 0) + r * Math.sin(-ma * Math.PI / 180);
-                            return (
-                              <text x={x} y={y} textAnchor="middle" dominantBaseline="central" style={{ fontFamily: "Calibri, Arial, sans-serif", fontSize: 14, fontWeight: 700, fill: "#ffffff" }}>
-                                <tspan x={x} dy="-0.5em">{payload?.department || ""}</tspan>
-                                <tspan x={x} dy="1.3em" style={{ fontSize: 18 }}>{payload?.count || 0} ({((percent || 0) * 100).toFixed(0)}%)</tspan>
-                              </text>
-                            );
-                          }}
-                          labelLine={({ cx, cy, midAngle, outerRadius }: any) => {
-                            const ma = midAngle || 0; const or = outerRadius || 190;
-                            const mx = (cx || 0) + (or + 12) * Math.cos(-ma * Math.PI / 180);
-                            const my = (cy || 0) + (or + 12) * Math.sin(-ma * Math.PI / 180);
-                            const ex = (cx || 0) + (or + 40) * Math.cos(-ma * Math.PI / 180);
-                            const ey = (cy || 0) + (or + 40) * Math.sin(-ma * Math.PI / 180);
-                            return <polyline points={`${mx},${my} ${ex},${ey}`} stroke="#A6A6A6" strokeWidth={1.5} fill="none" />;
-                          }}
-                        >
-                          {["#5B9BD5","#ED7D31","#A5A5A5","#FFC000","#4472C4","#70AD47","#2E75B6","#C55A11","#7F7F7F","#A68A00"].map((c, i) => <Cell key={i} fill={c} />)}
-                        </Pie>
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                {/* Chart B: Sunburst — outer ring with ALL purpose items labeled on side */}
-                <div className="rounded-xl overflow-hidden border" style={{ backgroundColor: "#ffffff", backgroundImage: "repeating-linear-gradient(135deg, #f4f4f4 0px, #f4f4f4 1px, #ffffff 1px, #ffffff 5px)" }}>
-                  <div style={{ fontFamily: "Calibri, Arial, sans-serif", padding: 24 }}>
-                    <div style={{ textAlign: "center", fontSize: 22, fontWeight: 400, color: "#666666", marginBottom: 12 }}>
-                      Application Categories
-                    </div>
-                    <div style={{ display: "flex" }}>
-                      {/* Sunburst chart — left 60% */}
-                      <div style={{ flex: "0 0 60%" }}>
-                        <ResponsiveContainer width="100%" height={520}>
-                          <PieChart>
-                            <Pie data={(data?.caseByPurpose || []).map((p) => ({ name: p.purpose, value: p.count, parent: p.category }))}
-                              dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={180} outerRadius={265} startAngle={90} endAngle={-270} stroke="#ffffff" strokeWidth={1.5}
-                              label={({ cx, cy, midAngle, innerRadius, outerRadius, payload, percent }: any) => {
-                                const RADIAN = Math.PI / 180;
-                                const ma = midAngle || 0;
-                                const ir = innerRadius || 180;
-                                const or = outerRadius || 265;
-                                const midR = (ir + or) / 2;
-                                const x = (cx || 0) + midR * Math.cos(-ma * RADIAN);
-                                const y = (cy || 0) + midR * Math.sin(-ma * RADIAN);
-                                const pct = ((percent || 0) * 100).toFixed(0);
-                                // Only show label if slice is big enough (>3%)
-                                if ((percent || 0) < 0.03) return null;
-                                return (
-                                  <text x={x} y={y} textAnchor="middle" dominantBaseline="central" style={{ fontFamily: "Calibri, Arial, sans-serif", fontSize: 11, fontWeight: 600, fill: "#1e293b" }}>
-                                    <tspan x={x} dy="-0.3em">{payload?.name || ""}</tspan>
-                                    <tspan x={x} dy="1.2em" style={{ fontSize: 13, fontWeight: 700 }}>{payload?.value || 0} ({pct}%)</tspan>
-                                  </text>
-                                );
-                              }}
-                              labelLine={({ cx, cy, midAngle, outerRadius, payload, percent }: any) => {
-                                if ((percent || 0) >= 0.03) return <g />; // No leader line for big slices
-                                const RADIAN = Math.PI / 180;
-                                const ma = midAngle || 0;
-                                const or = outerRadius || 265;
-                                const mx = (cx || 0) + (or + 5) * Math.cos(-ma * RADIAN);
-                                const my = (cy || 0) + (or + 5) * Math.sin(-ma * RADIAN);
-                                const ex = (cx || 0) + (or + 35) * Math.cos(-ma * RADIAN);
-                                const ey = (cy || 0) + (or + 35) * Math.sin(-ma * RADIAN);
-                                return (
-                                  <g>
-                                    <polyline points={`${mx},${my} ${ex},${ey}`} stroke="#94a3b8" strokeWidth={1} fill="none" />
-                                    <text x={ex} y={ey} textAnchor={ex > (cx || 0) ? "start" : "end"} dominantBaseline="central"
-                                      style={{ fontFamily: "Calibri, Arial, sans-serif", fontSize: 10, fontWeight: 600, fill: "#334155" }}>
-                                      <tspan x={ex} dy="-0.4em">{payload?.name || ""}</tspan>
-                                      <tspan x={ex} dy="1.1em" style={{ fontWeight: 700, fill: "#64748b" }}>{payload?.value || 0} ({(percent * 100).toFixed(0)}%)</tspan>
-                                    </text>
-                                  </g>
-                                );
-                              }}>
-                              {(data?.caseByPurpose || []).map((p, i) => {
-                                const catShades: Record<string, string[]> = {
-                                  "Clinical Use": ["#70AD47","#8CC168","#A9D18E"],
-                                  "Rehabilitation": ["#5B9BD5","#7FB3E0","#9DC3E6","#BDD7EE","#D2E4F4","#E1EDF9","#F0F5FB"],
-                                  "Training/ Education": ["#FFC000","#FFD34D","#FFE699"],
-                                };
-                                const shades = catShades[p.category] || ["#A5A5A5"];
-                                const siblings = (data?.caseByPurpose || []).filter((x: any) => x.category === p.category);
-                                const idx = siblings.findIndex((x: any) => x.purpose === p.purpose);
-                                return <Cell key={i} fill={shades[idx % shades.length]} />;
-                              })}
-                            </Pie>
-                            <Pie data={data?.caseBycategory || []} dataKey="count" nameKey="category" cx="50%" cy="50%" innerRadius={100} outerRadius={180} startAngle={90} endAngle={-270} stroke="#ffffff" strokeWidth={1.5}
-                              label={({ payload }: any) => payload?.category || ""} labelLine={false}>
-                              {["#70AD47","#5B9BD5","#FFC000"].map((c, i) => <Cell key={i} fill={c} />)}
-                            </Pie>
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
-                      {/* Legend — right 40%: list ALL purpose items with counts */}
-                      <div style={{ flex: "0 0 40%", paddingLeft: 16, overflowY: "auto", maxHeight: 520 }}>
-                        {(["Clinical Use","Rehabilitation","Training/ Education"] as const).map((cat) => {
-                          const catColor = { "Clinical Use": "#70AD47", "Rehabilitation": "#5B9BD5", "Training/ Education": "#FFC000" }[cat];
-                          const catTotal = (data?.caseBycategory || []).find((c: any) => c.category === cat)?.count || 0;
-                          const purposes = (data?.caseByPurpose || []).filter((p: any) => p.category === cat);
-                          return (
-                            <div key={cat} style={{ marginBottom: 14 }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                                <div style={{ width: 10, height: 10, backgroundColor: catColor, borderRadius: 2 }} />
-                                <span style={{ fontSize: 13, fontWeight: 700, color: "#334155", fontFamily: "Calibri, Arial, sans-serif" }}>{cat}</span>
-                                <span style={{ fontSize: 12, color: "#94a3b8", fontFamily: "Calibri, Arial, sans-serif" }}>({catTotal})</span>
-                              </div>
+                {/* Treemap — custom layout, no fragile JSX-in-labels */}
+                <div className="rounded-xl bg-white border shadow-sm" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
+                  <div className="p-6">
+                    <p className="text-center text-lg font-bold text-slate-500 uppercase tracking-wide mb-6">Cases by Category & Purpose</p>
+                    <div className="flex gap-4" style={{ minHeight: 420 }}>
+                      {(["Clinical Use","Rehabilitation","Training/ Education"] as const).map((cat) => {
+                        const catColor = { "Clinical Use": "#70AD47", "Rehabilitation": "#5B9BD5", "Training/ Education": "#FFC000" }[cat];
+                        const purposes = (data?.caseByPurpose || []).filter((p: any) => p.category === cat);
+                        const catTotal = purposes.reduce((s: number, x: any) => s + x.count, 0);
+                        const grandTotal = (data?.caseByPurpose || []).reduce((s: number, x: any) => s + x.count, 0);
+                        const catWidth = grandTotal > 0 ? Math.max(20, (catTotal / grandTotal) * 100) : 33;
+                        return (
+                          <div key={cat} style={{ flex: `0 0 ${catWidth}%` }} className="flex flex-col gap-2">
+                            <div className="flex items-center gap-2 pb-2 border-b-2" style={{ borderColor: catColor }}>
+                              <div className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: catColor }} />
+                              <span className="text-sm font-bold text-slate-700">{cat}</span>
+                              <span className="text-xs text-slate-400">{catTotal}</span>
+                            </div>
+                            <div className="flex-1 flex flex-col gap-2">
                               {purposes.map((p: any, j: number) => {
                                 const shades = {
                                   "Clinical Use": ["#A9D18E","#8CC168","#70AD47"],
-                                  "Rehabilitation": ["#BDD7EE","#9DC3E6","#7FB3E0","#5B9BD5","#D2E4F4","#E1EDF9","#F0F5FB"],
+                                  "Rehabilitation": ["#BDD7EE","#9DC3E6","#7FB3E0","#5B9BD5","#D2E4F4","#E1EDF9"],
                                   "Training/ Education": ["#FFE699","#FFD34D","#FFC000"],
                                 }[cat] || ["#D9D9D9"];
+                                const shadeIdx = j % shades.length;
+                                const boxH = catTotal > 0 ? Math.max(48, (p.count / catTotal) * 100) : 0;
                                 return (
-                                  <div key={p.purpose} style={{ display: "flex", alignItems: "center", gap: 6, paddingLeft: 16, paddingTop: 2 }}>
-                                    <div style={{ width: 8, height: 8, backgroundColor: shades[j % shades.length], borderRadius: 2, flexShrink: 0 }} />
-                                    <span style={{ fontSize: 12, color: "#475569", fontFamily: "Calibri, Arial, sans-serif", flex: 1 }}>{p.purpose}</span>
-                                    <span style={{ fontSize: 12, fontWeight: 700, color: "#334155", fontFamily: "Calibri, Arial, sans-serif", minWidth: 28, textAlign: "right" }}>{p.count}</span>
+                                  <div key={p.purpose} style={{ flex: `0 0 ${Math.max(6, boxH)}%`, backgroundColor: shades[shadeIdx], borderRadius: 8 }}
+                                    className="flex flex-col items-center justify-center text-center px-1.5 min-h-[52px] transition-shadow hover:shadow-lg cursor-default">
+                                    <span className="text-xs font-bold text-white leading-tight">{p.purpose}</span>
+                                    <span className="text-[22px] font-extrabold text-white leading-tight">{p.count}</span>
+                                    <span className="text-[10px] text-white/80">
+                                      {catTotal > 0 ? ((p.count / catTotal) * 100).toFixed(1) : 0}% of {cat}
+                                    </span>
                                   </div>
                                 );
                               })}
                             </div>
-                          );
-                        })}
-                      </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
