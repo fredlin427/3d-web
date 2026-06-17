@@ -37,6 +37,10 @@ copy ".next\*.json" "deploy-package\.next\" >nul 2>&1
 :: Copy public folder (uploaded images etc)
 if exist "public" xcopy /e /i /q "public" "deploy-package\public"
 
+:: Copy Prisma client (required for runtime)
+echo   Copying Prisma client...
+xcopy /e /i /q "node_modules\@prisma" "deploy-package\node_modules\@prisma"
+
 :: Copy seeded database
 copy dev.db "deploy-package\" >nul
 copy dev.db-journal "deploy-package\" >nul 2>&1
