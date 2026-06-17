@@ -241,7 +241,7 @@ export default function ChartBuilderPage() {
     const flatData = chartData.length > 0 ? chartData : stackedData.map((d) => ({ label: d.label, value: d.value }));
     const hasData = chartData.length > 0 || hasStack;
     const manyItems = flatData.length > 15;
-    const pieRadius = Math.min(containerWidth * 0.35, 240);
+    const pieRadius = Math.min(containerWidth * 0.28, 180);
 
     if (!hasData) {
       return (
@@ -262,7 +262,7 @@ export default function ChartBuilderPage() {
         const barKeys = hasStack ? stackKeys : ["value"];
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={barData} barSize={Math.max(14, Math.min(40, 800 / Math.max(barData.length * (barKeys.length + 1), 1)))}>
+            <BarChart data={barData} barSize={Math.max(10, Math.min(44, 750 / Math.max(barData.length * (barKeys.length + 1), 1)))} barCategoryGap="20%">
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f2f6" />
               <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false}
                 angle={barData.length > 8 ? -35 : 0} textAnchor={barData.length > 8 ? "end" : "middle"} height={barData.length > 8 ? 80 : 40}
@@ -306,7 +306,7 @@ export default function ChartBuilderPage() {
         const pieData = flatData.map((d) => ({ ...d, pctLabel: `${((d.value / Math.max(total, 1)) * 100).toFixed(0)}%` }));
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
+            <PieChart margin={{ top: 0, right: 40, bottom: 10, left: 40 }}>
               <Pie data={pieData} dataKey="value" nameKey="label" cx="50%" cy="45%" outerRadius={pieRadius}
                 label={({ label, value, percent }: any) => {
                   if (percent < 0.04) return "";
@@ -327,7 +327,7 @@ export default function ChartBuilderPage() {
         const donutData = flatData.map((d) => ({ ...d, pctLabel: `${((d.value / Math.max(total, 1)) * 100).toFixed(0)}%` }));
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
+            <PieChart margin={{ top: 0, right: 40, bottom: 10, left: 40 }}>
               <Pie data={donutData} dataKey="value" nameKey="label" cx="50%" cy="45%"
                 innerRadius={pieRadius * 0.42} outerRadius={pieRadius}
                 label={({ label, value, percent }: any) => {
@@ -395,7 +395,7 @@ export default function ChartBuilderPage() {
         const stackColors = CHART_COLORS;
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={groupedFlatData} barSize={Math.max(24, Math.min(56, 600 / Math.max(stackedData.length, 1)))}>
+            <BarChart data={groupedFlatData} barSize={Math.max(20, Math.min(56, 700 / Math.max(stackedData.length, 1)))} barCategoryGap="20%">
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f2f6" />
               <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false}
                 angle={stackedData.length > 6 ? -35 : 0} textAnchor={stackedData.length > 6 ? "end" : "middle"} height={stackedData.length > 6 ? 80 : 40}
