@@ -226,64 +226,51 @@ export default function ChartBuilderPage() {
   const exportPNG = () => {
     const container = document.getElementById("chart-builder-preview");
     const svg = container?.querySelector("svg");
-    if (!svg) { toast.error("No chart found — try refreshing the chart first"); return; }
-
-    // Clone the SVG and ensure it has proper namespace + computed styles inlined
-    const clone = svg.cloneNode(true) as SVGElement;
-    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-
-    // Copy computed styles from original to clone to avoid blank rendering
-    const originalChildren = svg.querySelectorAll("*");
-    const cloneChildren = clone.querySelectorAll("*");
-    originalChildren.forEach((el, i) => {
-      const cloneEl = cloneChildren[i];
-      if (!cloneEl) return;
-      const computed = window.getComputedStyle(el as Element);
-      // Only copy critical visual styles
-      const cssText = [
-        `fill:${computed.fill}`, `stroke:${computed.stroke}`, `stroke-width:${computed.strokeWidth}`,
-        `opacity:${computed.opacity}`, `font-size:${computed.fontSize}`, `font-weight:${computed.fontWeight}`,
-        `font-family:${computed.fontFamily}`, `text-anchor:${computed.textAnchor || "start"}`,
-      ].join(";");
-      (cloneEl as SVGElement).setAttribute("style", cssText);
-    });
+    if (!svg) { toast.error("No chart to export"); return; }
 
     const rect = svg.getBoundingClientRect();
-    const w = Math.ceil(rect.width) || 800;
-    const h = Math.ceil(rect.height) || 520;
+    const w = Math.max(400, Math.ceil(rect.width));
+    const h = Math.max(300, Math.ceil(rect.height));
+
+    // Clone and fix critical attributes
+    const clone = svg.cloneNode(true) as SVGElement;
+    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
     clone.setAttribute("width", String(w));
     clone.setAttribute("height", String(h));
+    if (!clone.getAttribute("viewBox")) clone.setAttribute("viewBox", `0 0 ${w} ${h}`);
 
-    const svgString = new XMLSerializer().serializeToString(clone);
-    const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
-    const url = URL.createObjectURL(svgBlob);
+    // Add white background rect as first child
+    const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    bg.setAttribute("width", "100%");
+    bg.setAttribute("height", "100%");
+    bg.setAttribute("fill", "#ffffff");
+    clone.insertBefore(bg, clone.firstChild);
 
+    const svgData = new XMLSerializer().serializeToString(clone);
     const canvas = document.createElement("canvas");
     canvas.width = w * 2;
     canvas.height = h * 2;
     const ctx = canvas.getContext("2d")!;
-    ctx.scale(2, 2);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, w, h);
 
     const img = new Image();
     img.onload = () => {
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.scale(2, 2);
       ctx.drawImage(img, 0, 0, w, h);
-      URL.revokeObjectURL(url);
       canvas.toBlob((blob) => {
         if (!blob) { toast.error("Export failed"); return; }
         const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
         a.download = `chart-${source}-${xField}.png`;
+        a.href = URL.createObjectURL(blob);
         a.click();
-        toast.success("Chart exported");
+        toast.success("Chart exported as PNG");
       }, "image/png");
     };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      toast.error("Export failed — try a different chart type");
-    };
-    img.src = url;
+    img.onerror = () => toast.error("Export failed — try refreshing the chart first");
+    // UTF-8 safe base64 encoding
+    const base64 = btoa(String.fromCharCode(...new TextEncoder().encode(svgData)));
+    img.src = `data:image/svg+xml;base64,${base64}`;
   };
 
   // ─── Render chart ──────────────────────────────────────────────
