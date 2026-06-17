@@ -135,6 +135,9 @@ export default function ChartBuilderPage() {
 
   // Fetch data
   const fetchData = useCallback(async () => {
+    // Guard: skip if xField not valid for current source (prevents race with auto-switch)
+    const validFields = SOURCE_FIELDS[source] || [];
+    if (!validFields.includes(xField) && !validFields.some((f) => f.endsWith(`.${xField}`))) return;
     setLoading(true);
     try {
       const params = new URLSearchParams();
