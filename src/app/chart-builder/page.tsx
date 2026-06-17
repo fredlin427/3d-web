@@ -232,19 +232,30 @@ export default function ChartBuilderPage() {
     const w = Math.max(400, Math.ceil(rect.width));
     const h = Math.max(300, Math.ceil(rect.height));
 
-    // Clone and fix critical attributes
+    // Deep clone the SVG
     const clone = svg.cloneNode(true) as SVGElement;
     clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
     clone.setAttribute("width", String(w));
     clone.setAttribute("height", String(h));
-    if (!clone.getAttribute("viewBox")) clone.setAttribute("viewBox", `0 0 ${w} ${h}`);
+    clone.setAttribute("viewBox", `0 0 ${w} ${h}`);
 
-    // Add white background rect as first child
-    const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-    bg.setAttribute("width", "100%");
-    bg.setAttribute("height", "100%");
-    bg.setAttribute("fill", "#ffffff");
-    clone.insertBefore(bg, clone.firstChild);
+    // Collect ALL CSS rules from the document and embed in the clone
+    let cssText = "";
+    try {
+      for (const sheet of Array.from(document.styleSheets)) {
+        try {
+          for (const rule of Array.from(sheet.cssRules || [])) {
+            cssText += rule.cssText + "\n";
+          }
+        } catch (_) { /* cross-origin stylesheet, skip */ }
+      }
+    } catch (_) { /* ignore */ }
+    // Also add explicit white background
+    cssText += "svg { background: white; }";
+
+    const styleEl = document.createElementNS("http://www.w3.org/2000/svg", "style");
+    styleEl.textContent = cssText;
+    clone.insertBefore(styleEl, clone.firstChild);
 
     const svgData = new XMLSerializer().serializeToString(clone);
     const canvas = document.createElement("canvas");
@@ -254,9 +265,9 @@ export default function ChartBuilderPage() {
 
     const img = new Image();
     img.onload = () => {
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.scale(2, 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, w, h);
       ctx.drawImage(img, 0, 0, w, h);
       canvas.toBlob((blob) => {
         if (!blob) { toast.error("Export failed"); return; }
@@ -268,7 +279,6 @@ export default function ChartBuilderPage() {
       }, "image/png");
     };
     img.onerror = () => toast.error("Export failed — try refreshing the chart first");
-    // UTF-8 safe base64 encoding
     const base64 = btoa(String.fromCharCode(...new TextEncoder().encode(svgData)));
     img.src = `data:image/svg+xml;base64,${base64}`;
   };
