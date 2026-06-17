@@ -455,7 +455,7 @@ export default function DashboardPage() {
                               <span className="text-sm font-bold text-slate-700">{cat}</span>
                               <span className="text-xs text-slate-400">{catTotal}</span>
                             </div>
-                            <div className="flex-1 flex flex-col gap-2">
+                            <div className="flex-1 flex flex-col gap-2 overflow-y-auto">
                               {purposes.map((p: any, j: number) => {
                                 const shades = {
                                   "Clinical Use": ["#A9D18E","#8CC168","#70AD47"],
@@ -463,13 +463,12 @@ export default function DashboardPage() {
                                   "Training/ Education": ["#FFE699","#FFD34D","#FFC000"],
                                 }[cat] || ["#D9D9D9"];
                                 const shadeIdx = j % shades.length;
-                                const boxH = catTotal > 0 ? Math.max(48, (p.count / catTotal) * 100) : 0;
                                 return (
-                                  <div key={p.purpose} style={{ flex: `0 0 ${Math.max(6, boxH)}%`, backgroundColor: shades[shadeIdx], borderRadius: 8 }}
-                                    className="flex flex-col items-center justify-center text-center px-1.5 min-h-[52px] transition-shadow hover:shadow-lg cursor-default">
-                                    <span className="text-xs font-bold text-white leading-tight">{p.purpose}</span>
-                                    <span className="text-[22px] font-extrabold text-white leading-tight">{p.count}</span>
-                                    <span className="text-[10px] text-white/80">
+                                  <div key={p.purpose} style={{ flex: `${p.count} 0 auto`, backgroundColor: shades[shadeIdx], borderRadius: 8, minHeight: 56 }}
+                                    className="flex flex-col items-center justify-center text-center px-2 transition-shadow hover:shadow-lg cursor-default">
+                                    <span className="text-[13px] font-bold text-white leading-tight">{p.purpose}</span>
+                                    <span className="text-[20px] font-extrabold text-white leading-tight mt-0.5">{p.count}</span>
+                                    <span className="text-[10px] text-white/70">
                                       {catTotal > 0 ? ((p.count / catTotal) * 100).toFixed(1) : 0}% of {cat}
                                     </span>
                                   </div>
