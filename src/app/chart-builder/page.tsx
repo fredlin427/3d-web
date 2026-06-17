@@ -554,34 +554,43 @@ export default function ChartBuilderPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {stackedData.map((group, gi) => (
-                        <>
-                          <tr key={group.label}
+                      {stackedData.flatMap((group, gi) => {
+                        const rows = [
+                          <tr key={`g-${group.label}`}
                             className={cn("border-b border-slate-50 cursor-pointer hover:bg-slate-50 transition-colors",
                               expandedGroups.has(group.label) && "bg-indigo-50/30")}
                             onClick={() => toggleGroup(group.label)}>
-                            <td className="py-2.5 px-5 font-semibold text-slate-800 flex items-center gap-2">
-                              <span className="text-slate-300">{expandedGroups.has(group.label) ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}</span>
-                              <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: CHART_COLORS[gi % CHART_COLORS.length] }} />
-                              {group.label}
+                            <td className="py-2.5 px-5 font-semibold text-slate-800">
+                              <div className="flex items-center gap-2">
+                                {expandedGroups.has(group.label)
+                                  ? <ChevronDown className="h-3.5 w-3.5 text-slate-300" />
+                                  : <ChevronRight className="h-3.5 w-3.5 text-slate-300" />}
+                                <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: CHART_COLORS[gi % CHART_COLORS.length] }} />
+                                {group.label}
+                              </div>
                             </td>
                             <td className="py-2.5 px-3 text-right font-bold text-slate-900 tabular-nums">{group.value}</td>
                             <td className="py-2.5 px-3 text-xs text-slate-400">{group.children.length} sub-items</td>
-                          </tr>
-                          {expandedGroups.has(group.label) && group.children.map((child, ci) => (
-                            <tr key={`${group.label}-${child.label}`} className="border-b border-slate-50 bg-slate-50/30">
-                              <td className="py-2 pl-12 pr-5 text-sm text-slate-600">
-                                <span className="inline-block w-2 h-2 rounded-sm shrink-0 mr-2" style={{ backgroundColor: CHART_COLORS[ci % CHART_COLORS.length], opacity: 0.7 }} />
-                                {child.label}
-                              </td>
-                              <td className="py-2 px-3 text-right font-semibold text-slate-700 tabular-nums">{child.value}</td>
-                              <td className="py-2 px-3 text-xs text-slate-400">
-                                {group.value > 0 ? ((child.value / group.value) * 100).toFixed(1) : 0}% of group
-                              </td>
-                            </tr>
-                          ))}
-                        </>
-                      ))}
+                          </tr>,
+                        ];
+                        if (expandedGroups.has(group.label)) {
+                          group.children.forEach((child, ci) => {
+                            rows.push(
+                              <tr key={`${group.label}-${child.label}`} className="border-b border-slate-50 bg-slate-50/30">
+                                <td className="py-2 pl-12 pr-5 text-sm text-slate-600">
+                                  <span className="inline-block w-2 h-2 rounded-sm shrink-0 mr-2 align-middle" style={{ backgroundColor: CHART_COLORS[ci % CHART_COLORS.length], opacity: 0.7 }} />
+                                  {child.label}
+                                </td>
+                                <td className="py-2 px-3 text-right font-semibold text-slate-700 tabular-nums">{child.value}</td>
+                                <td className="py-2 px-3 text-xs text-slate-400">
+                                  {group.value > 0 ? ((child.value / group.value) * 100).toFixed(1) : 0}% of group
+                                </td>
+                              </tr>
+                            );
+                          });
+                        }
+                        return rows;
+                      })}
                     </tbody>
                   </table>
                 </div>
