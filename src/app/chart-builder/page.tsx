@@ -73,6 +73,14 @@ function truncateLabel(s: string, max: number = 18): string {
   return s.length > max ? s.slice(0, max) + "…" : s;
 }
 
+function lighten(hex: string, amount: number): string {
+  const num = parseInt(hex.replace("#", ""), 16);
+  const r = Math.min(255, (num >> 16) + Math.round(255 * amount));
+  const g = Math.min(255, ((num >> 8) & 0x00FF) + Math.round(255 * amount));
+  const b = Math.min(255, (num & 0x0000FF) + Math.round(255 * amount));
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
+}
+
 export default function ChartBuilderPage() {
   // Config state
   const [source, setSource] = useState("cases");
@@ -309,8 +317,68 @@ export default function ChartBuilderPage() {
         );
       }
 
-      // ── PIE ──────────────────────────────────────────────────
+      // ── PIE (single-level or two-level donut) ────────────────
       case "pie": {
+        if (hasStack) {
+          // ── Two-level composite donut: inner=primary, outer=sub-items ──
+          const outerData: any[] = [];
+          stackedData.forEach((group, gi) => {
+            group.children.forEach((child, ci) => {
+              outerData.push({
+                name: child.label,
+                value: child.value,
+                parent: group.label,
+                parentIdx: gi,
+                childIdx: ci,
+              });
+            });
+          });
+          // Generate shades for each primary group
+          const groupShades: Record<number, string[]> = {};
+          stackedData.forEach((_, gi) => {
+            const base = CHART_COLORS[gi % CHART_COLORS.length];
+            groupShades[gi] = [base, lighten(base, 0.15), lighten(base, 0.3), lighten(base, 0.45), lighten(base, 0.6)];
+          });
+          const r = pieRadius;
+          const innerR = r * 0.55;
+          const outerR = r * 1.15;
+          return (
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart margin={{ top: 10, right: 50, bottom: 10, left: 50 }}>
+                {/* Inner ring: primary groups */}
+                <Pie data={flatData} dataKey="value" nameKey="label" cx="50%" cy="50%"
+                  innerRadius={innerR * 0.35} outerRadius={innerR} stroke="#fff" strokeWidth={1.5}
+                  label={({ index }: any) => {
+                    const d = flatData[index ?? -1];
+                    return d ? d.label : "";
+                  }} labelLine={false}>
+                  {flatData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                </Pie>
+                {/* Outer ring: sub-items, colored by parent */}
+                <Pie data={outerData} dataKey="value" nameKey="name" cx="50%" cy="50%"
+                  innerRadius={innerR + 4} outerRadius={outerR} stroke="#fff" strokeWidth={1}
+                  label={({ name, percent }: any) => {
+                    if (percent < 0.03) return "";
+                    return `${truncateLabel(name || "", 14)} (${(percent * 100).toFixed(0)}%)`;
+                  }}
+                  labelLine={{ stroke: "#cbd5e1", strokeWidth: 0.5 }}
+                  onClick={(d: any) => {
+                    const group = stackedData.find((s) => s.label === d.parent);
+                    if (group) setDrillGroup(group);
+                  }}
+                  style={{ cursor: "pointer" }}>
+                  {outerData.map((d, i) => {
+                    const shades = groupShades[d.parentIdx] || [CHART_COLORS[d.parentIdx % CHART_COLORS.length]];
+                    return <Cell key={i} fill={shades[d.childIdx % shades.length]} />;
+                  })}
+                </Pie>
+                <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
+                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 12 }} />
+              </PieChart>
+            </ResponsiveContainer>
+          );
+        }
+        // ── Single-level pie (no sub-group) ──
         const pieData = flatData.map((d) => ({ ...d, pctLabel: `${((d.value / Math.max(total, 1)) * 100).toFixed(0)}%` }));
         return (
           <ResponsiveContainer width="100%" height="100%">
@@ -320,13 +388,7 @@ export default function ChartBuilderPage() {
                   if (percent < 0.04) return "";
                   return `${truncateLabel(label, 12)} (${value}, ${(percent * 100).toFixed(0)}%)`;
                 }}
-                labelLine={{ stroke: "#cbd5e1" }}
-                onClick={(d: any) => {
-                  if (!hasStack || !d?.label) return;
-                  const group = stackedData.find((s) => s.label === d.label);
-                  if (group && group.children.length > 0) setDrillGroup(group);
-                }}
-                style={{ cursor: hasStack ? "pointer" : "default" }}>
+                labelLine={{ stroke: "#cbd5e1" }}>
                 {pieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="#fff" strokeWidth={1.5} />)}
               </Pie>
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
@@ -336,8 +398,59 @@ export default function ChartBuilderPage() {
         );
       }
 
-      // ── DONUT ────────────────────────────────────────────────
+      // ── DONUT (single-level or two-level) ────────────────────
       case "donut": {
+        if (hasStack) {
+          // Two-level composite donut (same as pie but donut style)
+          const outerData: any[] = [];
+          stackedData.forEach((group, gi) => {
+            group.children.forEach((child, ci) => {
+              outerData.push({ name: child.label, value: child.value, parent: group.label, parentIdx: gi, childIdx: ci });
+            });
+          });
+          const groupShades: Record<number, string[]> = {};
+          stackedData.forEach((_, gi) => {
+            const base = CHART_COLORS[gi % CHART_COLORS.length];
+            groupShades[gi] = [base, lighten(base, 0.15), lighten(base, 0.3), lighten(base, 0.45), lighten(base, 0.6)];
+          });
+          const r = pieRadius;
+          const innerR = r * 0.55;
+          const outerR = r * 1.15;
+          return (
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart margin={{ top: 10, right: 50, bottom: 10, left: 50 }}>
+                <Pie data={flatData} dataKey="value" nameKey="label" cx="50%" cy="50%"
+                  innerRadius={innerR * 0.35} outerRadius={innerR} stroke="#fff" strokeWidth={1.5}
+                  label={({ index }: any) => {
+                    const d = flatData[index ?? -1];
+                    return d ? d.label : "";
+                  }} labelLine={false}>
+                  {flatData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                </Pie>
+                <Pie data={outerData} dataKey="value" nameKey="name" cx="50%" cy="50%"
+                  innerRadius={innerR + 4} outerRadius={outerR} stroke="#fff" strokeWidth={1}
+                  label={({ name, percent }: any) => {
+                    if (percent < 0.03) return "";
+                    return `${truncateLabel(name || "", 14)} (${(percent * 100).toFixed(0)}%)`;
+                  }}
+                  labelLine={{ stroke: "#cbd5e1", strokeWidth: 0.5 }}
+                  onClick={(d: any) => {
+                    const group = stackedData.find((s) => s.label === d.parent);
+                    if (group) setDrillGroup(group);
+                  }}
+                  style={{ cursor: "pointer" }}>
+                  {outerData.map((d, i) => {
+                    const shades = groupShades[d.parentIdx] || [CHART_COLORS[d.parentIdx % CHART_COLORS.length]];
+                    return <Cell key={i} fill={shades[d.childIdx % shades.length]} />;
+                  })}
+                </Pie>
+                <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
+                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 12 }} />
+              </PieChart>
+            </ResponsiveContainer>
+          );
+        }
+        // Single-level donut
         const donutData = flatData.map((d) => ({ ...d, pctLabel: `${((d.value / Math.max(total, 1)) * 100).toFixed(0)}%` }));
         return (
           <ResponsiveContainer width="100%" height="100%">
@@ -348,13 +461,7 @@ export default function ChartBuilderPage() {
                   if (percent < 0.04) return "";
                   return `${truncateLabel(label, 12)} (${value}, ${(percent * 100).toFixed(0)}%)`;
                 }}
-                labelLine={{ stroke: "#cbd5e1" }}
-                onClick={(d: any) => {
-                  if (!hasStack || !d?.label) return;
-                  const group = stackedData.find((s) => s.label === d.label);
-                  if (group && group.children.length > 0) setDrillGroup(group);
-                }}
-                style={{ cursor: hasStack ? "pointer" : "default" }}>
+                labelLine={{ stroke: "#cbd5e1" }}>
                 {donutData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="#fff" strokeWidth={1.5} />)}
               </Pie>
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
