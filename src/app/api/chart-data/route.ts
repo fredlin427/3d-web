@@ -20,7 +20,7 @@ const SOURCE_CONFIG: Record<string, { model: string; dateField: string; textFiel
     dateField: "usageDate",
     textFields: ["unit", "staffName", "printerOrTank"],
     numFields: ["quantityUsed"],
-    joinFields: ["case.department", "case.category", "case.currentStatus", "material.materialName", "material.category", "material.brand", "material.status"],
+    joinFields: ["case.department", "case.category", "case.currentStatus", "case.purpose", "material.materialName", "material.category", "material.brand", "material.status"],
   },
   transactions: {
     model: "stockTransaction",
@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
     const dateTo = searchParams.get("dateTo") || "";
     const filterField = searchParams.get("filterField") || "";
     const filterValue = searchParams.get("filterValue") || "";
+    const stackBy = searchParams.get("stackBy") || "";
     const limit = parseInt(searchParams.get("limit") || "20", 10);
 
     const config = SOURCE_CONFIG[source];
@@ -80,24 +81,50 @@ export async function GET(request: NextRequest) {
     if (isJoinField) {
       const [relation, relField] = xField.split(".");
       const includeMap: Record<string, any> = {
-        case: { include: { case: { select: { department: true, category: true, currentStatus: true } } } },
+        case: { include: { case: { select: { department: true, category: true, currentStatus: true, purpose: true } } } },
         material: { include: { material: { select: { materialName: true, category: true, brand: true, status: true } } } },
       };
+
+      // Determine stackBy field for two-level grouping
+      let stackRelation = "", stackField = "";
+      if (stackBy && (config.joinFields || []).includes(stackBy)) {
+        [stackRelation, stackField] = stackBy.split(".");
+      }
 
       if (source === "usage") {
         const records = await (prisma.caseMaterialUsage as any).findMany({
           where,
-          ...(includeMap[relation] || {}),
+          include: { case: { select: { department: true, category: true, currentStatus: true, purpose: true } }, material: { select: { materialName: true, category: true, brand: true, status: true } } },
           orderBy: { usageDate: "desc" },
           take: 5000,
         });
-        const map = new Map<string, number>();
-        for (const r of records) {
-          const label = relation === "case" ? (r.case?.[relField] || "(empty)") : (r.material?.[relField] || "(empty)");
-          const val = map.get(label) || 0;
-          map.set(label, val + 1);
+
+        if (stackField) {
+          // Two-level grouping: primary → stack
+          const map = new Map<string, Map<string, number>>();
+          for (const r of records) {
+            const primary = relation === "case" ? (r.case?.[relField] || "(empty)") : (r.material?.[relField] || "(empty)");
+            const secondary = stackRelation === "case" ? (r.case?.[stackField] || "(empty)") : (r.material?.[stackField] || "(empty)");
+            if (!map.has(primary)) map.set(primary, new Map());
+            const inner = map.get(primary)!;
+            inner.set(secondary, (inner.get(secondary) || 0) + 1);
+          }
+          const stacked: { label: string; value: number; children: { label: string; value: number }[] }[] = [];
+          for (const [primary, innerMap] of map) {
+            const total = Array.from(innerMap.values()).reduce((s, v) => s + v, 0);
+            const children = Array.from(innerMap.entries()).map(([l, v]) => ({ label: l, value: v }));
+            stacked.push({ label: primary, value: total, children });
+          }
+          stacked.sort((a, b) => b.value - a.value);
+          return NextResponse.json({ success: true, data: { source, xField, stackBy, yMode, stacked, total: stacked.reduce((s, r) => s + r.value, 0) } });
+        } else {
+          const map = new Map<string, number>();
+          for (const r of records) {
+            const label = relation === "case" ? (r.case?.[relField] || "(empty)") : (r.material?.[relField] || "(empty)");
+            map.set(label, (map.get(label) || 0) + 1);
+          }
+          result = Array.from(map.entries()).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, limit);
         }
-        result = Array.from(map.entries()).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, limit);
       } else if (source === "transactions") {
         const records = await (prisma.stockTransaction as any).findMany({
           where,

@@ -12,7 +12,7 @@ import {
 } from "recharts";
 import {
   BarChart3, PieChartIcon, TrendingUp, AreaChartIcon, Download, Camera, RefreshCw,
-  Database, SlidersHorizontal, LayoutGrid, Loader2,
+  Database, SlidersHorizontal, LayoutGrid, Loader2, Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +31,7 @@ const CHART_TYPES = [
   { key: "donut", label: "Donut", icon: PieChartIcon },
   { key: "line", label: "Line", icon: TrendingUp },
   { key: "area", label: "Area", icon: AreaChartIcon },
+  { key: "stacked", label: "Stacked", icon: Layers },
 ];
 
 const FIELD_LABELS: Record<string, string> = {
@@ -43,7 +44,7 @@ const FIELD_LABELS: Record<string, string> = {
   unit: "Unit", staffName: "Staff", printerOrTank: "Printer/Tank",
   transactionType: "Transaction Type",
   "case.department": "→ Case Dept", "case.category": "→ Case Category",
-  "case.currentStatus": "→ Case Status",
+  "case.currentStatus": "→ Case Status", "case.purpose": "→ Case Purpose",
   "material.materialName": "→ Material Name", "material.category": "→ Material Category",
   "material.brand": "→ Material Brand", "material.status": "→ Material Status",
 };
@@ -54,7 +55,7 @@ const CHART_COLORS = ["#4f46e5","#06b6d4","#10b981","#f59e0b","#ef4444","#8b5cf6
 const SOURCE_FIELDS: Record<string, string[]> = {
   cases: ["department","category","purpose","currentStatus","priority","technician","printingParty","hospital","rank","modelType","requiredService"],
   materials: ["category","brand","materialType","status","colour","supplier","storageLocation","unit"],
-  usage: ["unit","staffName","printerOrTank","case.department","case.category","case.currentStatus","material.materialName","material.category","material.brand","material.status"],
+  usage: ["unit","staffName","printerOrTank","case.department","case.category","case.currentStatus","case.purpose","material.materialName","material.category","material.brand","material.status"],
   transactions: ["transactionType","staffName","material.materialName","material.category","material.brand","material.status"],
 };
 
@@ -62,6 +63,7 @@ export default function ChartBuilderPage() {
   // Config state
   const [source, setSource] = useState("cases");
   const [xField, setXField] = useState("department");
+  const [stackBy, setStackBy] = useState("");
   const [chartType, setChartType] = useState("bar");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -70,8 +72,14 @@ export default function ChartBuilderPage() {
 
   // Data state
   const [chartData, setChartData] = useState<{ label: string; value: number }[]>([]);
+  const [stackedData, setStackedData] = useState<{ label: string; value: number; children: { label: string; value: number }[] }[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
+  const stackKeys = useMemo(() => {
+    const s = new Set<string>();
+    stackedData.forEach((d) => d.children.forEach((c) => s.add(c.label)));
+    return Array.from(s);
+  }, [stackedData]);
 
   // Filter options (loaded from settings)
   const [filterOptions, setFilterOptions] = useState<Record<string, string[]>>({});
@@ -117,10 +125,17 @@ export default function ChartBuilderPage() {
         params.set("filterField", filterField);
         params.set("filterValue", filterValue);
       }
+      if (stackBy) params.set("stackBy", stackBy);
       const res = await fetch(`/api/chart-data?${params}`);
       const json = await res.json();
       if (json.success) {
-        setChartData(json.data.rows);
+        if (json.data.stacked) {
+          setStackedData(json.data.stacked);
+          setChartData([]);
+        } else {
+          setChartData(json.data.rows);
+          setStackedData([]);
+        }
         setTotal(json.data.total);
       } else {
         toast.error(json.error || "Failed");
@@ -134,7 +149,7 @@ export default function ChartBuilderPage() {
   };
 
   // Auto-fetch on config change
-  useEffect(() => { fetchData(); }, [source, xField, dateFrom, dateTo, filterField, filterValue]);
+  useEffect(() => { fetchData(); }, [source, xField, stackBy, dateFrom, dateTo, filterField, filterValue]);
 
   // Export PNG
   const exportPNG = () => {
@@ -170,8 +185,9 @@ export default function ChartBuilderPage() {
 
   // ─── Render chart ──────────────────────────────────────────────
   const renderChart = () => {
-    const data = chartData;
-    if (data.length === 0) {
+    const data = chartData.length > 0 ? chartData : stackedData.map((d) => ({ label: d.label, value: d.value }));
+    const hasData = chartData.length > 0 || stackedData.length > 0;
+    if (!hasData) {
       return (
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
@@ -268,6 +284,28 @@ export default function ChartBuilderPage() {
           </ResponsiveContainer>
         );
 
+      case "stacked": {
+        const colors = ["#4f46e5","#06b6d4","#10b981","#f59e0b","#ef4444","#8b5cf6","#ec4899","#f97316","#84cc16","#6366f1"];
+        const flatData = stackedData.map((d) => {
+          const row: Record<string, unknown> = { label: d.label };
+          d.children.forEach((c) => { row[c.label] = c.value; });
+          return row;
+        });
+        return (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={flatData} barSize={Math.max(20, Math.min(60, 600 / Math.max(stackedData.length, 1)))}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f2f6" />
+              <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} angle={stackedData.length > 6 ? -35 : 0} textAnchor={stackedData.length > 6 ? "end" : "middle"} height={stackedData.length > 6 ? 80 : 40} />
+              <YAxis tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <Tooltip />
+              {stackKeys.map((key, i) => (
+                <Bar key={key} dataKey={key} stackId="a" fill={colors[i % colors.length]} name={key} />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        );
+      }
+
       default:
         return null;
     }
@@ -342,6 +380,24 @@ export default function ChartBuilderPage() {
               </Select>
             </CardContent>
           </Card>
+
+          {/* Stack By (second level) */}
+          {["usage","transactions"].includes(source) && (
+            <Card className="border-0 shadow-sm">
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold flex items-center gap-2"><Layers className="h-4 w-4 text-indigo-500" />Stack By (sub-group)</CardTitle></CardHeader>
+              <CardContent>
+                <Select value={stackBy} onValueChange={(v) => { setStackBy(v || ""); if (v) setChartType("stacked"); }}>
+                  <SelectTrigger className="w-full h-9 bg-white"><SelectValue placeholder="None (flat)" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None (flat)</SelectItem>
+                    {fields.filter((f) => f !== xField).map((f) => (
+                      <SelectItem key={f} value={f}>{FIELD_LABELS[f] || f}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Filters */}
           <Card className="border-0 shadow-sm">
