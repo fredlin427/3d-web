@@ -40,6 +40,29 @@ for /f "delims=" %%h in ('dir /b /ad ".next\standalone\node_modules\@prisma\clie
 copy dev.db "deploy-package\" >/dev/null 2>&1
 copy prisma.config.ts "deploy-package\" >/dev/null 2>&1
 
+:: Create portable start.bat
+(
+echo @echo off
+echo title QEH 3D Printing Office
+echo cd /d "%%~dp0"
+echo.
+echo echo ============================================
+echo echo   QEH 3D Printing Office - Portable Server
+echo echo ============================================
+echo echo.
+echo echo Starting server...
+echo echo Open in browser: http://localhost:3000
+echo echo Press Ctrl+C to stop
+echo echo ============================================
+echo echo.
+echo.
+echo set PORT=3000
+echo set HOST=0.0.0.0
+echo "%%~dp0node.exe" "%%~dp0server.js"
+echo pause
+) > "deploy-package\start.bat"
+echo   Created start.bat
+
 :: Step 3: Bundle Node.js portable
 echo [3/4] Bundling Node.js...
 if not exist "node-portable\node.exe" (
