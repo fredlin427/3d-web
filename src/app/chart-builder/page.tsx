@@ -224,38 +224,43 @@ export default function ChartBuilderPage() {
 
   // Export PNG
   const exportPNG = () => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const container = document.getElementById("chart-builder-preview");
-        const svg = container?.querySelector("svg");
-        if (!svg) { toast.error("No chart to export — try again"); return; }
-        const clone = svg.cloneNode(true) as SVGElement;
-        clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-        const rect = svg.getBoundingClientRect();
-        const w = rect.width || 800;
-        const h = rect.height || 500;
-        const svgData = new XMLSerializer().serializeToString(clone);
-        const canvas = document.createElement("canvas");
-        canvas.width = w * 2; canvas.height = h * 2;
-        const ctx = canvas.getContext("2d")!;
-        ctx.scale(2, 2);
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, w, h);
-        const img = new Image();
-        img.onload = () => {
-          ctx.drawImage(img, 0, 0, w, h);
-          canvas.toBlob((blob) => {
-            if (!blob) return;
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url; a.download = `chart-${source}-${xField}.png`;
-            a.click(); URL.revokeObjectURL(url);
-            toast.success("Chart exported");
-          }, "image/png");
-        };
-        img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
-      });
-    });
+    const doExport = () => {
+      const container = document.getElementById("chart-builder-preview");
+      const svg = container?.querySelector("svg");
+      if (!svg) { toast.error("No chart to export — try again"); return; }
+      const clone = svg.cloneNode(true) as SVGElement;
+      // Ensure xmlns and proper sizing
+      clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      clone.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
+      const svgRect = svg.getBoundingClientRect();
+      const w = Math.ceil(svgRect.width) || 800;
+      const h = Math.ceil(svgRect.height) || 520;
+      clone.setAttribute("width", String(w));
+      clone.setAttribute("height", String(h));
+      const svgData = new XMLSerializer().serializeToString(clone);
+      const canvas = document.createElement("canvas");
+      canvas.width = w * 2; canvas.height = h * 2;
+      const ctx = canvas.getContext("2d")!;
+      ctx.scale(2, 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, w, h);
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob((blob) => {
+          if (!blob) { toast.error("Export failed"); return; }
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url; a.download = `chart-${source}-${xField}.png`;
+          a.click(); URL.revokeObjectURL(url);
+          toast.success("Chart exported");
+        }, "image/png");
+      };
+      img.onerror = () => toast.error("Export failed — SVG could not be rendered");
+      img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+    };
+    // Small delay to ensure recharts has finished rendering
+    setTimeout(doExport, 150);
   };
 
   // ─── Render chart ──────────────────────────────────────────────
@@ -357,15 +362,15 @@ export default function ChartBuilderPage() {
               outerData.push({ name: child.label, value: child.value, parent: group.label, parentIdx: gi, childIdx: ci });
             });
           });
-          const r = pieRadius;
-          // All rings fit within r (no overflow)
-          const hole = r * 0.28;
-          const innerOuter = r * 0.58;
-          const outerInner = r * 0.62;
-          const outerOuter = r;
+          // Smaller radius to leave room for outer labels
+          const twoR = Math.min(pieRadius * 0.75, 140);
+          const hole = twoR * 0.2;
+          const innerOuter = twoR * 0.58;
+          const outerInner = twoR * 0.64;
+          const outerOuter = twoR;
           return (
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart margin={{ top: 10, right: 60, bottom: 10, left: 60 }}>
+              <PieChart margin={{ top: 30, right: 80, bottom: 30, left: 80 }}>
                 {/* Inner ring: primary groups */}
                 <Pie data={flatData} dataKey="value" nameKey="label" cx="50%" cy="48%"
                   innerRadius={hole} outerRadius={innerOuter} stroke="#fff" strokeWidth={2}
@@ -378,9 +383,9 @@ export default function ChartBuilderPage() {
                 {/* Outer ring: sub-items */}
                 <Pie data={outerData} dataKey="value" nameKey="name" cx="50%" cy="48%"
                   innerRadius={outerInner} outerRadius={outerOuter} stroke="#fff" strokeWidth={0.5}
-                  label={({ name, percent }: any) => {
-                    if (percent < 0.04) return "";
-                    return `${truncateLabel(name || "", 12)} (${(percent * 100).toFixed(0)}%)`;
+                  label={({ name, value, percent }: any) => {
+                    if (percent < 0.05) return "";
+                    return `${truncateLabel(name || "", 10)} ${value}`;
                   }}
                   labelLine={{ stroke: "#cbd5e1", strokeWidth: 0.5 }}
                   onClick={(d: any) => {
@@ -395,7 +400,7 @@ export default function ChartBuilderPage() {
                   })}
                 </Pie>
                 <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 12 }} />
+                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
               </PieChart>
             </ResponsiveContainer>
           );
@@ -430,14 +435,14 @@ export default function ChartBuilderPage() {
               outerData.push({ name: child.label, value: child.value, parent: group.label, parentIdx: gi, childIdx: ci });
             });
           });
-          const r = pieRadius;
-          const hole = r * 0.28;
-          const innerOuter = r * 0.58;
-          const outerInner = r * 0.62;
-          const outerOuter = r;
+          const twoR = Math.min(pieRadius * 0.75, 140);
+          const hole = twoR * 0.2;
+          const innerOuter = twoR * 0.58;
+          const outerInner = twoR * 0.64;
+          const outerOuter = twoR;
           return (
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart margin={{ top: 10, right: 60, bottom: 10, left: 60 }}>
+              <PieChart margin={{ top: 30, right: 80, bottom: 30, left: 80 }}>
                 <Pie data={flatData} dataKey="value" nameKey="label" cx="50%" cy="48%"
                   innerRadius={hole} outerRadius={innerOuter} stroke="#fff" strokeWidth={2}
                   label={({ index }: any) => {
@@ -448,9 +453,9 @@ export default function ChartBuilderPage() {
                 </Pie>
                 <Pie data={outerData} dataKey="value" nameKey="name" cx="50%" cy="48%"
                   innerRadius={outerInner} outerRadius={outerOuter} stroke="#fff" strokeWidth={0.5}
-                  label={({ name, percent }: any) => {
-                    if (percent < 0.04) return "";
-                    return `${truncateLabel(name || "", 12)} (${(percent * 100).toFixed(0)}%)`;
+                  label={({ name, value, percent }: any) => {
+                    if (percent < 0.05) return "";
+                    return `${truncateLabel(name || "", 10)} ${value}`;
                   }}
                   labelLine={{ stroke: "#cbd5e1", strokeWidth: 0.5 }}
                   onClick={(d: any) => {
@@ -465,7 +470,7 @@ export default function ChartBuilderPage() {
                   })}
                 </Pie>
                 <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 12 }} />
+                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
               </PieChart>
             </ResponsiveContainer>
           );
