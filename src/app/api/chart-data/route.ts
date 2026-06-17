@@ -64,13 +64,18 @@ export async function GET(request: NextRequest) {
       where[filterField] = filterValue;
     }
 
-    // Determine field type
-    const isTextField = config.textFields.includes(xField);
-    const isJoinField = (config.joinFields || []).includes(xField);
-    const isNumField = config.numFields.includes(xField);
-    const validX = isTextField || isNumField || isJoinField;
+    // Auto-resolve short field names to join fields (e.g. "department" → "case.department" for usage)
+    let resolvedX = xField;
+    if (!config.textFields.includes(xField) && !config.numFields.includes(xField) && !(config.joinFields || []).includes(xField) && xField !== "auto") {
+      const match = (config.joinFields || []).find((jf) => jf.endsWith(`.${xField}`));
+      if (match) resolvedX = match;
+    }
+    const finalIsJoin = (config.joinFields || []).includes(resolvedX);
+    const finalIsText = config.textFields.includes(resolvedX);
+    const finalIsNum = config.numFields.includes(resolvedX);
+    const validX = finalIsText || finalIsNum || finalIsJoin;
 
-    if (!validX && xField !== "auto") {
+    if (!validX && resolvedX !== "auto") {
       return NextResponse.json({ success: false, error: `Field "${xField}" not available for source "${source}"` }, { status: 400 });
     }
 
@@ -78,8 +83,8 @@ export async function GET(request: NextRequest) {
     let result: { label: string; value: number }[] = [];
 
     // Handle join fields (usage/transactions joined to case/material)
-    if (isJoinField) {
-      const [relation, relField] = xField.split(".");
+    if (finalIsJoin) {
+      const [relation, relField] = resolvedX.split(".");
       const includeMap: Record<string, any> = {
         case: { include: { case: { select: { department: true, category: true, currentStatus: true, purpose: true } } } },
         material: { include: { material: { select: { materialName: true, category: true, brand: true, status: true } } } },
@@ -87,8 +92,13 @@ export async function GET(request: NextRequest) {
 
       // Determine stackBy field for two-level grouping
       let stackRelation = "", stackField = "";
-      if (stackBy && (config.joinFields || []).includes(stackBy)) {
-        [stackRelation, stackField] = stackBy.split(".");
+      let resolvedStack = stackBy;
+      if (stackBy && !(config.joinFields || []).includes(stackBy)) {
+        const sm = (config.joinFields || []).find((jf) => jf.endsWith(`.${stackBy}`));
+        if (sm) resolvedStack = sm;
+      }
+      if (resolvedStack && (config.joinFields || []).includes(resolvedStack)) {
+        [stackRelation, stackField] = resolvedStack.split(".");
       }
 
       if (source === "usage") {
@@ -140,33 +150,33 @@ export async function GET(request: NextRequest) {
         }
         result = Array.from(map.entries()).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, limit);
       }
-    } else if (source === "cases" && isTextField) {
+    } else if (source === "cases" && finalIsText) {
       const groups = await (prisma.case as any).groupBy({
-        by: [xField],
+        by: [resolvedX],
         where,
         _count: { id: true },
         orderBy: { _count: { id: "desc" } },
         take: limit,
       });
       result = groups.map((g: any) => ({
-        label: g[xField] || "(empty)",
+        label: g[resolvedX] || "(empty)",
         value: g._count.id,
       }));
-    } else if (source === "materials" && isTextField) {
+    } else if (source === "materials" && finalIsText) {
       const groups = await (prisma.material as any).groupBy({
-        by: [xField],
+        by: [resolvedX],
         where,
         _count: { id: true },
         orderBy: { _count: { id: "desc" } },
         take: limit,
       });
       result = groups.map((g: any) => ({
-        label: g[xField] || "(empty)",
+        label: g[resolvedX] || "(empty)",
         value: g._count.id,
       }));
     } else if (source === "usage") {
       const groups = await (prisma.caseMaterialUsage as any).groupBy({
-        by: isTextField ? [xField] : ["unit"],
+        by: finalIsText ? [resolvedX] : ["unit"],
         where,
         _count: { id: true },
         _sum: yMode === "sum" && yField ? { [yField]: true } : undefined,
@@ -174,12 +184,12 @@ export async function GET(request: NextRequest) {
         take: limit,
       });
       result = groups.map((g: any) => ({
-        label: isTextField ? (g[xField] || "(empty)") : g.unit || "(empty)",
+        label: finalIsText ? (g[resolvedX] || "(empty)") : g.unit || "(empty)",
         value: yMode === "sum" && yField ? (g._sum?.[yField] || 0) : g._count.id,
       }));
     } else if (source === "transactions") {
       const groups = await (prisma.stockTransaction as any).groupBy({
-        by: isTextField ? [xField] : ["transactionType"],
+        by: finalIsText ? [resolvedX] : ["transactionType"],
         where,
         _count: { id: true },
         _sum: yMode === "sum" && yField ? { [yField]: true } : undefined,
@@ -187,7 +197,7 @@ export async function GET(request: NextRequest) {
         take: limit,
       });
       result = groups.map((g: any) => ({
-        label: isTextField ? (g[xField] || "(empty)") : g.transactionType || "(empty)",
+        label: finalIsText ? (g[resolvedX] || "(empty)") : g.transactionType || "(empty)",
         value: yMode === "sum" && yField ? (g._sum?.[yField] || 0) : g._count.id,
       }));
     } else {
