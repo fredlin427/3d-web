@@ -591,14 +591,7 @@ export default function DashboardPage() {
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                           <thead>
-                            <tr className="border-y border-slate-100 bg-slate-50/50">
-                              <th className="text-left py-2.5 px-5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                                {TABLE_FIELD_LABELS[presTableGroupBy] || presTableGroupBy}
-                              </th>
-                              <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider w-20">Count</th>
-                              <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider w-16">%</th>
-                              {presTableSubGroup && <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Sub-items</th>}
-                            </tr>
+                            <tr className="border-y border-slate-100 bg-slate-50/50"><th className="text-left py-2.5 px-5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">{TABLE_FIELD_LABELS[presTableGroupBy] || presTableGroupBy}</th><th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider w-20">Count</th><th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider w-16">%</th>{presTableSubGroup ? <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Sub-items</th> : null}</tr>
                           </thead>
                           <tbody>
                             {presTableData.flatMap((group, gi) => {
@@ -622,7 +615,7 @@ export default function DashboardPage() {
                                   </td>
                                   <td className="py-2.5 px-3 text-right font-bold text-slate-900 tabular-nums">{group.value}</td>
                                   <td className="py-2.5 px-3 text-right text-slate-500 tabular-nums">{pct}%</td>
-                                  {presTableSubGroup && <td className="py-2.5 px-3 text-xs text-slate-400">{hasChildren ? `${group.children.length} sub-items` : "—"}</td>}
+                                  {presTableSubGroup ? <td className="py-2.5 px-3 text-xs text-slate-400">{hasChildren ? `${group.children.length} sub-items` : "—"}</td> : null}
                                 </tr>,
                               ];
                               if (hasChildren && presExpandedGroups.has(group.label)) {
@@ -636,7 +629,7 @@ export default function DashboardPage() {
                                       </td>
                                       <td className="py-2 px-3 text-right font-semibold text-slate-700 tabular-nums">{child.value}</td>
                                       <td className="py-2 px-3 text-right text-xs text-slate-500 tabular-nums">{childPct}%</td>
-                                      {presTableSubGroup && <td className="py-2 px-3 text-xs text-slate-400">{childPct}% of group</td>}
+                                      {presTableSubGroup ? <td className="py-2 px-3 text-xs text-slate-400">{childPct}% of group</td> : null}
                                     </tr>
                                   );
                                 });
