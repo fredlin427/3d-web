@@ -42,6 +42,10 @@ const FIELD_LABELS: Record<string, string> = {
   colour: "Colour", supplier: "Supplier", storageLocation: "Location",
   unit: "Unit", staffName: "Staff", printerOrTank: "Printer/Tank",
   transactionType: "Transaction Type",
+  "case.department": "→ Case Dept", "case.category": "→ Case Category",
+  "case.currentStatus": "→ Case Status",
+  "material.materialName": "→ Material Name", "material.category": "→ Material Category",
+  "material.brand": "→ Material Brand", "material.status": "→ Material Status",
 };
 
 const CHART_COLORS = ["#4f46e5","#06b6d4","#10b981","#f59e0b","#ef4444","#8b5cf6","#ec4899","#f97316","#84cc16","#6366f1","#14b8a6","#d946ef"];
@@ -50,8 +54,8 @@ const CHART_COLORS = ["#4f46e5","#06b6d4","#10b981","#f59e0b","#ef4444","#8b5cf6
 const SOURCE_FIELDS: Record<string, string[]> = {
   cases: ["department","category","purpose","currentStatus","priority","technician","printingParty","hospital","rank","modelType","requiredService"],
   materials: ["category","brand","materialType","status","colour","supplier","storageLocation","unit"],
-  usage: ["unit","staffName","printerOrTank"],
-  transactions: ["transactionType","staffName"],
+  usage: ["unit","staffName","printerOrTank","case.department","case.category","case.currentStatus","material.materialName","material.category","material.brand","material.status"],
+  transactions: ["transactionType","staffName","material.materialName","material.category","material.brand","material.status"],
 };
 
 export default function ChartBuilderPage() {
