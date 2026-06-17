@@ -232,35 +232,40 @@ export default function ChartBuilderPage() {
     const w = Math.max(400, Math.ceil(rect.width));
     const h = Math.max(300, Math.ceil(rect.height));
 
-    // Deep clone the SVG
+    // Clone and inline ALL visual properties from computed styles
     const clone = svg.cloneNode(true) as SVGElement;
     clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
     clone.setAttribute("width", String(w));
     clone.setAttribute("height", String(h));
     clone.setAttribute("viewBox", `0 0 ${w} ${h}`);
 
-    // Collect only Recharts-related CSS rules (not the entire Tailwind stylesheet)
-    let cssText = "svg { background: white; }";
-    try {
-      for (const sheet of Array.from(document.styleSheets)) {
-        try {
-          for (const rule of Array.from(sheet.cssRules || [])) {
-            const text = rule.cssText;
-            // Only include rules relevant to SVG rendering
-            if (text.includes("recharts") || text.includes(".recharts") ||
-                text.includes("svg") || text.includes("fill:") || text.includes("stroke:") ||
-                text.includes("text {") || text.includes("path {") || text.includes("rect {") ||
-                text.includes("font-") || text.includes("dominant-baseline") || text.includes("text-anchor")) {
-              cssText += text + "\n";
-            }
-          }
-        } catch (_) { /* cross-origin, skip */ }
+    // Walk both trees simultaneously, copy computed styles → inline attributes
+    const walk = (orig: Element, cloned: Element) => {
+      if (orig instanceof SVGElement || orig instanceof HTMLElement) {
+        const cs = window.getComputedStyle(orig);
+        const fill = cs.fill;
+        const stroke = cs.stroke;
+        if (fill && fill !== "none" && fill !== "rgb(0, 0, 0)" && fill !== "rgba(0, 0, 0, 0)") {
+          cloned.setAttribute("fill", fill);
+        }
+        if (stroke && stroke !== "none" && stroke !== "rgba(0, 0, 0, 0)") {
+          cloned.setAttribute("stroke", stroke);
+        }
+        if (cs.strokeWidth && cs.strokeWidth !== "0px") cloned.setAttribute("stroke-width", cs.strokeWidth);
+        if (cs.opacity && cs.opacity !== "1") cloned.setAttribute("opacity", cs.opacity);
+        if (cs.fontSize) cloned.setAttribute("font-size", cs.fontSize);
+        if (cs.fontWeight && cs.fontWeight !== "400") cloned.setAttribute("font-weight", cs.fontWeight);
+        if (cs.fontFamily) cloned.setAttribute("font-family", cs.fontFamily);
+        if (cs.textAnchor) cloned.setAttribute("text-anchor", cs.textAnchor);
       }
-    } catch (_) { /* ignore */ }
+      for (let i = 0; i < orig.children.length; i++) {
+        if (cloned.children[i]) walk(orig.children[i], cloned.children[i]);
+      }
+    };
+    walk(svg, clone);
 
-    const styleEl = document.createElementNS("http://www.w3.org/2000/svg", "style");
-    styleEl.textContent = cssText;
-    clone.insertBefore(styleEl, clone.firstChild);
+    // Remove all class attributes — no longer needed since styles are inlined
+    clone.querySelectorAll("[class]").forEach((el) => el.removeAttribute("class"));
 
     const svgData = new XMLSerializer().serializeToString(clone);
     const canvas = document.createElement("canvas");
@@ -284,7 +289,6 @@ export default function ChartBuilderPage() {
       }, "image/png");
     };
     img.onerror = () => toast.error("Export failed — try refreshing the chart first");
-    // Safe UTF-8 base64 without stack overflow (avoids spreading large arrays)
     const base64 = btoa(unescape(encodeURIComponent(svgData)));
     img.src = `data:image/svg+xml;base64,${base64}`;
   };
