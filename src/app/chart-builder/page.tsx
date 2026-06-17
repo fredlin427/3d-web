@@ -241,33 +241,38 @@ export default function ChartBuilderPage() {
 
     // Walk both trees simultaneously, copy computed styles → inline attributes
     const walk = (orig: Element, cloned: Element) => {
-      if (orig instanceof SVGElement || orig instanceof HTMLElement) {
-        const cs = window.getComputedStyle(orig);
-        const fill = cs.fill;
-        const stroke = cs.stroke;
-        if (fill && fill !== "none" && fill !== "rgb(0, 0, 0)" && fill !== "rgba(0, 0, 0, 0)") {
-          cloned.setAttribute("fill", fill);
-        }
-        if (stroke && stroke !== "none" && stroke !== "rgba(0, 0, 0, 0)") {
-          cloned.setAttribute("stroke", stroke);
-        }
-        if (cs.strokeWidth && cs.strokeWidth !== "0px") cloned.setAttribute("stroke-width", cs.strokeWidth);
-        if (cs.opacity && cs.opacity !== "1") cloned.setAttribute("opacity", cs.opacity);
-        if (cs.fontSize) cloned.setAttribute("font-size", cs.fontSize);
-        if (cs.fontWeight && cs.fontWeight !== "400") cloned.setAttribute("font-weight", cs.fontWeight);
-        if (cs.fontFamily) cloned.setAttribute("font-family", cs.fontFamily);
-        if (cs.textAnchor) cloned.setAttribute("text-anchor", cs.textAnchor);
+      const cs = window.getComputedStyle(orig);
+      const fill = cs.fill;
+      const stroke = cs.stroke;
+      // Always copy fill if it's a visible color (skip "none" and transparent black)
+      if (fill && fill !== "none" && fill !== "rgba(0, 0, 0, 0)") {
+        cloned.setAttribute("fill", fill);
       }
+      if (stroke && stroke !== "none" && stroke !== "rgba(0, 0, 0, 0)") {
+        cloned.setAttribute("stroke", stroke);
+      }
+      const sw = cs.strokeWidth;
+      if (sw && sw !== "0px") cloned.setAttribute("stroke-width", sw);
+      if (cs.opacity && cs.opacity !== "1") cloned.setAttribute("opacity", cs.opacity);
+      if (cs.fontSize) cloned.setAttribute("font-size", cs.fontSize);
+      if (cs.fontWeight && cs.fontWeight !== "400") cloned.setAttribute("font-weight", cs.fontWeight);
+      if (cs.fontFamily) cloned.setAttribute("font-family", cs.fontFamily);
+      if (cs.textAnchor) cloned.setAttribute("text-anchor", cs.textAnchor);
+      // Recurse children
       for (let i = 0; i < orig.children.length; i++) {
         if (cloned.children[i]) walk(orig.children[i], cloned.children[i]);
       }
     };
     walk(svg, clone);
 
-    // Remove all class attributes — no longer needed since styles are inlined
+    // Remove class attributes (styles now inlined)
     clone.querySelectorAll("[class]").forEach((el) => el.removeAttribute("class"));
 
+    // Use Blob URL instead of data URI for reliability
     const svgData = new XMLSerializer().serializeToString(clone);
+    const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+    const svgUrl = URL.createObjectURL(svgBlob);
+
     const canvas = document.createElement("canvas");
     canvas.width = w * 2;
     canvas.height = h * 2;
@@ -275,6 +280,7 @@ export default function ChartBuilderPage() {
 
     const img = new Image();
     img.onload = () => {
+      URL.revokeObjectURL(svgUrl);
       ctx.scale(2, 2);
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, w, h);
@@ -288,9 +294,11 @@ export default function ChartBuilderPage() {
         toast.success("Chart exported as PNG");
       }, "image/png");
     };
-    img.onerror = () => toast.error("Export failed — try refreshing the chart first");
-    const base64 = btoa(unescape(encodeURIComponent(svgData)));
-    img.src = `data:image/svg+xml;base64,${base64}`;
+    img.onerror = () => {
+      URL.revokeObjectURL(svgUrl);
+      toast.error("Export failed — try refreshing the chart first");
+    };
+    img.src = svgUrl;
   };
 
   // ─── Render chart ──────────────────────────────────────────────
