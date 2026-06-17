@@ -96,7 +96,7 @@ export default function StockTakePage() {
         </div>
         <div className="flex gap-2">
           <Button onClick={handleExport} variant="outline" className="gap-2"><Download className="h-4 w-4" />Export {activeCat}</Button>
-          <label className={cn("inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors", importing ? "bg-slate-100 text-slate-400" : "bg-indigo-600 text-white hover:bg-indigo-700")}>
+          <label className={cn("inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors", importing ? "bg-slate-100 text-slate-400" : "bg-primary text-white hover:bg-primary/90")}>
             {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             {importing ? "Importing..." : "Import CSV"}
             <input type="file" accept=".csv" className="hidden" onChange={handleImport} disabled={importing} />

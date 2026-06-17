@@ -272,7 +272,7 @@ export default function SettingsPage() {
                           className={cn(
                             "text-left px-3 py-2.5 rounded-lg transition-all duration-150 border",
                             activeKey === key
-                              ? "bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm"
+                              ? "bg-accent border-primary/20 text-primary shadow-sm"
                               : "bg-white border-slate-100 text-slate-700 hover:border-slate-200 hover:bg-slate-50"
                           )}
                         >

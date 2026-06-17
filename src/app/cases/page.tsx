@@ -105,7 +105,7 @@ export default function CasesPage() {
         </DropdownMenu>
       ),
     },
-    { key: "caseNumber", header: "Case #", sortable: true, render: (c) => <Link href={`/cases/${c.id}`} className="text-indigo-600 hover:text-indigo-800 font-medium text-sm hover:underline">{c.caseNumber}</Link> },
+    { key: "caseNumber", header: "Case #", sortable: true, render: (c) => <Link href={`/cases/${c.id}`} className="text-primary hover:text-primary/80 font-medium text-sm hover:underline">{c.caseNumber}</Link> },
     { key: "applicationDate", header: "Date", sortable: true, render: (c) => <span className="text-sm whitespace-nowrap">{formatDate(c.applicationDate)}</span> },
     { key: "department", header: "Dept", sortable: true, render: (c) => <span className="text-xs" title={DEPARTMENT_LABELS[c.department]}>{c.department}</span> },
     { key: "category", header: "Category", sortable: true, render: (c) => <Badge variant="secondary" className="text-xs">{c.category}</Badge> },

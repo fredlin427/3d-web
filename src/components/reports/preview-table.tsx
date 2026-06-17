@@ -64,7 +64,7 @@ export function PreviewTable({ columns, rows, loading }: PreviewTableProps) {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-6 w-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+          <div className="h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
           <span className="text-sm text-slate-400">Loading report data...</span>
         </div>
       </div>
@@ -116,7 +116,7 @@ export function PreviewTable({ columns, rows, loading }: PreviewTableProps) {
                     <div className="flex items-center gap-1">
                       {col}
                       {sortCol === col ? (
-                        sortDir === "asc" ? <ArrowUp className="h-3 w-3 text-indigo-500" /> : <ArrowDown className="h-3 w-3 text-indigo-500" />
+                        sortDir === "asc" ? <ArrowUp className="h-3 w-3 text-primary" /> : <ArrowDown className="h-3 w-3 text-primary" />
                       ) : (
                         <ArrowUpDown className="h-3 w-3 text-slate-300 opacity-0 group-hover:opacity-100" />
                       )}
@@ -132,7 +132,7 @@ export function PreviewTable({ columns, rows, loading }: PreviewTableProps) {
                   className={cn(
                     "border-b border-slate-100 transition-colors",
                     i % 2 === 0 ? "bg-white" : "bg-slate-50/50",
-                    "hover:bg-indigo-50/50"
+                    "hover:bg-accent/50"
                   )}
                 >
                   <td className="px-3 py-2 text-[11px] text-slate-300 tabular-nums">

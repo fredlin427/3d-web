@@ -45,7 +45,7 @@ export function MaterialInfoPopover({ materialId, name }: { materialId: string; 
 
   return (
     <span className="relative inline-flex" onMouseEnter={() => { timerRef.current = setTimeout(() => { setOpen(true); setHasFetched(true); }, 300); }} onMouseLeave={() => { if (timerRef.current) clearTimeout(timerRef.current); setTimeout(() => setOpen(false), 200); }}>
-      <span className="text-indigo-600 font-medium text-sm cursor-default hover:underline">{name}</span>
+      <span className="text-primary font-medium text-sm cursor-default hover:underline">{name}</span>
 
       {open && (
         <div className="absolute z-50 left-0 top-full mt-2 w-72 rounded-xl border bg-white shadow-xl animate-in fade-in-0 zoom-in-95 duration-150"
@@ -59,7 +59,7 @@ export function MaterialInfoPopover({ materialId, name }: { materialId: string; 
             ) : info ? (
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between">
-                  <Link href={`/materials/${info.id}`} className="text-sm font-semibold text-indigo-600 hover:underline">{info.materialName} →</Link>
+                  <Link href={`/materials/${info.id}`} className="text-sm font-semibold text-primary hover:underline">{info.materialName} →</Link>
                   <Badge className={cn(getStockStatusColor(info.status), "border text-[10px]")} variant="outline">{info.status}</Badge>
                 </div>
                 <div className="grid grid-cols-2 gap-1 text-xs text-slate-500">

@@ -624,7 +624,7 @@ export default function ChartBuilderPage() {
           <Button variant="outline" size="sm" className="h-9 gap-2" onClick={fetchData} disabled={loading}>
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />Refresh
           </Button>
-          <Button size="sm" className="h-9 gap-2 bg-indigo-600 hover:bg-indigo-700" onClick={exportPNG}>
+          <Button size="sm" className="h-9 gap-2 bg-primary hover:bg-primary/90" onClick={exportPNG}>
             <Camera className="h-4 w-4" />Export PNG
           </Button>
         </div>
@@ -640,7 +640,7 @@ export default function ChartBuilderPage() {
               {SOURCES.map((s) => (
                 <button key={s.key} onClick={() => setSource(s.key)}
                   className={cn("w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center gap-2.5",
-                    source === s.key ? "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200 font-semibold" : "text-slate-600 hover:bg-slate-50 font-medium")}>
+                    source === s.key ? "bg-accent text-primary ring-1 ring-primary/20 font-semibold" : "text-slate-600 hover:bg-slate-50 font-medium")}>
                   <s.icon className="h-3.5 w-3.5 shrink-0" />
                   {s.label}
                 </button>
@@ -656,7 +656,7 @@ export default function ChartBuilderPage() {
                 {CHART_TYPES.map((t) => (
                   <button key={t.key} onClick={() => setChartType(t.key)}
                     className={cn("flex flex-col items-center gap-0.5 p-2 rounded-lg text-[11px] font-medium transition-all",
-                      chartType === t.key ? "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200" : "text-slate-500 hover:bg-slate-50")}>
+                      chartType === t.key ? "bg-accent text-primary ring-1 ring-primary/20" : "text-slate-500 hover:bg-slate-50")}>
                     <t.icon className="h-4 w-4" />{t.label}
                   </button>
                 ))}
@@ -758,7 +758,7 @@ export default function ChartBuilderPage() {
                 <CardTitle className="text-base font-bold text-slate-800">{title}</CardTitle>
                 <p className="text-xs text-slate-400 mt-0.5">{hasStacked ? `${stackedData.length} groups, ${stackKeys.length} sub-groups` : `${chartData.length} groups`} · {flatTotal} total records</p>
               </div>
-              <Button variant="ghost" size="sm" className={cn("h-8 gap-1.5 text-xs", showTable && "text-indigo-600")}
+              <Button variant="ghost" size="sm" className={cn("h-8 gap-1.5 text-xs", showTable && "text-primary")}
                 onClick={() => setShowTable(!showTable)}>
                 <Table2 className="h-3.5 w-3.5" />{showTable ? "Hide Table" : "Show Table"}
               </Button>
@@ -767,7 +767,7 @@ export default function ChartBuilderPage() {
               <div id="chart-builder-preview" ref={containerRef} className="w-full" style={{ height: showTable ? 400 : 500 }}>
                 {loading ? (
                   <div className="flex items-center justify-center h-full">
-                    <Loader2 className="h-8 w-8 text-indigo-500 animate-spin" />
+                    <Loader2 className="h-8 w-8 text-primary animate-spin" />
                   </div>
                 ) : renderChart()}
               </div>
@@ -779,7 +779,7 @@ export default function ChartBuilderPage() {
             <Card className="border-0 shadow-sm">
               <CardHeader className="pb-2 pt-4 px-5">
                 <CardTitle className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                  <ListTree className="h-4 w-4 text-indigo-500" />
+                  <ListTree className="h-4 w-4 text-primary" />
                   Breakdown: {FIELD_LABELS[xField] || xField} → {FIELD_LABELS[stackBy] || stackBy}
                 </CardTitle>
               </CardHeader>
@@ -797,7 +797,7 @@ export default function ChartBuilderPage() {
             <Card className="border-0 shadow-sm">
               <CardHeader className="pb-2 pt-4 px-5">
                 <CardTitle className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                  <Table2 className="h-4 w-4 text-indigo-500" />Data Table
+                  <Table2 className="h-4 w-4 text-primary" />Data Table
                 </CardTitle>
               </CardHeader>
               <CardContent className="px-2 pb-4">

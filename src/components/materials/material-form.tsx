@@ -604,7 +604,7 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Category:</span>
           <span className="text-sm font-semibold text-slate-800">{selectedCategory}</span>
           {!isEditing && (
-            <button type="button" onClick={() => { setSelectedCategory(""); setValue("category", ""); }} className="ml-auto text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+            <button type="button" onClick={() => { setSelectedCategory(""); setValue("category", ""); }} className="ml-auto text-xs text-primary hover:text-primary font-medium">
               Change
             </button>
           )}
@@ -612,12 +612,12 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
       )}
 
       {selectedCategory && sections.map((section) => (
-        <Card key={section.name} className={cn("overflow-visible", editMode && "ring-2 ring-indigo-200")}>
+        <Card key={section.name} className={cn("overflow-visible", editMode && "ring-2 ring-primary/20")}>
           <CardHeader className="pb-2"><CardTitle className="text-base">{section.name}</CardTitle></CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {section.fields.map((field) => (
-                <div key={field.key} className={cn(editMode && "rounded-lg border-2 border-dashed border-slate-200 p-3 hover:border-indigo-300")}>
+                <div key={field.key} className={cn(editMode && "rounded-lg border-2 border-dashed border-slate-200 p-3 hover:border-primary/30")}>
                   {editMode && (
                     <div className="flex items-center gap-1 mb-2 bg-slate-50 rounded-lg px-2 py-1 flex-wrap">
                       <button type="button" onClick={() => moveField(field.key, -1)} className="text-slate-500 hover:text-slate-700 p-0.5"><ChevronUp className="h-3.5 w-3.5" /></button>
@@ -629,7 +629,7 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
                           placeholder="Replace..." className="min-w-[120px]" />
                       ) : (
                         <button type="button" onClick={() => setEditingField(field.key)}
-                          className="text-[10px] font-mono text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded px-1 py-0.5 transition-colors shrink-0" title="Replace field">
+                          className="text-[10px] font-mono text-slate-400 hover:text-primary hover:bg-accent rounded px-1 py-0.5 transition-colors shrink-0" title="Replace field">
                           {field.key.startsWith("custom::") ? "custom" : field.key}
                         </button>
                       )}
@@ -643,7 +643,7 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
                       <input type="text" defaultValue={field.label}
                         onBlur={(e) => updateFieldLabel(field.key, e.target.value)}
                         onKeyDown={(e) => { if (e.key==="Enter") { e.preventDefault(); updateFieldLabel(field.key, (e.target as HTMLInputElement).value); } }}
-                        className="text-xs font-medium text-slate-700 border-b-2 border-slate-200 focus:border-indigo-400 outline-none px-1 min-w-[80px] bg-transparent"
+                        className="text-xs font-medium text-slate-700 border-b-2 border-slate-200 focus:border-primary/60 outline-none px-1 min-w-[80px] bg-transparent"
                         placeholder="Field name" />
                       <button type="button" onClick={() => removeField(field.key)} className="p-0.5 shrink-0 ml-auto" title="Remove"><Trash2 className="h-3.5 w-3.5 text-slate-400 hover:text-red-500" /></button>
                     </div>
@@ -668,7 +668,7 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
 
       <div className="flex gap-3 justify-end">
         <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
-        <Button type="submit" disabled={saving} className="bg-indigo-600 hover:bg-indigo-700">
+        <Button type="submit" disabled={saving} className="bg-primary hover:bg-primary/90">
           {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {isEditing ? "Update Material" : "Create Material"}
         </Button>

@@ -41,7 +41,7 @@ function StockBar({ used, remain, total, unit }: { used: number; remain: number;
   const usedPct = Math.min(100, Math.round((used / total) * 100));
   const remainPct = 100 - usedPct;
   const barColor = remainPct <= 10 ? "bg-red-500" : remainPct <= 25 ? "bg-amber-500" : "bg-emerald-500";
-  const usedColor = usedPct > 80 ? "bg-red-400" : usedPct > 50 ? "bg-amber-400" : "bg-indigo-400";
+  const usedColor = usedPct > 80 ? "bg-red-400" : usedPct > 50 ? "bg-amber-400" : "bg-blue-500";
   return (
     <div className="flex items-center gap-2">
       <div className="flex-1 flex h-2 rounded-full bg-slate-100 overflow-hidden min-w-[60px]">
@@ -138,7 +138,7 @@ export default function MaterialsPage() {
     },
     { key: "materialName", header: "Material", sortable: true, className: "min-w-[180px]", render: (m) => (
       <div className="space-y-0.5">
-        <Link href={`/materials/${m.id}`} className="text-indigo-600 hover:text-indigo-800 font-semibold text-sm hover:underline">{m.materialName}</Link>
+        <Link href={`/materials/${m.id}`} className="text-primary hover:text-primary/80 font-semibold text-sm hover:underline">{m.materialName}</Link>
         <div className="flex items-center gap-2">
           {m.materialId && <span className="text-[10px] font-mono text-slate-400 bg-slate-100 rounded px-1">{m.materialId}</span>}
           <CaseUsagePopover materialId={m.id} count={m._count?.materialUsage || 0} />
@@ -181,12 +181,12 @@ export default function MaterialsPage() {
         </div>
         <div className="flex gap-2">
           <Button onClick={handleExport} variant="outline" size="sm" className="gap-2"><Download className="h-4 w-4" />Export</Button>
-          <label className={cn("inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer transition-colors", importing ? "bg-slate-100 text-slate-400" : "bg-indigo-600 text-white hover:bg-indigo-700")}>
+          <label className={cn("inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer transition-colors", importing ? "bg-slate-100 text-slate-400" : "bg-primary text-white hover:bg-primary/90")}>
             {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             {importing ? "Importing..." : "Import"}
             <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImport} disabled={importing} />
           </label>
-          <Link href="/materials/new"><Button size="sm" className="gap-2 bg-indigo-600 hover:bg-indigo-700"><Plus className="h-4 w-4" />New</Button></Link>
+          <Link href="/materials/new"><Button size="sm" className="gap-2 bg-primary hover:bg-primary/90"><Plus className="h-4 w-4" />New</Button></Link>
         </div>
       </div>
 
@@ -234,7 +234,7 @@ export default function MaterialsPage() {
             <button key={c.key} onClick={() => { setActiveCat(c.key); setImportResult(null); }}
               className={cn("px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2", activeCat === c.key ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700")}>
               {c.label}
-              <span className={cn("text-[10px] rounded-full px-1.5 py-0.5 font-bold", activeCat === c.key ? "bg-indigo-100 text-indigo-600" : "bg-slate-200 text-slate-400")}>{count}</span>
+              <span className={cn("text-[10px] rounded-full px-1.5 py-0.5 font-bold", activeCat === c.key ? "bg-blue-100 text-primary" : "bg-slate-200 text-slate-400")}>{count}</span>
             </button>
           );
         })}

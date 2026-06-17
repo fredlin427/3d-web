@@ -22,7 +22,7 @@ export function Header() {
   const title = getPageTitle(pathname);
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-slate-200/60 bg-white/70 backdrop-blur-xl px-8">
+    <header className="flex h-16 items-center justify-between border-b border-[var(--border)] bg-white px-8">
       <div>
         <h1 className="text-base font-semibold tracking-tight text-slate-800">{title}</h1>
         <p className="text-xs text-slate-400 mt-0.5">QEH 3D Printing Office</p>
@@ -32,7 +32,7 @@ export function Header() {
           <p className="text-[13px] font-medium text-slate-700">3D Printing Office</p>
           <p className="text-[11px] text-slate-400">Internal Portal</p>
         </div>
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500 text-xs font-bold text-white shadow-sm shadow-indigo-500/20">3D</div>
+        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[var(--primary)] text-xs font-bold text-white">3D</div>
       </div>
     </header>
   );

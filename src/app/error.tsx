@@ -20,7 +20,7 @@ export default function GlobalError({
         <p className="text-sm text-slate-500 mb-6">
           An unexpected error occurred. Please try again or contact support if the problem persists.
         </p>
-        <Button onClick={reset} className="gap-2 bg-indigo-600 hover:bg-indigo-700">
+        <Button onClick={reset} className="gap-2 bg-primary hover:bg-primary/90">
           <RotateCcw className="h-4 w-4" /> Try again
         </Button>
       </div>

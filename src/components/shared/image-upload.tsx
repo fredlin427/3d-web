@@ -58,7 +58,7 @@ export function ImageUpload({ value, onChange, className }: ImageUploadProps) {
         <div
           className={cn(
             "relative flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-8 transition-colors cursor-pointer",
-            dragOver ? "border-indigo-400 bg-indigo-50" : "border-slate-200 hover:border-slate-300 bg-slate-50/50"
+            dragOver ? "border-primary bg-accent" : "border-slate-200 hover:border-slate-300 bg-slate-50/50"
           )}
           onClick={() => inputRef.current?.click()}
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}

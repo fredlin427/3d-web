@@ -93,7 +93,7 @@ function exportChartImageFile(chartId: string, filename: string) {
 }
 
 const statDefs = [
-  { key: "totalCases", title: "Total Cases", icon: FolderOpen, color: "#4f46e5", bg: "#eef0ff" },
+  { key: "totalCases", title: "Total Cases", icon: FolderOpen, color: "#003d7c", bg: "#e6edf5" },
   { key: "casesThisMonth", title: "This Month", icon: Clock, color: "#06b6d4", bg: "#ecfeff" },
   { key: "casesInProgress", title: "In Progress", icon: Clock, color: "#f59e0b", bg: "#fffbeb" },
   { key: "completedCases", title: "Completed", icon: CheckCircle2, color: "#10b981", bg: "#ecfdf5" },
@@ -299,7 +299,7 @@ export default function DashboardPage() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-[15px] font-semibold text-slate-800">Recent Cases</h3>
-            <Link href="/cases" className="flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-700">
+            <Link href="/cases" className="flex items-center gap-1 text-xs font-medium text-primary hover:text-primary">
               View all <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
@@ -578,7 +578,7 @@ export default function DashboardPage() {
                   <CardContent className="px-0 pb-2">
                     <div className="px-2">
                       {presTableLoading ? (
-                        <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 text-indigo-500 animate-spin" /></div>
+                        <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 text-primary animate-spin" /></div>
                       ) : (
                         <HierarchicalTable
                           data={presTableData}

@@ -125,21 +125,21 @@ export function ComboBox({ value, onChange, options, placeholder, disabled, clas
               key={`${option}-${i}`}
               className={cn(
                 "flex items-center px-3 py-2 text-sm cursor-pointer select-none",
-                i === highlightedIndex ? "bg-indigo-50 text-indigo-700" : "text-slate-700 hover:bg-slate-50",
+                i === highlightedIndex ? "bg-accent text-primary" : "text-slate-700 hover:bg-slate-50",
                 option === value && "font-semibold"
               )}
               onMouseDown={(e) => { e.preventDefault(); handleSelect(option); }}
               onMouseEnter={() => setHighlightedIndex(i)}
             >
               <span className="flex-1">{option}</span>
-              {option === value && <Check className="h-3.5 w-3.5 text-indigo-600 shrink-0 ml-2" />}
+              {option === value && <Check className="h-3.5 w-3.5 text-primary shrink-0 ml-2" />}
             </div>
           ))}
           {showCreateNew && (
             <div
               className={cn(
                 "flex items-center gap-2 px-3 py-2 text-sm cursor-pointer border-t border-slate-100 select-none",
-                highlightedIndex === filtered.length ? "bg-indigo-50 text-indigo-700" : "text-indigo-600 hover:bg-indigo-50"
+                highlightedIndex === filtered.length ? "bg-accent text-primary" : "text-primary hover:bg-accent"
               )}
               onMouseDown={(e) => { e.preventDefault(); handleCreateNew(); }}
               onMouseEnter={() => setHighlightedIndex(filtered.length)}

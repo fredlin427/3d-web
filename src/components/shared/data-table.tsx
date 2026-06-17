@@ -100,7 +100,7 @@ export function DataTable<T>({ data, columns, keyField = "id", searchValue = "",
                 else if (page > totalPages - 5) { pageNum = i === 0 ? 0 : i === 1 ? -1 : totalPages - 7 + i; }
                 else { pageNum = i === 0 ? 0 : i === 1 ? -1 : page + i - 3; }
                 if (pageNum === -1) return <span key="dots" className="px-1 text-slate-300">...</span>;
-                return <Button key={pageNum} variant={pageNum === page ? "default" : "outline"} size="sm" className={cn("h-8 w-8 p-0 font-medium", pageNum === page && "bg-indigo-600 hover:bg-indigo-700")} onClick={() => setPage(pageNum)}>{pageNum + 1}</Button>;
+                return <Button key={pageNum} variant={pageNum === page ? "default" : "outline"} size="sm" className={cn("h-8 w-8 p-0 font-medium", pageNum === page && "bg-primary hover:bg-primary/90")} onClick={() => setPage(pageNum)}>{pageNum + 1}</Button>;
               })}
               <Button variant="outline" size="sm" onClick={() => setPage(page + 1)} disabled={page >= totalPages - 1} className="h-8 w-8 p-0"><ChevronRight className="h-4 w-4" /></Button>
             </div>

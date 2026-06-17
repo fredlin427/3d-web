@@ -206,7 +206,7 @@ export default function ApplyPage() {
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100 mx-auto mb-5"><CheckCircle2 className="h-8 w-8 text-emerald-600" /></div>
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Application Submitted</h2>
         <p className="text-slate-500">Your application has been received.</p>
-        <p className="text-lg font-bold text-indigo-600 mt-4">Case Number: {submitted}</p>
+        <p className="text-lg font-bold text-primary mt-4">Case Number: {submitted}</p>
         <p className="text-sm text-slate-400 mt-4">Please save this number. The 3D Printing Office will contact you.</p>
         <Button variant="outline" className="mt-6" onClick={() => window.location.reload()}>Submit Another</Button>
       </CardContent></Card>
@@ -221,7 +221,7 @@ export default function ApplyPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center mb-8">
-        <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 mb-1">QEH 3D Printing Office</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-primary mb-1">QEH 3D Printing Office</p>
         <h2 className="text-2xl font-bold text-slate-900">3D Printing Service Application Form</h2>
         <p className="text-xs text-slate-400 mt-1">(The application form should be submitted <strong>at least 1 month</strong> before the expected completion date.)</p>
       </div>
@@ -280,7 +280,7 @@ export default function ApplyPage() {
                 <button
                   key={cat} type="button"
                   onClick={() => { update("purposeCategory", cat); update("purposeCheckboxes", {}); update("purposeOthers", ""); }}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold border-2 transition-all ${form.purposeCategory === cat ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"}`}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold border-2 transition-all ${form.purposeCategory === cat ? "border-blue-500 bg-accent text-primary" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"}`}
                 >
                   {cat}
                 </button>
@@ -289,7 +289,7 @@ export default function ApplyPage() {
 
             {/* Checkboxes for selected category */}
             {form.purposeCategory && (
-              <div className="space-y-2 pl-2 border-l-2 border-indigo-100">
+              <div className="space-y-2 pl-2 border-l-2 border-blue-100">
                 {purposeOptions.map((opt, idx) => {
                   const key = `${form.purposeCategory}-${opt}-${idx}`;
                   return (
@@ -323,7 +323,7 @@ export default function ApplyPage() {
                 <div className="flex gap-6">
                   {REPRINT_OPTIONS.map((opt) => (
                     <label key={opt} className="flex items-center gap-2 cursor-pointer">
-                      <input type="radio" name="isReprint" value={opt} checked={form.isReprint === opt} onChange={(e) => update("isReprint", e.target.value)} className="text-indigo-600" />
+                      <input type="radio" name="isReprint" value={opt} checked={form.isReprint === opt} onChange={(e) => update("isReprint", e.target.value)} className="text-primary" />
                       <span className="text-sm text-slate-700">{opt}</span>
                     </label>
                   ))}
@@ -465,7 +465,7 @@ export default function ApplyPage() {
                 <label key={opt} className="flex items-center gap-2 cursor-pointer">
                   <input type="radio" name="copyrightRisk" value={opt} checked={form.copyrightRisk === opt}
                     onChange={(e) => { update("copyrightRisk", e.target.value); if (e.target.value === "No") update("copyrightDetails", ""); }}
-                    className="text-indigo-600" />
+                    className="text-primary" />
                   <span className="text-sm font-medium text-slate-700">{opt}</span>
                 </label>
               ))}
@@ -496,7 +496,7 @@ export default function ApplyPage() {
 
         {/* Submit */}
         <div className="flex justify-end">
-          <Button type="submit" disabled={submitting} size="lg" className="bg-indigo-600 hover:bg-indigo-700 px-12 text-base">
+          <Button type="submit" disabled={submitting} size="lg" className="bg-primary hover:bg-primary/90 px-12 text-base">
             {submitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}Submit Application
           </Button>
         </div>

@@ -37,13 +37,13 @@ export function Sidebar() {
         "flex h-16 items-center border-b border-white/[0.06]",
         collapsed ? "justify-center px-3" : "px-5 gap-3"
       )}>
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500 shadow-lg shadow-indigo-500/25">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/15">
           <Box className="h-5 w-5 text-white" />
         </div>
         {!collapsed && (
           <div className="flex flex-col leading-tight min-w-0">
             <span className="text-[14px] font-semibold text-white tracking-tight">QEH 3D Print</span>
-            <span className="text-[11px] text-indigo-300/60 font-medium">Office Manager</span>
+            <span className="text-[11px] text-white/50 font-medium">Office Manager</span>
           </div>
         )}
         <Button
@@ -70,12 +70,12 @@ export function Sidebar() {
                   "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150",
                   collapsed && "justify-center px-2",
                   isActive
-                    ? "bg-indigo-500/15 text-white shadow-sm ring-1 ring-indigo-500/20"
-                    : "text-white/50 hover:text-white/80 hover:bg-white/[0.04]"
+                    ? "bg-white/12 text-white ring-1 ring-white/10"
+                    : "text-white/55 hover:text-white/85 hover:bg-white/[0.06]"
                 )}
                 title={collapsed ? item.name : undefined}
               >
-                <item.icon className={cn("h-[18px] w-[18px] shrink-0", isActive && "text-indigo-400")} />
+                <item.icon className={cn("h-[18px] w-[18px] shrink-0", isActive && "text-white")} />
                 {!collapsed && <span>{item.name}</span>}
               </Link>
             );
@@ -86,8 +86,8 @@ export function Sidebar() {
       {!collapsed && (
         <div className="border-t border-white/[0.06] p-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-500/20 text-xs font-bold text-indigo-400 ring-1 ring-indigo-500/30">3D</div>
-            <div className="text-xs"><p className="font-medium text-white/80">3DP Office</p><p className="text-white/30">Internal Portal</p></div>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white/70">3D</div>
+            <div className="text-xs"><p className="font-medium text-white/70">3DP Office</p><p className="text-white/35">Internal Portal</p></div>
           </div>
         </div>
       )}

@@ -36,7 +36,7 @@ export function ColumnPicker({ columns, selected, onChange }: ColumnPickerProps)
         <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100">
           <span className="text-xs font-semibold text-slate-500">Select columns</span>
           <div className="flex gap-1">
-            <button onClick={selectAll} className="text-[10px] text-indigo-600 hover:text-indigo-800 font-medium px-1">All</button>
+            <button onClick={selectAll} className="text-[10px] text-primary hover:text-primary/80 font-medium px-1">All</button>
             <button onClick={deselectAll} className="text-[10px] text-slate-400 hover:text-slate-600 font-medium px-1">None</button>
           </div>
         </div>
@@ -46,7 +46,7 @@ export function ColumnPicker({ columns, selected, onChange }: ColumnPickerProps)
               key={col}
               className={cn(
                 "flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors text-sm",
-                selected.includes(col) ? "bg-indigo-50 text-slate-800" : "text-slate-600 hover:bg-slate-50"
+                selected.includes(col) ? "bg-accent text-slate-800" : "text-slate-600 hover:bg-slate-50"
               )}
             >
               <Checkbox

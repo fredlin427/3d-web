@@ -365,7 +365,7 @@ export default function ApplyManagePage() {
           if (!editMode && activeFields.length === 0) return null;
 
           return (
-            <Card key={section.name} className={cn("overflow-visible border-0 shadow-sm", editMode && "ring-2 ring-indigo-200")}>
+            <Card key={section.name} className={cn("overflow-visible border-0 shadow-sm", editMode && "ring-2 ring-primary/20")}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">{section.name}</CardTitle>
                 {editMode && <p className="text-[11px] text-slate-400">↑↓ reorder · toggle to show/hide · trash to remove · click tag to change field</p>}
@@ -380,7 +380,7 @@ export default function ApplyManagePage() {
                       return (
                         <div key={field.key} className={cn(
                           "flex items-center gap-3 rounded-lg border-2 border-dashed p-3 transition-colors",
-                          isActive ? "border-slate-200 hover:border-indigo-300" : "border-red-100 bg-red-50/30 opacity-60"
+                          isActive ? "border-slate-200 hover:border-primary/30" : "border-red-100 bg-red-50/30 opacity-60"
                         )}>
                           {/* Reorder */}
                           <div className="flex flex-col gap-0.5">
@@ -397,7 +397,7 @@ export default function ApplyManagePage() {
                                 placeholder="Replace with..." className="min-w-[140px]" />
                             ) : (
                               <button type="button" onClick={() => setEditingField(field.key)}
-                                className="text-[10px] font-mono text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded px-1 py-0.5 transition-colors shrink-0" title="Click to replace with another field">
+                                className="text-[10px] font-mono text-slate-400 hover:text-primary hover:bg-accent rounded px-1 py-0.5 transition-colors shrink-0" title="Click to replace with another field">
                                 {field.key.startsWith("custom::") ? "custom" : field.key}
                               </button>
                             )}
@@ -425,7 +425,7 @@ export default function ApplyManagePage() {
                               defaultValue={field.label}
                               onBlur={(e) => updateFieldLabel(field.key, e.target.value)}
                               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); updateFieldLabel(field.key, (e.target as HTMLInputElement).value); } }}
-                              className="text-sm font-medium text-slate-700 border-b-2 border-slate-200 focus:border-indigo-400 outline-none px-1 min-w-[80px] bg-transparent"
+                              className="text-sm font-medium text-slate-700 border-b-2 border-slate-200 focus:border-primary/60 outline-none px-1 min-w-[80px] bg-transparent"
                               placeholder="Field name"
                             />
                             {field.required && <span className="text-red-400 text-xs">*</span>}
@@ -491,7 +491,7 @@ export default function ApplyManagePage() {
           <div className="space-y-1">
             {(purposeItems[purposeTab] || []).sort((a, b) => a.sortOrder - b.sortOrder).map((item: any, idx: number) => (
               <div key={item.id} className={cn("flex items-center gap-2 px-3 py-2 rounded-lg group", !item.isActive && "opacity-40")}>
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
                 <span className="flex-1 text-sm text-slate-700">{item.value}</span>
                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button type="button" onClick={() => movePurposeOption(purposeTab, idx, -1)} disabled={idx === 0} className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-30"><ChevronUp className="h-3.5 w-3.5" /></button>

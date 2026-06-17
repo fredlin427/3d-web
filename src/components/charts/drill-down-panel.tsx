@@ -39,14 +39,14 @@ export function DrillDownPanel({ title, groupTotal, grandTotal, children, onClos
   const groupPct = grandTotal > 0 ? ((groupTotal / grandTotal) * 100).toFixed(1) : "0";
 
   return (
-    <div className="rounded-xl border border-indigo-200 bg-white shadow-xl animate-in" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
+    <div className="rounded-xl border border-primary/20 bg-white shadow-xl animate-in" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-indigo-100 bg-indigo-50/50 rounded-t-xl">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-blue-100 bg-accent/50 rounded-t-xl">
         <div>
-          <span className="text-sm font-bold text-indigo-700">{title}</span>
-          <span className="text-xs text-indigo-400 ml-2">{groupTotal} items ({groupPct}% of total)</span>
+          <span className="text-sm font-bold text-primary">{title}</span>
+          <span className="text-xs text-blue-300 ml-2">{groupTotal} items ({groupPct}% of total)</span>
         </div>
-        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-indigo-100" onClick={onClose}><X className="h-4 w-4 text-indigo-500" /></Button>
+        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-blue-100" onClick={onClose}><X className="h-4 w-4 text-primary" /></Button>
       </div>
       {/* Sub-items */}
       <div className="px-4 py-2 max-h-[260px] overflow-y-auto">

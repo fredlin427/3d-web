@@ -15,7 +15,7 @@ export default function ApplyLayout({ children }: { children: React.ReactNode })
             <h1 className="text-lg font-bold tracking-tight text-slate-900">QEH 3D Printing Office</h1>
             <p className="text-xs text-slate-500">3D Printing Service Application Form</p>
           </div>
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500 text-sm font-bold text-white shadow-sm">3D</div>
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent0 text-sm font-bold text-white shadow-sm">3D</div>
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-6 py-10">{children}</main>

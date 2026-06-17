@@ -270,7 +270,7 @@ export default function ReportsPage() {
                 onKeyDown={(e) => { if (e.key === "Enter") saveCurrentPreset(); if (e.key === "Escape") setShowSavePreset(false); }}
                 autoFocus
               />
-              <Button size="sm" className="h-9 gap-1 bg-indigo-600 hover:bg-indigo-700" onClick={saveCurrentPreset}>
+              <Button size="sm" className="h-9 gap-1 bg-primary hover:bg-primary/90" onClick={saveCurrentPreset}>
                 <BookmarkCheck className="h-3.5 w-3.5" />Save
               </Button>
               <Button size="sm" variant="ghost" className="h-9" onClick={() => setShowSavePreset(false)}>✕</Button>
@@ -301,11 +301,11 @@ export default function ReportsPage() {
                   className={cn(
                     "text-left p-4 rounded-xl border-2 transition-all duration-150",
                     reportType === r.key
-                      ? "border-indigo-500 bg-indigo-50 shadow-sm"
+                      ? "border-blue-500 bg-accent shadow-sm"
                       : "border-transparent bg-white shadow-sm hover:border-slate-200 hover:shadow"
                   )}
                 >
-                  <r.icon className={cn("h-6 w-6 mb-2", reportType === r.key ? "text-indigo-600" : "text-slate-400")} />
+                  <r.icon className={cn("h-6 w-6 mb-2", reportType === r.key ? "text-primary" : "text-slate-400")} />
                   <p className="text-sm font-semibold text-slate-700">{r.title}</p>
                   <p className="text-[11px] text-slate-400 mt-0.5">{r.desc}</p>
                 </button>
@@ -319,7 +319,7 @@ export default function ReportsPage() {
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
-            {selected && <selected.icon className="h-5 w-5 text-indigo-500" />}
+            {selected && <selected.icon className="h-5 w-5 text-primary" />}
             {selected?.title} — Filters & Export
           </CardTitle>
         </CardHeader>
@@ -383,7 +383,7 @@ export default function ReportsPage() {
                 </Select>
               </div>
             )}
-            <Button onClick={() => fetchReport(reportType)} disabled={loading} className="h-9 gap-2 bg-indigo-600 hover:bg-indigo-700">
+            <Button onClick={() => fetchReport(reportType)} disabled={loading} className="h-9 gap-2 bg-primary hover:bg-primary/90">
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
               Generate
             </Button>

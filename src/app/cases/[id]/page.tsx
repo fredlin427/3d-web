@@ -111,7 +111,7 @@ export default function CaseDetailPage() {
               <ImageIcon className="h-10 w-10 text-slate-200 mx-auto mb-2" />
               <p className="text-sm text-slate-400">No 3D model image</p>
               {caseData.photoFolderUrl && (
-                <a href={caseData.photoFolderUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-2 text-xs text-indigo-600 font-medium"><ExternalLink className="h-3 w-3" />Photo Folder</a>
+                <a href={caseData.photoFolderUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-2 text-xs text-primary font-medium"><ExternalLink className="h-3 w-3" />Photo Folder</a>
               )}
             </div>
           </div>
@@ -143,11 +143,11 @@ export default function CaseDetailPage() {
       </div>
 
       {/* === PROGRESS — MOST IMPORTANT, FRONT AND CENTER === */}
-      <Card className="border-0 shadow-sm ring-1 ring-indigo-100">
+      <Card className="border-0 shadow-sm ring-1 ring-blue-100">
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-100">
-              <svg className="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-100">
+              <svg className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
             </div>
             Progress Timeline
             {caseData.currentProgressStep && (

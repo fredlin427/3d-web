@@ -49,7 +49,7 @@ export function CaseUsagePopover({ materialId, count }: { materialId: string; co
 
   return (
     <span ref={containerRef} className="relative inline-flex" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
-      <span className="inline-flex items-center gap-0.5 text-xs text-indigo-600 font-semibold bg-indigo-50 rounded-full px-2 py-0.5 cursor-default">
+      <span className="inline-flex items-center gap-0.5 text-xs text-primary font-semibold bg-accent rounded-full px-2 py-0.5 cursor-default">
         {count} case{count > 1 ? "s" : ""}
       </span>
 
@@ -73,10 +73,10 @@ export function CaseUsagePopover({ materialId, count }: { materialId: string; co
                   <Link
                     key={c.id}
                     href={`/cases/${c.id}`}
-                    className="flex items-center justify-between p-2.5 rounded-lg hover:bg-indigo-50 transition-colors group"
+                    className="flex items-center justify-between p-2.5 rounded-lg hover:bg-accent transition-colors group"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-indigo-600 group-hover:text-indigo-800 group-hover:underline truncate">{c.caseNumber} →</p>
+                      <p className="text-sm font-semibold text-primary group-hover:text-primary/80 group-hover:underline truncate">{c.caseNumber} →</p>
                       <p className="text-[11px] text-slate-500 truncate mt-0.5">{c.projectTitle}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">{c.department}</Badge>

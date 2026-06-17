@@ -112,7 +112,7 @@ export function FieldEditBar({
             <X className="h-3 w-3 text-slate-400 cursor-pointer" onClick={() => setEditing(false)} />
           </span>
         ) : (
-          <span className="cursor-pointer hover:text-indigo-500" onClick={() => { setEditVal(fieldKey); setEditing(true); }}>{fieldKey}</span>
+          <span className="cursor-pointer hover:text-primary" onClick={() => { setEditVal(fieldKey); setEditing(true); }}>{fieldKey}</span>
         )}
       </span>
       <button onClick={onToggle} className="p-0.5" title={visible ? "Hide" : "Show"}>
