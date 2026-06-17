@@ -224,43 +224,66 @@ export default function ChartBuilderPage() {
 
   // Export PNG
   const exportPNG = () => {
-    const doExport = () => {
-      const container = document.getElementById("chart-builder-preview");
-      const svg = container?.querySelector("svg");
-      if (!svg) { toast.error("No chart to export — try again"); return; }
-      const clone = svg.cloneNode(true) as SVGElement;
-      // Ensure xmlns and proper sizing
-      clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-      clone.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
-      const svgRect = svg.getBoundingClientRect();
-      const w = Math.ceil(svgRect.width) || 800;
-      const h = Math.ceil(svgRect.height) || 520;
-      clone.setAttribute("width", String(w));
-      clone.setAttribute("height", String(h));
-      const svgData = new XMLSerializer().serializeToString(clone);
-      const canvas = document.createElement("canvas");
-      canvas.width = w * 2; canvas.height = h * 2;
-      const ctx = canvas.getContext("2d")!;
-      ctx.scale(2, 2);
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, w, h);
-      const img = new Image();
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0, w, h);
-        canvas.toBlob((blob) => {
-          if (!blob) { toast.error("Export failed"); return; }
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url; a.download = `chart-${source}-${xField}.png`;
-          a.click(); URL.revokeObjectURL(url);
-          toast.success("Chart exported");
-        }, "image/png");
-      };
-      img.onerror = () => toast.error("Export failed — SVG could not be rendered");
-      img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+    const container = document.getElementById("chart-builder-preview");
+    const svg = container?.querySelector("svg");
+    if (!svg) { toast.error("No chart found — try refreshing the chart first"); return; }
+
+    // Clone the SVG and ensure it has proper namespace + computed styles inlined
+    const clone = svg.cloneNode(true) as SVGElement;
+    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+
+    // Copy computed styles from original to clone to avoid blank rendering
+    const originalChildren = svg.querySelectorAll("*");
+    const cloneChildren = clone.querySelectorAll("*");
+    originalChildren.forEach((el, i) => {
+      const cloneEl = cloneChildren[i];
+      if (!cloneEl) return;
+      const computed = window.getComputedStyle(el as Element);
+      // Only copy critical visual styles
+      const cssText = [
+        `fill:${computed.fill}`, `stroke:${computed.stroke}`, `stroke-width:${computed.strokeWidth}`,
+        `opacity:${computed.opacity}`, `font-size:${computed.fontSize}`, `font-weight:${computed.fontWeight}`,
+        `font-family:${computed.fontFamily}`, `text-anchor:${computed.textAnchor || "start"}`,
+      ].join(";");
+      (cloneEl as SVGElement).setAttribute("style", cssText);
+    });
+
+    const rect = svg.getBoundingClientRect();
+    const w = Math.ceil(rect.width) || 800;
+    const h = Math.ceil(rect.height) || 520;
+    clone.setAttribute("width", String(w));
+    clone.setAttribute("height", String(h));
+
+    const svgString = new XMLSerializer().serializeToString(clone);
+    const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = w * 2;
+    canvas.height = h * 2;
+    const ctx = canvas.getContext("2d")!;
+    ctx.scale(2, 2);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, w, h);
+
+    const img = new Image();
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      canvas.toBlob((blob) => {
+        if (!blob) { toast.error("Export failed"); return; }
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `chart-${source}-${xField}.png`;
+        a.click();
+        toast.success("Chart exported");
+      }, "image/png");
     };
-    // Small delay to ensure recharts has finished rendering
-    setTimeout(doExport, 150);
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      toast.error("Export failed — try a different chart type");
+    };
+    img.src = url;
   };
 
   // ─── Render chart ──────────────────────────────────────────────
