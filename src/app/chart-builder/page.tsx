@@ -225,10 +225,22 @@ export default function ChartBuilderPage() {
   };
 
   // ─── Render chart ──────────────────────────────────────────────
+  // Pre-computed grouped data for non-stacked charts with sub-groups
+  const groupedFlatData = useMemo(() => {
+    if (stackedData.length === 0) return [];
+    return stackedData.map((d) => {
+      const row: Record<string, unknown> = { label: d.label };
+      d.children.forEach((c) => { row[c.label] = c.value; });
+      return row;
+    });
+  }, [stackedData]);
+
   const renderChart = () => {
-    const data = chartData.length > 0 ? chartData : stackedData.map((d) => ({ label: d.label, value: d.value }));
-    const hasData = chartData.length > 0 || stackedData.length > 0;
-    const manyItems = data.length > 15;
+    const hasStack = stackedData.length > 0;
+    // Simple data (flat, no sub-group)
+    const flatData = chartData.length > 0 ? chartData : stackedData.map((d) => ({ label: d.label, value: d.value }));
+    const hasData = chartData.length > 0 || hasStack;
+    const manyItems = flatData.length > 15;
     const pieRadius = Math.min(containerWidth * 0.35, 240);
 
     if (!hasData) {
@@ -245,45 +257,53 @@ export default function ChartBuilderPage() {
 
     switch (chartType) {
       // ── BAR ──────────────────────────────────────────────────
-      case "bar":
+      case "bar": {
+        const barData = hasStack ? groupedFlatData : flatData;
+        const barKeys = hasStack ? stackKeys : ["value"];
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} barSize={Math.max(14, Math.min(48, 600 / Math.max(data.length, 1)))}>
+            <BarChart data={barData} barSize={Math.max(14, Math.min(40, 800 / Math.max(barData.length * (barKeys.length + 1), 1)))}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f2f6" />
               <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false}
-                angle={data.length > 8 ? -35 : 0} textAnchor={data.length > 8 ? "end" : "middle"} height={data.length > 8 ? 80 : 40}
+                angle={barData.length > 8 ? -35 : 0} textAnchor={barData.length > 8 ? "end" : "middle"} height={barData.length > 8 ? 80 : 40}
                 tickFormatter={(v) => truncateLabel(v)} />
               <YAxis tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
               <Tooltip cursor={{ fill: "#f8f9fc" }} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                {!manyItems && <LabelList dataKey="value" position="top" style={{ fontSize: 12, fontWeight: 700, fill: "#475569" }} />}
-                {data.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-              </Bar>
+              {hasStack && <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />}
+              {barKeys.map((key, i) => (
+                <Bar key={key} dataKey={key} fill={CHART_COLORS[i % CHART_COLORS.length]} name={key} radius={[6, 6, 0, 0]}>
+                  {!hasStack && !manyItems && <LabelList dataKey="value" position="top" style={{ fontSize: 12, fontWeight: 700, fill: "#475569" }} />}
+                </Bar>
+              ))}
             </BarChart>
           </ResponsiveContainer>
         );
+      }
 
       // ── BAR HORIZONTAL ───────────────────────────────────────
-      case "barH":
+      case "barH": {
+        const barData = hasStack ? groupedFlatData : flatData;
+        const barKeys = hasStack ? stackKeys : ["value"];
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} layout="vertical" barSize={Math.max(14, Math.min(36, 500 / Math.max(data.length, 1)))} margin={{ left: 20, right: 60 }}>
+            <BarChart data={barData} layout="vertical" barSize={Math.max(14, Math.min(32, 450 / Math.max(barData.length, 1)))} margin={{ left: 20, right: 60 }}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f2f6" />
               <XAxis type="number" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
               <YAxis type="category" dataKey="label" width={140} tick={{ fontSize: 12, fontWeight: 500, fill: "#334155" }} axisLine={false} tickLine={false}
                 tickFormatter={(v) => truncateLabel(v)} />
               <Tooltip cursor={{ fill: "#f8f9fc" }} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              <Bar dataKey="value" radius={[0, 6, 6, 0]}>
-                {!manyItems && <LabelList dataKey="value" position="right" style={{ fontSize: 13, fontWeight: 700 }} />}
-                {data.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-              </Bar>
+              {hasStack && <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />}
+              {barKeys.map((key, i) => (
+                <Bar key={key} dataKey={key} fill={CHART_COLORS[i % CHART_COLORS.length]} name={key} radius={[0, 6, 6, 0]} />
+              ))}
             </BarChart>
           </ResponsiveContainer>
         );
+      }
 
       // ── PIE ──────────────────────────────────────────────────
       case "pie": {
-        const pieData = data.map((d) => ({ ...d, pctLabel: `${((d.value / Math.max(total, 1)) * 100).toFixed(0)}%` }));
+        const pieData = flatData.map((d) => ({ ...d, pctLabel: `${((d.value / Math.max(total, 1)) * 100).toFixed(0)}%` }));
         return (
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -304,13 +324,12 @@ export default function ChartBuilderPage() {
 
       // ── DONUT ────────────────────────────────────────────────
       case "donut": {
-        const donutData = data.map((d) => ({ ...d, pctLabel: `${((d.value / Math.max(total, 1)) * 100).toFixed(0)}%` }));
-        const donutRadius = pieRadius;
+        const donutData = flatData.map((d) => ({ ...d, pctLabel: `${((d.value / Math.max(total, 1)) * 100).toFixed(0)}%` }));
         return (
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie data={donutData} dataKey="value" nameKey="label" cx="50%" cy="45%"
-                innerRadius={donutRadius * 0.42} outerRadius={donutRadius}
+                innerRadius={pieRadius * 0.42} outerRadius={pieRadius}
                 label={({ label, value, percent }: any) => {
                   if (percent < 0.04) return "";
                   return `${truncateLabel(label, 12)} (${value}, ${(percent * 100).toFixed(0)}%)`;
@@ -326,50 +345,57 @@ export default function ChartBuilderPage() {
       }
 
       // ── LINE ─────────────────────────────────────────────────
-      case "line":
+      case "line": {
+        const lineData = hasStack ? groupedFlatData : flatData;
+        const lineKeys = hasStack ? stackKeys : ["value"];
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data}>
+            <LineChart data={lineData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f2f6" />
               <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false}
-                angle={data.length > 8 ? -35 : 0} textAnchor={data.length > 8 ? "end" : "middle"} height={data.length > 8 ? 80 : 40}
+                angle={lineData.length > 8 ? -35 : 0} textAnchor={lineData.length > 8 ? "end" : "middle"} height={lineData.length > 8 ? 80 : 40}
                 tickFormatter={(v) => truncateLabel(v)} />
               <YAxis tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              <Line type="monotone" dataKey="value" stroke="#4f46e5" strokeWidth={3} dot={{ fill: "#4f46e5", r: 5 }} activeDot={{ r: 7 }}>
-                {!manyItems && <LabelList dataKey="value" position="top" style={{ fontSize: 12, fontWeight: 600 }} />}
-              </Line>
+              {hasStack && <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />}
+              {lineKeys.map((key, i) => (
+                <Line key={key} type="monotone" dataKey={key} stroke={CHART_COLORS[i % CHART_COLORS.length]} strokeWidth={2.5}
+                  dot={{ fill: CHART_COLORS[i % CHART_COLORS.length], r: 4 }} activeDot={{ r: 6 }} name={key} />
+              ))}
             </LineChart>
           </ResponsiveContainer>
         );
+      }
 
       // ── AREA ─────────────────────────────────────────────────
-      case "area":
+      case "area": {
+        const areaData = hasStack ? groupedFlatData : flatData;
+        const areaKeys = hasStack ? stackKeys : ["value"];
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data}>
+            <AreaChart data={areaData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f2f6" />
               <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false}
-                angle={data.length > 8 ? -35 : 0} textAnchor={data.length > 8 ? "end" : "middle"} height={data.length > 8 ? 80 : 40}
+                angle={areaData.length > 8 ? -35 : 0} textAnchor={areaData.length > 8 ? "end" : "middle"} height={areaData.length > 8 ? 80 : 40}
                 tickFormatter={(v) => truncateLabel(v)} />
               <YAxis tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              <Area type="monotone" dataKey="value" stroke="#4f46e5" strokeWidth={2} fill="#4f46e5" fillOpacity={0.12} />
+              {hasStack && <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />}
+              {areaKeys.map((key, i) => (
+                <Area key={key} type="monotone" dataKey={key} stroke={CHART_COLORS[i % CHART_COLORS.length]} strokeWidth={2}
+                  fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.08} name={key} />
+              ))}
             </AreaChart>
           </ResponsiveContainer>
         );
+      }
 
       // ── STACKED ──────────────────────────────────────────────
       case "stacked": {
         const stackColors = CHART_COLORS;
-        const flatData = stackedData.map((d) => {
-          const row: Record<string, unknown> = { label: d.label };
-          d.children.forEach((c) => { row[c.label] = c.value; });
-          return row;
-        });
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={flatData} barSize={Math.max(24, Math.min(56, 600 / Math.max(stackedData.length, 1)))}>
+            <BarChart data={groupedFlatData} barSize={Math.max(24, Math.min(56, 600 / Math.max(stackedData.length, 1)))}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f2f6" />
               <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false}
                 angle={stackedData.length > 6 ? -35 : 0} textAnchor={stackedData.length > 6 ? "end" : "middle"} height={stackedData.length > 6 ? 80 : 40}
