@@ -612,8 +612,8 @@ export default function ChartBuilderPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* ─── Left: Configuration Panel (1/5) ────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
+        {/* ─── Left: Configuration Panel (1/6) ────────────────── */}
         <div className="space-y-3 lg:col-span-1">
           {/* Source */}
           <Card className="border-0 shadow-sm">
@@ -732,7 +732,7 @@ export default function ChartBuilderPage() {
         </div>
 
         {/* ─── Right: Chart + Table (4/5) ─────────────────────── */}
-        <div className="lg:col-span-4 space-y-4">
+        <div className="lg:col-span-5 space-y-4">
           {/* Chart */}
           <Card className="border-0 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between pb-1 pt-5 px-5">
@@ -746,7 +746,7 @@ export default function ChartBuilderPage() {
               </Button>
             </CardHeader>
             <CardContent className="px-2 pb-4">
-              <div id="chart-builder-preview" ref={containerRef} className="w-full" style={{ height: showTable ? 500 : 600 }}>
+              <div id="chart-builder-preview" ref={containerRef} className="w-full" style={{ height: showTable ? 550 : 700 }}>
                 {loading ? (
                   <div className="flex items-center justify-center h-full">
                     <Loader2 className="h-8 w-8 text-primary animate-spin" />
