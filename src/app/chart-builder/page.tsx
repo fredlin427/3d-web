@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import { HierarchicalTable } from "@/components/charts/hierarchical-table";
 import type { StackedRow } from "@/components/charts/hierarchical-table";
 import { DrillDownPanel } from "@/components/charts/drill-down-panel";
-import { exportSVG, exportPNG, debugOpenSVG } from "@/lib/export-utils";
+import { exportSVG, exportPNG } from "@/lib/export-utils";
 
 // ─── Color palettes ─────────────────────────────────────────────
 const COLOR_PALETTES: Record<string, string[]> = {
@@ -555,9 +555,6 @@ export default function ChartBuilderPage() {
           </Button>
           <Button size="sm" className="h-9 gap-2 bg-primary hover:bg-primary/90" onClick={handleExportPNG}>
             <Camera className="h-4 w-4" />PNG
-          </Button>
-          <Button size="sm" variant="ghost" className="h-9 gap-1 text-xs text-slate-400" onClick={() => debugOpenSVG("chart-builder-preview")}>
-            Debug
           </Button>
         </div>
       </div>
