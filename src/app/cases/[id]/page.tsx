@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { Pencil, Copy, Trash2, ImageIcon, ExternalLink, Calendar, User, Building2, Tag } from "lucide-react";
 import { formatDate, formatDateTime, getStatusBadgeVariant } from "@/lib/utils";
 import { DEPARTMENT_LABELS } from "@/lib/constants";
+import { CaseDetailFields } from "@/components/cases/case-detail-fields";
 
 interface CaseDetail {
   id: string; caseNumber: string; applicationDate: string;
@@ -69,27 +70,6 @@ export default function CaseDetailPage() {
 
   if (loading) return <LoadingState />;
   if (!caseData) return <p className="text-center py-20 text-slate-500">Case not found.</p>;
-
-  const detailCards = [
-    { label: "Model Type", value: caseData.modelType },
-    { label: "Ownership", value: caseData.ownership },
-    { label: "Service", value: caseData.requiredService },
-    { label: "Sterilization", value: caseData.requiresSterilization },
-    { label: "Model Material", value: caseData.modelMaterial },
-    { label: "Colour", value: caseData.colourRequirement },
-    { label: "QTY", value: String(caseData.quantity) },
-    { label: "Components", value: String(caseData.totalComponents) },
-    { label: "Technician", value: caseData.technician },
-    { label: "Party", value: caseData.printingParty },
-    { label: "Hospital", value: caseData.hospital },
-    { label: "Rank", value: caseData.rank },
-    { label: "Copyright Risk", value: caseData.copyrightRisk === true ? "Yes" : caseData.copyrightRisk === false ? "No" : null },
-    { label: "Copyright Details", value: caseData.copyrightDetails },
-    { label: "Reprint", value: caseData.isReprint === true ? "Yes" : null },
-    { label: "Funding Source", value: caseData.fundingSource },
-    { label: "Approved", value: formatDate(caseData.approvalDate) },
-    { label: "Completed", value: formatDate(caseData.completionDate) },
-  ].filter((d) => d.value && d.value !== "—");
 
   return (
     <div className="space-y-6">
@@ -164,28 +144,7 @@ export default function CaseDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Key details + description */}
         <div className="lg:col-span-1 space-y-4">
-          {detailCards.length > 0 && (
-            <Card className="border-0 shadow-sm">
-              <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Details</CardTitle></CardHeader>
-              <CardContent className="grid grid-cols-2 gap-2">
-                {detailCards.map((d) => (
-                  <div key={d.label} className="rounded-lg bg-slate-50 px-3 py-2">
-                    <p className="text-[10px] font-medium text-slate-400 uppercase">{d.label}</p>
-                    <p className="text-sm font-medium text-slate-700">{d.value}</p>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
-          {caseData.description && (
-            <Card className="border-0 shadow-sm"><CardContent className="p-4 text-sm text-slate-600 leading-relaxed">{caseData.description}</CardContent></Card>
-          )}
-          {caseData.serviceRequirements && (
-            <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-[10px] font-medium text-slate-400 uppercase mb-1">Requirements</p><p className="text-sm text-slate-700">{caseData.serviceRequirements}</p></CardContent></Card>
-          )}
-          {caseData.remarks && (
-            <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-[10px] font-medium text-slate-400 uppercase mb-1">Remarks</p><p className="text-sm text-slate-700">{caseData.remarks}</p></CardContent></Card>
-          )}
+          <CaseDetailFields caseData={caseData} />
         </div>
 
         {/* Material Usage */}
