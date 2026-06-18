@@ -758,13 +758,35 @@ export default function ChartBuilderPage() {
               </Button>
             </CardHeader>
             <CardContent className="px-2 pb-4">
-              <div id="chart-builder-preview" ref={containerRef} className="w-full" style={{ height: hasStacked ? (showTable ? 480 : 560) : (showTable ? 400 : 500) }}>
+              <div id="chart-builder-preview" ref={containerRef} className="w-full" style={{ height: 400 }}>
                 {loading ? (
                   <div className="flex items-center justify-center h-full">
                     <Loader2 className="h-8 w-8 text-primary animate-spin" />
                   </div>
                 ) : renderChart()}
               </div>
+              {/* Grouped legend — outside chart container, always visible */}
+              {hasStacked && (
+                <div className="mt-4 pt-3 border-t text-xs" style={{ fontFamily: "system-ui, sans-serif" }}>
+                  {stackedData.map((group, gi) => (
+                    <div key={group.label} className="mb-2">
+                      <div className="flex items-center gap-1.5 font-bold text-slate-700">
+                        <span className="inline-block w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: CHART_COLORS[gi % CHART_COLORS.length] }} />
+                        {group.label}
+                        <span className="text-slate-400 font-normal">({group.value})</span>
+                      </div>
+                      <div className="ml-5 grid grid-cols-3 gap-x-2 gap-y-0.5 mt-0.5">
+                        {group.children.map((child, ci) => (
+                          <div key={child.label} className="flex items-center gap-1 text-slate-500">
+                            <span className="inline-block w-1.5 h-1.5 rounded-sm shrink-0" style={{ backgroundColor: shadeColor(CHART_COLORS[gi % CHART_COLORS.length], ci, group.children.length), opacity: 0.7 }} />
+                            {truncateLabel(child.label, 16)}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
