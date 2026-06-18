@@ -266,10 +266,11 @@ export default function SettingsPage() {
                       if (!item) return null;
                       const stored = settings[key] || [];
                       const active = stored.filter((s: any) => s.isActive);
-                      const cat = materialCatMap[key];
-                      const defaults = cat ? MATERIAL_CATEGORY_FIELDS[cat] || [] : [];
-                      const count = active.length > 0 ? active.length : defaults.length;
-                      const total = Math.max(stored.length, defaults.length);
+                      // Hardcoded default field counts per category (must match MATERIAL_CATEGORY_FIELDS)
+                      const DEF_COUNTS: Record<string, number> = { fdm_form_field: 14, sla_form_field: 17, tank_form_field: 12, ipa_form_field: 4 };
+                      const def = DEF_COUNTS[key] || 0;
+                      const count = active.length || def;
+                      const total = stored.length || def;
                       return (
                         <button
                           key={key}
