@@ -79,28 +79,43 @@ export function exportSVG(containerId: string, filename: string): void {
   toast.success(`Exported: ${filename}.svg`);
 }
 
-/** Download chart as PNG via server-side resvg-js rendering */
+/** Download chart as PNG — loads SVG in browser Image → canvas → PNG */
 export async function exportPNG(containerId: string, filename: string): Promise<void> {
   const svgString = getSVGString(containerId);
   if (!svgString) { toast.error("No chart to export"); return; }
 
   try {
-    const res = await fetch("/api/export/png", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ svg: svgString }),
+    const img = new Image();
+    const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+    const svgUrl = URL.createObjectURL(svgBlob);
+
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error("SVG failed to load as image"));
+      img.src = svgUrl;
     });
-    if (!res.ok) throw new Error(`Server error: ${res.status}`);
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.download = `${filename}.png`;
-    a.href = url;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success(`Exported: ${filename}.png`);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth * 2;
+    canvas.height = img.naturalHeight * 2;
+    const ctx = canvas.getContext("2d")!;
+    ctx.scale(2, 2);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, img.naturalWidth, img.naturalHeight);
+    ctx.drawImage(img, 0, 0);
+
+    URL.revokeObjectURL(svgUrl);
+
+    canvas.toBlob((blob) => {
+      if (!blob) { toast.error("PNG export failed"); return; }
+      const a = document.createElement("a");
+      a.download = `${filename}.png`;
+      a.href = URL.createObjectURL(blob);
+      a.click();
+      toast.success(`Exported: ${filename}.png`);
+    }, "image/png");
   } catch (e) {
     console.error("PNG export failed:", e);
-    toast.error("PNG export failed — try Export SVG instead");
+    toast.error("PNG export failed — use Export SVG instead (PowerPoint supports SVG)");
   }
 }
