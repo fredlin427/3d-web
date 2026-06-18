@@ -34,6 +34,19 @@ export async function exportPNG(
       scale: 3,
       useCORS: true,
       logging: false,
+      onclone: (clonedDoc) => {
+        // Remove Tailwind v4 oklch/lab colors that html2canvas cannot parse
+        const all = clonedDoc.querySelectorAll("*");
+        all.forEach((el) => {
+          const s = (el as HTMLElement).style;
+          for (let i = s.length - 1; i >= 0; i--) {
+            const v = s.getPropertyValue(s[i]);
+            if (v.includes("oklch(") || v.includes("lab(")) {
+              s.removeProperty(s[i]);
+            }
+          }
+        });
+      },
     });
     const blob = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob(resolve, "image/png")
