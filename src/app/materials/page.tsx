@@ -62,11 +62,15 @@ export default function MaterialsPage() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
 
-  // SWR: auto-caches, deduplicates, revalidates on focus
+  // SWR: current category for table display
   const swrKey = apiUrl("/api/materials", { category: activeCat, ...(search && { search }) });
   const { data: swrData, isLoading, mutate } = useAPI<{ success: boolean; data: MaterialItem[] }>(swrKey);
   const materials = swrData?.success ? swrData.data : [];
   const loading = isLoading;
+
+  // Separate fetch for ALL materials counts (no category filter)
+  const { data: allData } = useAPI<{ success: boolean; data: MaterialItem[] }>("/api/materials");
+  const allMaterials = allData?.success ? allData.data : [];
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -229,7 +233,7 @@ export default function MaterialsPage() {
       {/* Category tabs with counts */}
       <div className="flex gap-1 bg-slate-100 rounded-xl p-1 w-fit">
         {CATEGORIES.map((c) => {
-          const count = materials.filter((m) => m.category === c.key).length;
+          const count = allMaterials.filter((m) => m.category === c.key).length || materials.filter((m) => m.category === c.key).length;
           return (
             <button key={c.key} onClick={() => { setActiveCat(c.key); setImportResult(null); }}
               className={cn("px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2", activeCat === c.key ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700")}>
