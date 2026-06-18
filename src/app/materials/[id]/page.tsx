@@ -12,6 +12,7 @@ import { DataTable, Column } from "@/components/shared/data-table";
 import { toast } from "sonner";
 import { Pencil, Trash2, AlertTriangle, Clock, Package, ArrowDownUp } from "lucide-react";
 import { formatDate, formatDateTime, getStockAlertStatus, getStatusBadgeVariant } from "@/lib/utils";
+import { MaterialDetailFields } from "@/components/materials/material-detail-fields";
 
 interface MaterialDetail {
   id: string;
@@ -161,36 +162,8 @@ export default function MaterialDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          {/* Material Info */}
-          <Card>
-            <CardHeader><CardTitle className="text-sm font-semibold">Material Information</CardTitle></CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                <div><p className="text-xs text-slate-400">Category</p><p className="font-medium">{material.category}</p></div>
-                <div><p className="text-xs text-slate-400">Brand</p><p className="font-medium">{material.brand || "—"}</p></div>
-                <div><p className="text-xs text-slate-400">Material Type</p><p className="font-medium">{material.materialType || "—"}</p></div>
-                <div><p className="text-xs text-slate-400">Colour</p><p className="font-medium">{material.colour || "—"}</p></div>
-                <div><p className="text-xs text-slate-400">Batch Number</p><p className="font-mono text-sm">{material.batchNumber}</p></div>
-                <div><p className="text-xs text-slate-400">Supplier</p><p className="font-medium">{material.supplier || "—"}</p></div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Stock Info */}
-          <Card>
-            <CardHeader><CardTitle className="text-sm font-semibold">Stock Details</CardTitle></CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div><p className="text-xs text-slate-400">Total Weight</p><p className="font-medium text-lg">{material.initialQuantity} {material.unit}</p></div>
-                <div><p className="text-xs text-slate-400">Used</p><p className="font-medium text-lg text-amber-600">{material.initialQuantity - material.currentQuantity} {material.unit}</p></div>
-                <div><p className="text-xs text-slate-400">Remain</p><p className="font-medium text-lg text-emerald-600">{material.currentQuantity} {material.unit}</p></div>
-                <div><p className="text-xs text-slate-400">Unit</p><p className="font-medium">{material.unit}</p></div>
-                <div><p className="text-xs text-slate-400">Reorder Threshold</p><p className="font-medium">{material.reorderThreshold} {material.unit}</p></div>
-                <div><p className="text-xs text-slate-400">Storage</p><p className="font-medium">{material.storageLocation || "—"}</p></div>
-                <div><p className="text-xs text-slate-400">Status</p><Badge variant={getStatusBadgeVariant(material.status)}>{material.status}</Badge></div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Dynamic material fields — synced from Settings */}
+          <MaterialDetailFields material={material} />
 
           {/* Stock Transactions */}
           <Card>
