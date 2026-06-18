@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CHART_COLORS_24 } from "@/lib/chart-colors";
 
 interface ChildItem {
   label: string;
@@ -17,13 +18,7 @@ interface Props {
   colors?: string[];
 }
 
-const DEFAULT_COLORS = [
-  "#4472C4","#ED7D31","#A5A5A5","#FFC000","#5B9BD5","#70AD47",
-  "#F15C5C","#9B59B6","#1ABC9C","#E67E22","#2E75B6","#C55A11",
-  "#7F7F7F","#A68A00","#3B6FB6","#D44C2B","#8C8C8C","#E5A800",
-];
-
-export function DrillDownPanel({ title, groupTotal, grandTotal, children, onClose, colors = DEFAULT_COLORS }: Props) {
+export function DrillDownPanel({ title, groupTotal, grandTotal, children, onClose, colors = CHART_COLORS_24 }: Props) {
   if (!children || children.length === 0) {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-lg">

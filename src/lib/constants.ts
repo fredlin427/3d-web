@@ -79,15 +79,7 @@ export const SERVICE_OPTIONS = [
 
 export const STERILIZATION_OPTIONS = ["Yes", "No"] as const;
 
-export const PRIORITIES = ["Routine", "Urgent", "High priority"] as const;
-
-export const CASE_STATUSES = [
-  "Draft",
-  "In progress",
-  "On hold",
-  "Completed",
-  "Cancelled",
-] as const;
+// PRIORITIES and CASE_STATUSES removed (unused)
 
 export const TECHNICIANS = ["Madeleine", "Tiffany", "Other"] as const;
 
@@ -207,14 +199,6 @@ export const PROGRESS_STEP_STATUSES = [
   "Skipped",
 ] as const;
 
-export const TRANSACTION_TYPES = [
-  "Usage",
-  "Refill",
-  "Adjustment",
-  "Disposal",
-  "Stock take adjustment",
-] as const;
-
 export const DEFAULT_PROGRESS_STEPS = [
   "Application Received",
   "Approval",
@@ -224,18 +208,6 @@ export const DEFAULT_PROGRESS_STEPS = [
   "Post-processing",
   "Final Product",
   "Completion",
-] as const;
-
-export const STORAGE_LOCATIONS = [
-  "Shelf A",
-  "Shelf B",
-  "Shelf C",
-  "Cabinet 1",
-  "Cabinet 2",
-  "Cold Storage",
-  "Hazardous Cabinet",
-  "Printer Station 1",
-  "Printer Station 2",
 ] as const;
 
 export const AUDIT_ACTIONS = {

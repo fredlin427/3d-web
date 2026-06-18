@@ -34,12 +34,7 @@ const TABLE_FIELD_LABELS: Record<string, string> = {
   "material.materialName": "→ Material", "material.category": "→ Mat Category",
   "material.brand": "→ Brand", "material.status": "→ Mat Status",
 };
-const TABLE_COLORS_24 = [
-  "#4472C4","#ED7D31","#A5A5A5","#FFC000","#5B9BD5","#70AD47",
-  "#F15C5C","#9B59B6","#1ABC9C","#E67E22","#2E75B6","#C55A11",
-  "#7F7F7F","#A68A00","#3B6FB6","#D44C2B","#8C8C8C","#E5A800",
-  "#4A90D9","#F07020","#B0B0B0","#FFB300","#6BA5DA","#85C056",
-];
+import { CHART_COLORS_24 as TABLE_COLORS_24 } from "@/lib/chart-colors";
 
 interface DashboardData {
   stats: { totalCases: number; casesThisMonth: number; casesInProgress: number; completedCases: number; lowStockItems: number; expiringMaterials: number; materialsOpened: number };

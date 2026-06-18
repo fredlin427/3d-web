@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import { CHART_COLORS_24 } from "@/lib/chart-colors";
 
 export interface StackedRow {
   label: string;
@@ -16,20 +16,13 @@ interface Props {
   colors?: string[];
 }
 
-const DEFAULT_COLORS = [
-  "#4472C4","#ED7D31","#A5A5A5","#FFC000","#5B9BD5","#70AD47",
-  "#F15C5C","#9B59B6","#1ABC9C","#E67E22","#2E75B6","#C55A11",
-  "#7F7F7F","#A68A00","#3B6FB6","#D44C2B","#8C8C8C","#E5A800",
-  "#4A90D9","#F07020","#B0B0B0","#FFB300","#6BA5DA","#85C056",
-];
-
-export function HierarchicalTable({ data, total, primaryLabel = "Group", secondaryLabel = "Sub-item", colors = DEFAULT_COLORS }: Props) {
+export function HierarchicalTable({ data, total, primaryLabel = "Group", secondaryLabel = "Sub-item", colors = CHART_COLORS_24 }: Props) {
   if (!data || data.length === 0) {
     return <p className="text-xs text-slate-400 text-center py-6">No data available</p>;
   }
 
   return (
-    <div className="overflow-x-auto" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
+    <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <colgroup>
           <col style={{ width: "auto" }} />

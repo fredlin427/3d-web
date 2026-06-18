@@ -244,14 +244,18 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
     }
   }, [watchedOpenDate, watchedDisposalDate, watchedExpiryDate, watchedCategory, watchedBatch]);
 
-  // Auto-calculate Remain = Weight − Used (on change)
+  // Auto-calculate Remain = Initial − Used − Opened − Expired (matches server formula)
   const watchedWeight = watch("initialQuantity");
   const watchedUsed = watch("unusedQuantity");
+  const watchedOpened = watch("openedQuantity");
+  const watchedExpired = watch("expiredQuantity");
   useEffect(() => {
     const w = Number(watchedWeight) || 0;
     const u = Number(watchedUsed) || 0;
-    setValue("currentQuantity", Math.max(0, w - u));
-  }, [watchedWeight, watchedUsed]);
+    const o = Number(watchedOpened) || 0;
+    const e = Number(watchedExpired) || 0;
+    setValue("currentQuantity", Math.max(0, w - u - o - e));
+  }, [watchedWeight, watchedUsed, watchedOpened, watchedExpired]);
 
   // Re-apply field filter when category changes
   useEffect(() => {
