@@ -362,7 +362,7 @@ export default function ChartBuilderPage() {
           const innerOuter = twoR * 0.58;
           const outerInner = twoR * 0.64;
           const outerOuter = twoR;
-          return (
+          return (<>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart margin={{ top: 30, right: 80, bottom: 30, left: 80 }}>
                 {/* Inner ring: primary groups */}
@@ -394,9 +394,36 @@ export default function ChartBuilderPage() {
                   })}
                 </Pie>
                 <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
               </PieChart>
             </ResponsiveContainer>
+            {/* Grouped legend — parent groups with sub-items indented */}
+            <div key="legend" className="mt-3 max-h-[200px] overflow-y-auto px-4 text-xs" style={{ fontFamily: "system-ui, sans-serif" }}>
+              {stackedData.map((group, gi) => (
+                <div key={group.label} className="mb-2">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-700">
+                    <span className="inline-block w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: CHART_COLORS[gi % CHART_COLORS.length] }} />
+                    {group.label}
+                    <span className="text-slate-400 font-normal text-[11px]">({group.value})</span>
+                  </div>
+                  <div className="ml-5 grid grid-cols-2 gap-x-3 gap-y-0.5">
+                    {group.children.map((child, ci) => {
+                      const shades = [CHART_COLORS[gi % CHART_COLORS.length],
+                        shadeColor(CHART_COLORS[gi % CHART_COLORS.length], 1, 4),
+                        shadeColor(CHART_COLORS[gi % CHART_COLORS.length], 2, 4),
+                        shadeColor(CHART_COLORS[gi % CHART_COLORS.length], 3, 4),
+                      ];
+                      return (
+                        <div key={child.label} className="flex items-center gap-1 text-[11px] text-slate-500">
+                          <span className="inline-block w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: shades[ci % shades.length], opacity: 0.7 }} />
+                          {truncateLabel(child.label, 15)}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
           );
         }
         // ── Single-level pie (no sub-group) ──
@@ -434,7 +461,7 @@ export default function ChartBuilderPage() {
           const innerOuter = twoR * 0.58;
           const outerInner = twoR * 0.64;
           const outerOuter = twoR;
-          return (
+          return (<>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart margin={{ top: 30, right: 80, bottom: 30, left: 80 }}>
                 <Pie data={flatData} dataKey="value" nameKey="label" cx="50%" cy="48%"
@@ -464,9 +491,36 @@ export default function ChartBuilderPage() {
                   })}
                 </Pie>
                 <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
               </PieChart>
             </ResponsiveContainer>
+            {/* Grouped legend */}
+            <div className="mt-3 max-h-[200px] overflow-y-auto px-4 text-xs" style={{ fontFamily: "system-ui, sans-serif" }}>
+              {stackedData.map((group, gi) => (
+                <div key={group.label} className="mb-2">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-700">
+                    <span className="inline-block w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: CHART_COLORS[gi % CHART_COLORS.length] }} />
+                    {group.label}
+                    <span className="text-slate-400 font-normal text-[11px]">({group.value})</span>
+                  </div>
+                  <div className="ml-4.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
+                    {group.children.map((child, ci) => {
+                      const shades = [CHART_COLORS[gi % CHART_COLORS.length],
+                        shadeColor(CHART_COLORS[gi % CHART_COLORS.length], 1, 4),
+                        shadeColor(CHART_COLORS[gi % CHART_COLORS.length], 2, 4),
+                        shadeColor(CHART_COLORS[gi % CHART_COLORS.length], 3, 4),
+                      ];
+                      return (
+                        <div key={child.label} className="flex items-center gap-1 text-[11px] text-slate-500">
+                          <span className="inline-block w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: shades[ci % shades.length], opacity: 0.7 }} />
+                          {truncateLabel(child.label, 15)}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
           );
         }
         // Single-level donut
