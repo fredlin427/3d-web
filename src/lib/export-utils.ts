@@ -35,15 +35,26 @@ export async function exportPNG(
       useCORS: true,
       logging: false,
       onclone: (clonedDoc) => {
-        // Remove Tailwind v4 oklch/lab colors that html2canvas cannot parse
-        const all = clonedDoc.querySelectorAll("*");
-        all.forEach((el) => {
+        // Strip oklch/lab from cloned stylesheets AND inline styles
+        try {
+          for (const sheet of Array.from(clonedDoc.styleSheets)) {
+            try {
+              const rules = Array.from(sheet.cssRules || []);
+              for (let i = rules.length - 1; i >= 0; i--) {
+                const text = rules[i].cssText;
+                if (text.includes("oklch(") || text.includes("lab(") || text.includes("lch(")) {
+                  sheet.deleteRule(i);
+                }
+              }
+            } catch (_) { /* cross-origin */ }
+          }
+        } catch (_) { /* ignore */ }
+        // Also strip from inline styles
+        clonedDoc.querySelectorAll("*").forEach((el) => {
           const s = (el as HTMLElement).style;
           for (let i = s.length - 1; i >= 0; i--) {
             const v = s.getPropertyValue(s[i]);
-            if (v.includes("oklch(") || v.includes("lab(")) {
-              s.removeProperty(s[i]);
-            }
+            if (v.includes("oklch(") || v.includes("lab(")) s.removeProperty(s[i]);
           }
         });
       },
