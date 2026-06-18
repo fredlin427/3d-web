@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LoadingState } from "@/components/shared/loading-state";
 import { HierarchicalTable } from "@/components/charts/hierarchical-table";
-import { exportSVG, exportPNG } from "@/lib/export-utils";
+import { exportPNG } from "@/lib/export-utils";
 import { toast } from "sonner";
 import { FolderOpen, Clock, CheckCircle2, AlertTriangle, Package, TrendingDown, Download, ImageIcon, ArrowRight, Camera, Presentation, X, Database, Loader2 } from "lucide-react";
 import Link from "next/link";

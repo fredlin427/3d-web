@@ -11,7 +11,7 @@ import {
   LabelList,
 } from "recharts";
 import {
-  BarChart3, PieChartIcon, TrendingUp, AreaChartIcon, Camera, RefreshCw, Download,
+  BarChart3, PieChartIcon, TrendingUp, AreaChartIcon, Camera, RefreshCw,
   Database, SlidersHorizontal, LayoutGrid, Loader2, Layers,
   Table2, ListTree,
 } from "lucide-react";
@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import { HierarchicalTable } from "@/components/charts/hierarchical-table";
 import type { StackedRow } from "@/components/charts/hierarchical-table";
 import { DrillDownPanel } from "@/components/charts/drill-down-panel";
-import { exportSVG, exportPNG } from "@/lib/export-utils";
+import { exportPNG } from "@/lib/export-utils";
 
 // ─── Color palettes ─────────────────────────────────────────────
 const COLOR_PALETTES: Record<string, string[]> = {
@@ -132,6 +132,7 @@ export default function ChartBuilderPage() {
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [drillGroup, setDrillGroup] = useState<StackedRow | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const stackKeys = useMemo(() => {
     const s = new Set<string>();
@@ -224,8 +225,11 @@ export default function ChartBuilderPage() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   // Export handlers
-  const handleExportPNG = () => exportPNG("chart-builder-preview", `chart-${source}-${xField}`);
-  const handleExportSVG = () => exportSVG("chart-builder-preview", `chart-${source}-${xField}`);
+  const handleExportPNG = async () => {
+    setExporting(true);
+    await exportPNG("chart-builder-preview", `chart-${source}-${xField}`);
+    setExporting(false);
+  };
 
   // ─── Render chart ──────────────────────────────────────────────
   // Pre-computed grouped data for non-stacked charts with sub-groups
@@ -550,11 +554,12 @@ export default function ChartBuilderPage() {
           <Button variant="outline" size="sm" className="h-9 gap-2" onClick={fetchData} disabled={loading}>
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />Refresh
           </Button>
-          <Button size="sm" variant="outline" className="h-9 gap-2" onClick={handleExportSVG}>
-            <Download className="h-4 w-4" />SVG
-          </Button>
-          <Button size="sm" className="h-9 gap-2 bg-primary hover:bg-primary/90" onClick={handleExportPNG}>
-            <Camera className="h-4 w-4" />PNG
+          <Button size="sm" className="h-9 gap-2 bg-primary hover:bg-primary/90" onClick={handleExportPNG} disabled={exporting}>
+            {exporting ? (
+              <><Loader2 className="h-4 w-4 animate-spin" />Rendering...</>
+            ) : (
+              <><Camera className="h-4 w-4" />Export PNG</>
+            )}
           </Button>
         </div>
       </div>
