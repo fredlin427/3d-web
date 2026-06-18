@@ -330,7 +330,7 @@ export default function ChartBuilderPage() {
                 tickFormatter={(v) => truncateLabel(v)} />
               <YAxis tick={{ fontSize: 12, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={formatYAxis} />
               <Tooltip cursor={{ fill: "#f8f9fc" }} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              {hasStack && <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />}
+              {legendPayload.length > 0 && <Legend content={renderLegend} />}
               {barKeys.map((key, i) => (
                 <Bar key={key} dataKey={key} fill={CHART_COLORS[i % CHART_COLORS.length]} name={key} radius={[6, 6, 0, 0]}
                   onClick={(d: any) => {
@@ -360,7 +360,7 @@ export default function ChartBuilderPage() {
               <YAxis type="category" dataKey="label" width={140} tick={{ fontSize: 12, fontWeight: 500, fill: "#334155" }} axisLine={false} tickLine={false}
                 tickFormatter={(v) => truncateLabel(v)} />
               <Tooltip cursor={{ fill: "#f8f9fc" }} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              {hasStack && <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />}
+              {legendPayload.length > 0 && <Legend content={renderLegend} />}
               {barKeys.map((key, i) => (
                 <Bar key={key} dataKey={key} fill={CHART_COLORS[i % CHART_COLORS.length]} name={key} radius={[0, 6, 6, 0]}
                   onClick={(d: any) => {
@@ -444,7 +444,7 @@ export default function ChartBuilderPage() {
                 {pieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="#fff" strokeWidth={1.5} />)}
               </Pie>
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              <Legend wrapperStyle={{ fontSize: 12, paddingTop: 16 }} />
+              {legendPayload.length > 0 && <Legend content={renderLegend} />}
             </PieChart>
           </ResponsiveContainer>
         );
@@ -516,7 +516,7 @@ export default function ChartBuilderPage() {
                 {donutData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="#fff" strokeWidth={1.5} />)}
               </Pie>
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              <Legend wrapperStyle={{ fontSize: 12, paddingTop: 16 }} />
+              {legendPayload.length > 0 && <Legend content={renderLegend} />}
             </PieChart>
           </ResponsiveContainer>
         );
@@ -535,7 +535,7 @@ export default function ChartBuilderPage() {
                 tickFormatter={(v) => truncateLabel(v)} />
               <YAxis tick={{ fontSize: 12, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={formatYAxis} />
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              {hasStack && <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />}
+              {legendPayload.length > 0 && <Legend content={renderLegend} />}
               {lineKeys.map((key, i) => (
                 <Line key={key} type="monotone" dataKey={key} stroke={CHART_COLORS[i % CHART_COLORS.length]} strokeWidth={2.5}
                   dot={{ fill: CHART_COLORS[i % CHART_COLORS.length], r: 4 }} activeDot={{ r: 6 }} name={key} />
@@ -559,7 +559,7 @@ export default function ChartBuilderPage() {
                 tickFormatter={(v) => truncateLabel(v)} />
               <YAxis tick={{ fontSize: 12, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={formatYAxis} />
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              {hasStack && <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />}
+              {legendPayload.length > 0 && <Legend content={renderLegend} />}
               {areaKeys.map((key, i) => (
                 <Area key={key} type="monotone" dataKey={key} stroke={CHART_COLORS[i % CHART_COLORS.length]} strokeWidth={2}
                   fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.08} name={key} />
@@ -582,7 +582,7 @@ export default function ChartBuilderPage() {
                 tickFormatter={(v) => truncateLabel(v)} />
               <YAxis tick={{ fontSize: 12, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={formatYAxis} />
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              <Legend wrapperStyle={{ fontSize: 12, paddingTop: 14 }} />
+              {legendPayload.length > 0 && <Legend content={renderLegend} />}
               {stackKeys.map((key, i) => (
                 <Bar key={key} dataKey={key} stackId="a" fill={stackColors[i % stackColors.length]} name={key}
                   radius={i === stackKeys.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]} />
@@ -601,6 +601,29 @@ export default function ChartBuilderPage() {
   const title = `${FIELD_LABELS[xField] || xField} by ${source === "cases" ? "Cases" : source === "materials" ? "Materials" : source === "usage" ? "Material Usage" : "Transactions"}`;
   const hasStacked = stackedData.length > 0;
   const flatTotal = total;
+  const legendPayload = useMemo(() => {
+    if (!hasStacked) return [] as { value: string; color: string; bold?: boolean }[];
+    const p: { value: string; color: string; bold?: boolean }[] = [];
+    stackedData.forEach((group, gi) => {
+      p.push({ value: `${group.label}  ${group.value}`, color: CHART_COLORS[gi % CHART_COLORS.length], bold: true });
+      group.children.forEach((child, ci) => {
+        p.push({ value: child.label, color: shadeColor(CHART_COLORS[gi % CHART_COLORS.length], ci, group.children.length) });
+      });
+    });
+    return p;
+  }, [stackedData, hasStacked, CHART_COLORS]);
+
+  // Custom grouped legend renderer
+  const renderLegend = () => (
+    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px]">
+      {legendPayload.map((e, i) => (
+        <span key={i} className={`flex items-center gap-1 ${e.bold ? "font-bold text-slate-700 w-full mt-1" : "text-slate-500 ml-5"}`}>
+          <span className="inline-block w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: e.color, opacity: e.bold ? 1 : 0.7 }} />
+          {e.value}
+        </span>
+      ))}
+    </div>
+  );
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto">
@@ -757,35 +780,14 @@ export default function ChartBuilderPage() {
                 <Table2 className="h-3.5 w-3.5" />{showTable ? "Hide Table" : "Show Table"}
               </Button>
             </CardHeader>
-            <CardContent className="px-2 pb-4 overflow-visible">
-              <div id="chart-builder-preview" ref={containerRef} className="w-full" style={{ height: 400 }}>
+            <CardContent className="px-2 pb-4">
+              <div id="chart-builder-preview" ref={containerRef} className="w-full" style={{ height: showTable ? 400 : 500 }}>
                 {loading ? (
                   <div className="flex items-center justify-center h-full">
                     <Loader2 className="h-8 w-8 text-primary animate-spin" />
                   </div>
                 ) : renderChart()}
               </div>
-              {/* Grouped legend — outside chart container */}
-              {hasStacked && (
-                <div className="mt-4 pt-3 border-t text-xs">
-                  {stackedData.map((group, gi) => (
-                    <div key={group.label} className="mb-2.5">
-                      <p className="font-bold text-slate-700 mb-1">
-                        <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0 mr-1.5 align-middle" style={{ backgroundColor: CHART_COLORS[gi % CHART_COLORS.length] }} />
-                        {group.label} <span className="text-slate-400 font-normal">({group.value})</span>
-                      </p>
-                      <div className="ml-4 grid grid-cols-2 gap-x-4 gap-y-1">
-                        {group.children.slice(0, 12).map((child, ci) => (
-                          <div key={child.label} className="flex items-center gap-1.5 text-slate-600 text-[11px]">
-                            <span className="inline-block w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: shadeColor(CHART_COLORS[gi % CHART_COLORS.length], ci, group.children.length), opacity: 0.8 }} />
-                            {child.label}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </CardContent>
           </Card>
 
