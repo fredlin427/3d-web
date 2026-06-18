@@ -2,32 +2,29 @@
 
 import { toast } from "sonner";
 
-/** Walk both trees and copy computed fill/stroke/font styles to inline attributes */
-function inlineComputedStyles(orig: Element, cloned: Element): void {
-  const cs = window.getComputedStyle(orig);
-  const fill = cs.fill;
-  const stroke = cs.stroke;
-  if (fill && fill !== "none" && fill !== "rgba(0, 0, 0, 0)") {
-    cloned.setAttribute("fill", fill);
-  }
-  if (stroke && stroke !== "none" && stroke !== "rgba(0, 0, 0, 0)") {
-    cloned.setAttribute("stroke", stroke);
-  }
-  const sw = cs.strokeWidth;
-  if (sw && sw !== "0px") cloned.setAttribute("stroke-width", sw);
-  if (cs.opacity && cs.opacity !== "1") cloned.setAttribute("opacity", cs.opacity);
-  if (cs.fontSize) cloned.setAttribute("font-size", cs.fontSize);
-  if (cs.fontWeight && cs.fontWeight !== "400") cloned.setAttribute("font-weight", cs.fontWeight);
-  if (cs.fontFamily) cloned.setAttribute("font-family", cs.fontFamily);
-  if (cs.textAnchor) cloned.setAttribute("text-anchor", cs.textAnchor);
-
-  for (let i = 0; i < orig.children.length; i++) {
-    if (cloned.children[i]) inlineComputedStyles(orig.children[i], cloned.children[i]);
-  }
+/** Collect page CSS rules relevant to SVG/chart rendering */
+function collectRelevantCSS(): string {
+  const keywords = ["recharts", "svg", ".recharts", "fill:", "stroke:", "opacity",
+    "text {", "path {", "rect {", "circle {", "line {", "font-", "text-anchor",
+    "dominant-baseline", "transform", "shape-rendering"];
+  let cssText = "";
+  try {
+    for (const sheet of Array.from(document.styleSheets)) {
+      try {
+        for (const rule of Array.from(sheet.cssRules || [])) {
+          const text = rule.cssText;
+          if (keywords.some((kw) => text.includes(kw))) {
+            cssText += text + "\n";
+          }
+        }
+      } catch (_) { /* cross-origin */ }
+    }
+  } catch (_) { /* ignore */ }
+  return cssText;
 }
 
-/** Prepare a fully-inlined standalone SVG element ready for export */
-function prepareSVG(containerId: string): { svgString: string; w: number; h: number } | null {
+/** Get the SVG element and return a self-contained SVG string */
+function getSVGString(containerId: string): string | null {
   const container = document.getElementById(containerId);
   const svg = container?.querySelector("svg");
   if (!svg) return null;
@@ -36,11 +33,13 @@ function prepareSVG(containerId: string): { svgString: string; w: number; h: num
   const w = Math.max(400, Math.ceil(rect.width));
   const h = Math.max(300, Math.ceil(rect.height));
 
+  // Clone the SVG
   const clone = svg.cloneNode(true) as SVGElement;
-  clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-  clone.setAttribute("width", String(w));
-  clone.setAttribute("height", String(h));
-  clone.setAttribute("viewBox", `0 0 ${w} ${h}`);
+
+  // Embed page CSS as a <style> block inside the SVG
+  const styleEl = document.createElementNS("http://www.w3.org/2000/svg", "style");
+  styleEl.textContent = collectRelevantCSS();
+  clone.insertBefore(styleEl, clone.firstChild);
 
   // Add white background
   const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
@@ -49,19 +48,28 @@ function prepareSVG(containerId: string): { svgString: string; w: number; h: num
   bg.setAttribute("fill", "#ffffff");
   clone.insertBefore(bg, clone.firstChild);
 
-  // Inline all computed styles
-  inlineComputedStyles(svg, clone);
+  // Build a complete standalone SVG with proper namespace
+  const innerHTML = new XMLSerializer().serializeToString(clone)
+    .replace(/<svg[^>]*>/, "")  // remove inner <svg> tag
+    .replace(/<\/svg>$/, "");   // remove closing </svg>
 
-  const svgString = new XMLSerializer().serializeToString(clone);
-  return { svgString, w, h };
+  const standalone = [
+    `<?xml version="1.0" encoding="UTF-8"?>`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">`,
+    `<rect width="100%" height="100%" fill="#ffffff"/>`,
+    innerHTML,
+    `</svg>`,
+  ].join("\n");
+
+  return standalone;
 }
 
-/** Download chart as SVG file — 100% reliable, no CSS dependency */
+/** Download chart as SVG file */
 export function exportSVG(containerId: string, filename: string): void {
-  const result = prepareSVG(containerId);
-  if (!result) { toast.error("No chart to export"); return; }
+  const svgString = getSVGString(containerId);
+  if (!svgString) { toast.error("No chart to export"); return; }
 
-  const blob = new Blob([result.svgString], { type: "image/svg+xml;charset=utf-8" });
+  const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.download = `${filename}.svg`;
@@ -73,14 +81,14 @@ export function exportSVG(containerId: string, filename: string): void {
 
 /** Download chart as PNG via server-side resvg-js rendering */
 export async function exportPNG(containerId: string, filename: string): Promise<void> {
-  const result = prepareSVG(containerId);
-  if (!result) { toast.error("No chart to export"); return; }
+  const svgString = getSVGString(containerId);
+  if (!svgString) { toast.error("No chart to export"); return; }
 
   try {
     const res = await fetch("/api/export/png", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ svg: result.svgString }),
+      body: JSON.stringify({ svg: svgString }),
     });
     if (!res.ok) throw new Error(`Server error: ${res.status}`);
     const blob = await res.blob();
