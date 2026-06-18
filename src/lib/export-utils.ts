@@ -2,28 +2,7 @@
 
 import { toast } from "sonner";
 
-/** Collect page CSS rules relevant to SVG/chart rendering */
-function collectRelevantCSS(): string {
-  const keywords = ["recharts", "svg", ".recharts", "fill:", "stroke:", "opacity",
-    "text {", "path {", "rect {", "circle {", "line {", "font-", "text-anchor",
-    "dominant-baseline", "transform", "shape-rendering"];
-  let cssText = "";
-  try {
-    for (const sheet of Array.from(document.styleSheets)) {
-      try {
-        for (const rule of Array.from(sheet.cssRules || [])) {
-          const text = rule.cssText;
-          if (keywords.some((kw) => text.includes(kw))) {
-            cssText += text + "\n";
-          }
-        }
-      } catch (_) { /* cross-origin */ }
-    }
-  } catch (_) { /* ignore */ }
-  return cssText;
-}
-
-/** Get the SVG element and return a self-contained SVG string */
+/** Build a clean standalone SVG: clone, remove classes, keep only inline attributes */
 function getSVGString(containerId: string): string | null {
   const container = document.getElementById(containerId);
   const svg = container?.querySelector("svg");
@@ -33,35 +12,25 @@ function getSVGString(containerId: string): string | null {
   const w = Math.max(400, Math.ceil(rect.width));
   const h = Math.max(300, Math.ceil(rect.height));
 
-  // Clone the SVG
+  // Deep clone
   const clone = svg.cloneNode(true) as SVGElement;
 
-  // Embed page CSS as a <style> block inside the SVG
-  const styleEl = document.createElementNS("http://www.w3.org/2000/svg", "style");
-  styleEl.textContent = collectRelevantCSS();
-  clone.insertBefore(styleEl, clone.firstChild);
+  // Remove ALL class attributes — inline fill/stroke from Recharts <Cell> will take over
+  clone.querySelectorAll("*").forEach((el) => el.removeAttribute("class"));
 
-  // Add white background
-  const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-  bg.setAttribute("width", "100%");
-  bg.setAttribute("height", "100%");
-  bg.setAttribute("fill", "#ffffff");
-  clone.insertBefore(bg, clone.firstChild);
+  // Build a complete standalone SVG
+  const inner = new XMLSerializer().serializeToString(clone);
+  // Extract inner content (strip outer <svg> wrapper from serialized clone)
+  const innerMatch = inner.match(/<svg[^>]*>([\s\S]*)<\/svg>/);
+  const innerContent = innerMatch ? innerMatch[1] : inner;
 
-  // Build a complete standalone SVG with proper namespace
-  const innerHTML = new XMLSerializer().serializeToString(clone)
-    .replace(/<svg[^>]*>/, "")  // remove inner <svg> tag
-    .replace(/<\/svg>$/, "");   // remove closing </svg>
-
-  const standalone = [
+  return [
     `<?xml version="1.0" encoding="UTF-8"?>`,
     `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">`,
     `<rect width="100%" height="100%" fill="#ffffff"/>`,
-    innerHTML,
+    innerContent,
     `</svg>`,
   ].join("\n");
-
-  return standalone;
 }
 
 /** Download chart as SVG file */
@@ -79,19 +48,19 @@ export function exportSVG(containerId: string, filename: string): void {
   toast.success(`Exported: ${filename}.svg`);
 }
 
-/** Download chart as PNG — loads SVG in browser Image → canvas → PNG */
+/** Download chart as PNG */
 export async function exportPNG(containerId: string, filename: string): Promise<void> {
   const svgString = getSVGString(containerId);
   if (!svgString) { toast.error("No chart to export"); return; }
 
   try {
-    const img = new Image();
     const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
     const svgUrl = URL.createObjectURL(svgBlob);
+    const img = new Image();
 
     await new Promise<void>((resolve, reject) => {
       img.onload = () => resolve();
-      img.onerror = () => reject(new Error("SVG failed to load as image"));
+      img.onerror = () => reject(new Error("SVG load failed"));
       img.src = svgUrl;
     });
 
@@ -100,10 +69,7 @@ export async function exportPNG(containerId: string, filename: string): Promise<
     canvas.height = img.naturalHeight * 2;
     const ctx = canvas.getContext("2d")!;
     ctx.scale(2, 2);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, img.naturalWidth, img.naturalHeight);
     ctx.drawImage(img, 0, 0);
-
     URL.revokeObjectURL(svgUrl);
 
     canvas.toBlob((blob) => {
@@ -116,6 +82,6 @@ export async function exportPNG(containerId: string, filename: string): Promise<
     }, "image/png");
   } catch (e) {
     console.error("PNG export failed:", e);
-    toast.error("PNG export failed — use Export SVG instead (PowerPoint supports SVG)");
+    toast.error("PNG export failed — use Export SVG instead");
   }
 }
