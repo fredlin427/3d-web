@@ -367,7 +367,7 @@ export default function ChartBuilderPage() {
           const outerOuter = twoR;
           return (<>
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart margin={{ top: 20, right: 40, bottom: 80, left: 40 }}>
+              <PieChart margin={{ top: 20, right: 40, bottom: 40, left: 40 }}>
                 {/* Inner ring: primary groups */}
                 <Pie data={flatData} dataKey="value" nameKey="label" cx="50%" cy="48%"
                   innerRadius={hole} outerRadius={innerOuter} stroke="#fff" strokeWidth={2}
@@ -407,7 +407,7 @@ export default function ChartBuilderPage() {
         const pieData = flatData.map((d) => ({ ...d, pctLabel: `${((d.value / Math.max(total, 1)) * 100).toFixed(0)}%` }));
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <PieChart margin={{ top: 0, right: 40, bottom: 60, left: 40 }}>
+            <PieChart margin={{ top: 0, right: 40, bottom: 10, left: 40 }}>
               <Pie data={pieData} dataKey="value" nameKey="label" cx="50%" cy="45%" outerRadius={pieRadius}
                 label={({ label, value, percent }: any) => {
                   if (percent < 0.04) return "";
@@ -440,7 +440,7 @@ export default function ChartBuilderPage() {
           const outerOuter = twoR;
           return (<>
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart margin={{ top: 20, right: 40, bottom: 80, left: 40 }}>
+              <PieChart margin={{ top: 20, right: 40, bottom: 40, left: 40 }}>
                 <Pie data={flatData} dataKey="value" nameKey="label" cx="50%" cy="48%"
                   innerRadius={hole} outerRadius={innerOuter} stroke="#fff" strokeWidth={2}
                   label={({ index }: any) => {
@@ -478,7 +478,7 @@ export default function ChartBuilderPage() {
         const donutData = flatData.map((d) => ({ ...d, pctLabel: `${((d.value / Math.max(total, 1)) * 100).toFixed(0)}%` }));
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <PieChart margin={{ top: 0, right: 40, bottom: 60, left: 40 }}>
+            <PieChart margin={{ top: 0, right: 40, bottom: 10, left: 40 }}>
               <Pie data={donutData} dataKey="value" nameKey="label" cx="50%" cy="45%"
                 innerRadius={pieRadius * 0.42} outerRadius={pieRadius}
                 label={({ label, value, percent }: any) => {
