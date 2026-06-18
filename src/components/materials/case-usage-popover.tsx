@@ -40,7 +40,7 @@ export function CaseUsagePopover({ materialId, count }: { materialId: string; co
   };
   const handleMouseLeave = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    setTimeout(() => setOpen(false), 200);
+    timerRef.current = setTimeout(() => setOpen(false), 500);
   };
 
   useEffect(() => { return () => { if (timerRef.current) clearTimeout(timerRef.current); }; }, []);
@@ -57,7 +57,7 @@ export function CaseUsagePopover({ materialId, count }: { materialId: string; co
         <div
           className="absolute z-50 left-0 top-full mt-2 w-80 rounded-xl border bg-white shadow-xl animate-in fade-in-0 zoom-in-95 duration-150"
           onMouseEnter={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
-          onMouseLeave={() => setOpen(false)}
+          onMouseLeave={handleMouseLeave}
         >
           <div className="p-3 border-b">
             <p className="text-xs font-semibold text-slate-700">Cases using this material</p>
