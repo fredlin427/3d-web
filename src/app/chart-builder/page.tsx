@@ -278,7 +278,7 @@ export default function ChartBuilderPage() {
 
     // Grouped legend shared across chart types
     const groupedLegend = hasStack && (
-      <div className="mt-2 max-h-[160px] overflow-y-auto px-2 text-[11px]" style={{ fontFamily: "system-ui, sans-serif" }}>
+      <div className="mt-2 px-2 text-[11px]" style={{ fontFamily: "system-ui, sans-serif" }}>
         {stackedData.map((group, gi) => (
           <div key={group.label} className="mb-1.5">
             <div className="flex items-center gap-1.5 font-semibold text-slate-700">
@@ -758,7 +758,7 @@ export default function ChartBuilderPage() {
               </Button>
             </CardHeader>
             <CardContent className="px-2 pb-4">
-              <div id="chart-builder-preview" ref={containerRef} className="w-full" style={{ height: hasStacked ? (showTable ? 320 : 440) : (showTable ? 400 : 500) }}>
+              <div id="chart-builder-preview" ref={containerRef} className="w-full" style={{ minHeight: hasStacked ? 560 : (showTable ? 400 : 500) }}>
                 {loading ? (
                   <div className="flex items-center justify-center h-full">
                     <Loader2 className="h-8 w-8 text-primary animate-spin" />
