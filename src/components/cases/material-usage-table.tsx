@@ -4,18 +4,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Trash2, Loader2, X } from "lucide-react";
+import { Plus, Trash2, Loader2, X, Check, ChevronDown } from "lucide-react";
 import { MaterialInfoPopover } from "@/components/materials/material-info-popover";
 import { formatDate } from "@/lib/utils";
 import { DataTable, Column } from "@/components/shared/data-table";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface MaterialUsage {
   id: string;
@@ -62,6 +56,8 @@ export function MaterialUsageTable({ caseId, usageRecords, onRefresh }: Material
   const [formNotes, setFormNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [materialPopOpen, setMaterialPopOpen] = useState(false);
+  const selectedMat = materials.find((m) => m.id === formMaterialId);
 
   const resetForm = () => {
     setFormMaterialId("");
@@ -169,22 +165,30 @@ export function MaterialUsageTable({ caseId, usageRecords, onRefresh }: Material
         <div className="rounded-lg border bg-slate-50/50 p-4 space-y-3">
           <p className="text-xs font-medium text-slate-500">Record material usage for this case</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Select value={formMaterialId} onValueChange={(v) => { if (v) setFormMaterialId(v); }}>
-              <SelectTrigger className="h-9 bg-white">
-                <SelectValue placeholder={loadingMats ? "Loading..." : "Select material..."}>
-                  {formMaterialId && materials.find((m) => m.id === formMaterialId)?.materialName}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="max-w-[500px]">
-                {materials.length === 0 && !loadingMats && <p className="text-xs text-slate-400 px-2 py-4 text-center">No materials available</p>}
-                {materials.map((m) => (
-                  <SelectItem key={m.id} value={m.id} className="text-sm pr-8">
-                    <span className="flex-1 min-w-0">{m.materialName}</span>
-                    <span className="text-slate-400 text-xs ml-3 shrink-0 tabular-nums">{m.currentQuantity} {m.unit} left</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={materialPopOpen} onOpenChange={(open) => { if (open) loadMaterials(); setMaterialPopOpen(open); }}>
+              <PopoverTrigger className="flex items-center justify-between h-9 w-full rounded-md border border-input bg-white px-3 text-sm">
+                <span className={selectedMat ? "text-slate-900 truncate" : "text-slate-400"}>
+                  {loadingMats ? "Loading..." : selectedMat ? `${selectedMat.materialName} (${selectedMat.currentQuantity} ${selectedMat.unit})` : "Select material..."}
+                </span>
+                <ChevronDown className="h-4 w-4 text-slate-400 shrink-0 ml-2" />
+              </PopoverTrigger>
+              <PopoverContent className="w-[480px] p-0" align="start">
+                <div className="max-h-[320px] overflow-y-auto">
+                  {materials.length === 0 && !loadingMats && <p className="text-xs text-slate-400 px-3 py-8 text-center">No materials available</p>}
+                  {materials.map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={() => { setFormMaterialId(m.id); setMaterialPopOpen(false); }}
+                      className={`w-full text-left px-3 py-2.5 text-sm hover:bg-slate-50 flex items-center justify-between gap-3 ${formMaterialId === m.id ? "bg-accent" : ""}`}
+                    >
+                      <span className="font-medium text-slate-700 truncate flex-1">{m.materialName}</span>
+                      <span className="text-xs text-slate-500 shrink-0 tabular-nums">{m.currentQuantity} {m.unit} left</span>
+                      {formMaterialId === m.id && <Check className="h-4 w-4 text-primary shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
             <Input type="number" step="0.01" placeholder="Quantity used" value={formQuantity} onChange={(e) => setFormQuantity(e.target.value)} className="h-9 bg-white" />
             <Input placeholder="Staff name" value={formStaff} onChange={(e) => setFormStaff(e.target.value)} className="h-9 bg-white" />
             <Input placeholder="Printer / Tank" value={formPrinter} onChange={(e) => setFormPrinter(e.target.value)} className="h-9 bg-white" />
