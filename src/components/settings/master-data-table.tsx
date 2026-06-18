@@ -83,8 +83,10 @@ export function MasterDataTable({ title, type, items, onRefresh, showReorder, di
 
   const handleDelete = async (id: string) => {
     try {
-      await fetch(`/api/settings/${id}`, { method: "DELETE" });
-      toast.success("Deleted");
+      const item = items.find((i) => i.id === id);
+      if (!item) return;
+      await fetch(`/api/settings/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...item, isActive: false }) });
+      toast.success("Deactivated");
       onRefresh();
     } catch { toast.error("Failed"); }
   };
