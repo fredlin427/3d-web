@@ -32,8 +32,8 @@ export async function GET(request: NextRequest) {
 
   switch (source) {
     case "cases":
-      for (const f of ["department","category","purpose","currentStatus","priority","technician","printingParty","hospital","rank","modelType","requiredService","fundingSource","ownership"]) {
-        fields.push({ key: f, label: f.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase()), type: "text", group: FIELD_GROUPS[f] || "Other" });
+      for (const f of ["department","category","purpose","currentStatus","priority","technician","printingParty","hospital","rank","modelType","requiredService","fundingSource","ownership","requiresSterilization","isReprint","copyrightRisk","colourRequirement","modelMaterial"]) {
+        fields.push({ key: f, label: f.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase()).replace(/^Is /, "").replace(/^Requires /, "Requires ").replace(/^Copyright /, "Copyright ").replace(/^Colour /, "Colour ").replace(/^Model /, "Model "), type: f === "isReprint" || f === "copyrightRisk" || f === "requiresSterilization" ? "boolean" : "text", group: FIELD_GROUPS[f] || "Case Details" });
       }
       fields.push({ key: "quantity", label: "Quantity", type: "number", group: "Metrics" });
       fields.push({ key: "totalComponents", label: "Components", type: "number", group: "Metrics" });

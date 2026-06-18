@@ -38,6 +38,16 @@ function resolveField(field: string, config: typeof SOURCE_CONFIG[string]): stri
   return match || field;
 }
 
+// Helper: auto-group small items into "Other" when too many
+function groupTopN<T extends { label: string; value: number }>(items: T[], topN: number): T[] {
+  if (items.length <= topN) return items;
+  const sorted = [...items].sort((a, b) => b.value - a.value);
+  const top = sorted.slice(0, topN);
+  const otherValue = sorted.slice(topN).reduce((s, r) => s + r.value, 0);
+  if (otherValue > 0) top.push({ label: `Other (${sorted.length - topN} items)`, value: otherValue } as T);
+  return top;
+}
+
 // Helper: build stacked result from groupBy records [{primary, secondary, count}]
 function buildStacked(
   records: { primary: string; secondary: string; count: number }[]
@@ -71,6 +81,7 @@ export async function GET(request: NextRequest) {
     const filterValue = searchParams.get("filterValue") || "";
     const stackBy = searchParams.get("stackBy") || "";
     const limit = parseInt(searchParams.get("limit") || "20", 10);
+    const groupTop = parseInt(searchParams.get("groupTop") || "0", 10); // 0 = disabled, N = top N + Other
 
     const config = SOURCE_CONFIG[source];
     if (!config) {
@@ -258,7 +269,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: { source, xField, yMode, rows: result, total: result.reduce((s, r) => s + r.value, 0) },
+      data: { source, xField, yMode, rows: groupTop > 0 ? groupTopN(result, groupTop) : result, total: result.reduce((s, r) => s + r.value, 0) },
     });
   } catch (error) {
     console.error(error);

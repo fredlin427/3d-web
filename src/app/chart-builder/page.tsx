@@ -127,6 +127,7 @@ export default function ChartBuilderPage() {
   const [filterField, setFilterField] = useState("");
   const [filterValue, setFilterValue] = useState("");
   const [showTable, setShowTable] = useState(true);
+  const [groupTop, setGroupTop] = useState(12); // 0=all, N=top N + Other
   const [paletteKey, setPaletteKey] = useState(DEFAULT_PALETTE);
   const CHART_COLORS = COLOR_PALETTES[paletteKey] || COLOR_PALETTES[DEFAULT_PALETTE];
   const containerRef = useRef<HTMLDivElement>(null);
@@ -199,6 +200,7 @@ export default function ChartBuilderPage() {
       params.set("x", xField);
       params.set("y", "count");
       params.set("limit", "30");
+      if (groupTop > 0) params.set("groupTop", String(groupTop));
       if (dateFrom) params.set("dateFrom", dateFrom);
       if (dateTo) params.set("dateTo", dateTo);
       if (filterField && filterValue) {
@@ -656,6 +658,27 @@ export default function ChartBuilderPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </CardContent>
+          </Card>
+
+          {/* Grouping */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-1.5 pt-4 px-4"><CardTitle className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Grouping</CardTitle></CardHeader>
+            <CardContent className="space-y-2 px-3 pb-3">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-medium text-slate-500">Top N + Other</label>
+                <Select value={String(groupTop)} onValueChange={(v) => setGroupTop(Number(v))}>
+                  <SelectTrigger className="w-20 h-7 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">All</SelectItem>
+                    <SelectItem value="5">Top 5</SelectItem>
+                    <SelectItem value="8">Top 8</SelectItem>
+                    <SelectItem value="12">Top 12</SelectItem>
+                    <SelectItem value="20">Top 20</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <p className="text-[10px] text-slate-400 leading-tight">Auto-groups smaller items into "Other" for cleaner charts with many categories.</p>
             </CardContent>
           </Card>
 
