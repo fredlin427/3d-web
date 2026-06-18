@@ -302,7 +302,7 @@ export default function ChartBuilderPage() {
                 tickFormatter={(v) => truncateLabel(v)} />
               <YAxis tick={{ fontSize: 12, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={formatYAxis} />
               <Tooltip cursor={{ fill: "#f8f9fc" }} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              {legendPayload.length > 0 && <Legend content={renderLegend} />}
+              {legendPayload.length > 0 ? <Legend content={renderLegend} /> : <Legend />}
               {barKeys.map((key, i) => (
                 <Bar key={key} dataKey={key} fill={CHART_COLORS[i % CHART_COLORS.length]} name={key} radius={[6, 6, 0, 0]}
                   onClick={(d: any) => {
@@ -332,7 +332,7 @@ export default function ChartBuilderPage() {
               <YAxis type="category" dataKey="label" width={140} tick={{ fontSize: 12, fontWeight: 500, fill: "#334155" }} axisLine={false} tickLine={false}
                 tickFormatter={(v) => truncateLabel(v)} />
               <Tooltip cursor={{ fill: "#f8f9fc" }} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              {legendPayload.length > 0 && <Legend content={renderLegend} />}
+              {legendPayload.length > 0 ? <Legend content={renderLegend} /> : <Legend />}
               {barKeys.map((key, i) => (
                 <Bar key={key} dataKey={key} fill={CHART_COLORS[i % CHART_COLORS.length]} name={key} radius={[0, 6, 6, 0]}
                   onClick={(d: any) => {
@@ -416,7 +416,7 @@ export default function ChartBuilderPage() {
                 {pieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="#fff" strokeWidth={1.5} />)}
               </Pie>
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              {legendPayload.length > 0 && <Legend content={renderLegend} />}
+              {legendPayload.length > 0 ? <Legend content={renderLegend} /> : <Legend />}
             </PieChart>
           </ResponsiveContainer>
         );
@@ -488,7 +488,7 @@ export default function ChartBuilderPage() {
                 {donutData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="#fff" strokeWidth={1.5} />)}
               </Pie>
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              {legendPayload.length > 0 && <Legend content={renderLegend} />}
+              {legendPayload.length > 0 ? <Legend content={renderLegend} /> : <Legend />}
             </PieChart>
           </ResponsiveContainer>
         );
@@ -507,7 +507,7 @@ export default function ChartBuilderPage() {
                 tickFormatter={(v) => truncateLabel(v)} />
               <YAxis tick={{ fontSize: 12, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={formatYAxis} />
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              {legendPayload.length > 0 && <Legend content={renderLegend} />}
+              {legendPayload.length > 0 ? <Legend content={renderLegend} /> : <Legend />}
               {lineKeys.map((key, i) => (
                 <Line key={key} type="monotone" dataKey={key} stroke={CHART_COLORS[i % CHART_COLORS.length]} strokeWidth={2.5}
                   dot={{ fill: CHART_COLORS[i % CHART_COLORS.length], r: 4 }} activeDot={{ r: 6 }} name={key} />
@@ -531,7 +531,7 @@ export default function ChartBuilderPage() {
                 tickFormatter={(v) => truncateLabel(v)} />
               <YAxis tick={{ fontSize: 12, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={formatYAxis} />
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              {legendPayload.length > 0 && <Legend content={renderLegend} />}
+              {legendPayload.length > 0 ? <Legend content={renderLegend} /> : <Legend />}
               {areaKeys.map((key, i) => (
                 <Area key={key} type="monotone" dataKey={key} stroke={CHART_COLORS[i % CHART_COLORS.length]} strokeWidth={2}
                   fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.08} name={key} />
@@ -554,7 +554,7 @@ export default function ChartBuilderPage() {
                 tickFormatter={(v) => truncateLabel(v)} />
               <YAxis tick={{ fontSize: 12, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={formatYAxis} />
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              {legendPayload.length > 0 && <Legend content={renderLegend} />}
+              {legendPayload.length > 0 ? <Legend content={renderLegend} /> : <Legend />}
               {stackKeys.map((key, i) => (
                 <Bar key={key} dataKey={key} stackId="a" fill={stackColors[i % stackColors.length]} name={key}
                   radius={i === stackKeys.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]} />
@@ -575,17 +575,17 @@ export default function ChartBuilderPage() {
   const flatTotal = total;
   const legendPayload = useMemo(() => {
     if (!hasStacked) return [] as { value: string; color: string; bold?: boolean }[];
+    const keys = stackKeys; // sub-group names in consistent order
     const p: { value: string; color: string; bold?: boolean }[] = [];
-    let colorIdx = 0;
     stackedData.forEach((group, gi) => {
       p.push({ value: `${group.label}  ${group.value}`, color: CHART_COLORS[gi % CHART_COLORS.length], bold: true });
       group.children.forEach((child) => {
-        p.push({ value: child.label, color: CHART_COLORS[colorIdx % CHART_COLORS.length] });
-        colorIdx++;
+        const ki = keys.indexOf(child.label);
+        p.push({ value: child.label, color: CHART_COLORS[ki >= 0 ? ki : 0] });
       });
     });
     return p;
-  }, [stackedData, hasStacked, CHART_COLORS]);
+  }, [stackedData, hasStacked, CHART_COLORS, stackKeys]);
 
   // Custom grouped legend renderer
   const renderLegend = () => (
