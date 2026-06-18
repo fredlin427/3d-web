@@ -175,12 +175,12 @@ export function MaterialUsageTable({ caseId, usageRecords, onRefresh }: Material
                   {formMaterialId && materials.find((m) => m.id === formMaterialId)?.materialName}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent className="max-w-[360px]">
+              <SelectContent className="max-w-[500px]">
                 {materials.length === 0 && !loadingMats && <p className="text-xs text-slate-400 px-2 py-4 text-center">No materials available</p>}
                 {materials.map((m) => (
-                  <SelectItem key={m.id} value={m.id} className="text-sm">
-                    <span className="truncate max-w-[280px] inline-block">{m.materialName}</span>
-                    <span className="text-slate-400 text-xs ml-2 shrink-0">{m.currentQuantity} {m.unit}</span>
+                  <SelectItem key={m.id} value={m.id} className="text-sm pr-8">
+                    <span className="flex-1 min-w-0">{m.materialName}</span>
+                    <span className="text-slate-400 text-xs ml-3 shrink-0 tabular-nums">{m.currentQuantity} {m.unit} left</span>
                   </SelectItem>
                 ))}
               </SelectContent>
