@@ -399,7 +399,7 @@ export default function ChartBuilderPage() {
                 <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
               </PieChart>
             </ResponsiveContainer>
-            
+            {legendItems && <Legend content={() => (<div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] px-4">{legendItems.map((item, i) => (<span key={i} className={`flex items-center gap-1 ${item.bold ? "font-bold text-slate-700 w-full mt-1" : "text-slate-500 ml-5"}`}><span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{backgroundColor: item.color, opacity: item.bold ? 1 : 0.7}} />{item.label}</span>))}</div>)} />}
           </>
           );
         }
@@ -470,7 +470,7 @@ export default function ChartBuilderPage() {
                 <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
               </PieChart>
             </ResponsiveContainer>
-            
+            {legendItems && <Legend content={() => (<div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] px-4">{legendItems.map((item, i) => (<span key={i} className={`flex items-center gap-1 ${item.bold ? "font-bold text-slate-700 w-full mt-1" : "text-slate-500 ml-5"}`}><span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{backgroundColor: item.color, opacity: item.bold ? 1 : 0.7}} />{item.label}</span>))}</div>)} />}
           </>
           );
         }
