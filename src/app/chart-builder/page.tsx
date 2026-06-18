@@ -95,6 +95,12 @@ function truncateLabel(s: string, max: number = 18): string {
   return s.length > max ? s.slice(0, max) + "…" : s;
 }
 
+function formatYAxis(value: number): string {
+  if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+  if (value >= 1000) return `${(value / 1000).toFixed(0)}K`;
+  return String(value);
+}
+
 // Generate a distinct shade by shifting hue slightly and adjusting saturation
 // Keeps colors visible (avoids white-out from naive lighten)
 function shadeColor(hex: string, step: number, total: number): string {
@@ -270,11 +276,11 @@ export default function ChartBuilderPage() {
         return (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={barData} barSize={Math.max(10, Math.min(44, 750 / Math.max(barData.length * (barKeys.length + 1), 1)))} barCategoryGap="20%">
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f2f6" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e8ecf1" strokeWidth={1} vertical={false} />
               <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false}
                 angle={barData.length > 8 ? -35 : 0} textAnchor={barData.length > 8 ? "end" : "middle"} height={barData.length > 8 ? 80 : 40}
                 tickFormatter={(v) => truncateLabel(v)} />
-              <YAxis tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <YAxis tick={{ fontSize: 12, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={formatYAxis} />
               <Tooltip cursor={{ fill: "#f8f9fc" }} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
               {hasStack && <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />}
               {barKeys.map((key, i) => (
@@ -300,8 +306,8 @@ export default function ChartBuilderPage() {
         return (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={barData} layout="vertical" barSize={Math.max(14, Math.min(32, 450 / Math.max(barData.length, 1)))} margin={{ left: 20, right: 60 }}>
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f2f6" />
-              <XAxis type="number" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e8ecf1" strokeWidth={1} horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 12, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={formatYAxis} />
               <YAxis type="category" dataKey="label" width={140} tick={{ fontSize: 12, fontWeight: 500, fill: "#334155" }} axisLine={false} tickLine={false}
                 tickFormatter={(v) => truncateLabel(v)} />
               <Tooltip cursor={{ fill: "#f8f9fc" }} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
@@ -471,11 +477,11 @@ export default function ChartBuilderPage() {
         return (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={lineData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f2f6" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e8ecf1" strokeWidth={1} vertical={false} />
               <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false}
                 angle={lineData.length > 8 ? -35 : 0} textAnchor={lineData.length > 8 ? "end" : "middle"} height={lineData.length > 8 ? 80 : 40}
                 tickFormatter={(v) => truncateLabel(v)} />
-              <YAxis tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <YAxis tick={{ fontSize: 12, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={formatYAxis} />
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
               {hasStack && <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />}
               {lineKeys.map((key, i) => (
@@ -494,11 +500,11 @@ export default function ChartBuilderPage() {
         return (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={areaData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f2f6" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e8ecf1" strokeWidth={1} vertical={false} />
               <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false}
                 angle={areaData.length > 8 ? -35 : 0} textAnchor={areaData.length > 8 ? "end" : "middle"} height={areaData.length > 8 ? 80 : 40}
                 tickFormatter={(v) => truncateLabel(v)} />
-              <YAxis tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <YAxis tick={{ fontSize: 12, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={formatYAxis} />
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
               {hasStack && <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />}
               {areaKeys.map((key, i) => (
@@ -516,11 +522,11 @@ export default function ChartBuilderPage() {
         return (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={groupedFlatData} barSize={Math.max(20, Math.min(56, 700 / Math.max(stackedData.length, 1)))} barCategoryGap="20%">
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f2f6" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e8ecf1" strokeWidth={1} vertical={false} />
               <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false}
                 angle={stackedData.length > 6 ? -35 : 0} textAnchor={stackedData.length > 6 ? "end" : "middle"} height={stackedData.length > 6 ? 80 : 40}
                 tickFormatter={(v) => truncateLabel(v)} />
-              <YAxis tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <YAxis tick={{ fontSize: 12, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={formatYAxis} />
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
               <Legend wrapperStyle={{ fontSize: 12, paddingTop: 14 }} />
               {stackKeys.map((key, i) => (

@@ -11,13 +11,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useState } from "react";
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Cases", href: "/cases", icon: FolderOpen },
-  { name: "Materials", href: "/materials", icon: Package },
-  { name: "Reports", href: "/reports", icon: BarChart3 },
-  { name: "Chart Builder", href: "/chart-builder", icon: PieChart },
-  { name: "Settings", href: "/settings", icon: Settings },
-  { name: "Apply Form", href: "/apply-manage", icon: FileText },
+  { name: "Dashboard", href: "/", icon: LayoutDashboard, color: "text-blue-400" },
+  { name: "Cases", href: "/cases", icon: FolderOpen, color: "text-amber-400" },
+  { name: "Materials", href: "/materials", icon: Package, color: "text-emerald-400" },
+  { name: "Reports", href: "/reports", icon: BarChart3, color: "text-cyan-400" },
+  { name: "Chart Builder", href: "/chart-builder", icon: PieChart, color: "text-violet-400" },
+  { name: "Settings", href: "/settings", icon: Settings, color: "text-slate-400" },
+  { name: "Apply Form", href: "/apply-manage", icon: FileText, color: "text-rose-400" },
 ];
 
 export function Sidebar() {
@@ -77,7 +77,7 @@ export function Sidebar() {
                 )}
                 title={collapsed ? item.name : undefined}
               >
-                <item.icon className={cn("h-[18px] w-[18px] shrink-0", isActive && "text-white")} />
+                <item.icon className={cn("h-[18px] w-[18px] shrink-0", isActive ? "text-white" : item.color)} />
                 {!collapsed && <span>{item.name}</span>}
               </Link>
             );
