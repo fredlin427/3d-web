@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LoadingState } from "@/components/shared/loading-state";
 import { HierarchicalTable } from "@/components/charts/hierarchical-table";
+import { exportSVG, exportPNG } from "@/lib/export-utils";
 import { toast } from "sonner";
 import { FolderOpen, Clock, CheckCircle2, AlertTriangle, Package, TrendingDown, Download, ImageIcon, ArrowRight, Camera, Presentation, X, Database, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -53,38 +54,6 @@ function exportDataFile(rows: Record<string, unknown>[], filename: string) {
   XLSX.utils.book_append_sheet(wb, ws, "Data");
   XLSX.writeFile(wb, `${filename}.xlsx`);
   toast.success(`Exported: ${filename}.xlsx`);
-}
-
-function exportChartImageFile(chartId: string, filename: string) {
-  const container = document.getElementById(chartId);
-  const svg = container?.querySelector("svg");
-  if (!svg) { toast.error("Chart not found"); return; }
-  const clone = svg.cloneNode(true) as SVGElement;
-  clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-  const rect = svg.getBoundingClientRect();
-  const w = rect.width || 600;
-  const h = rect.height || 300;
-  const svgData = new XMLSerializer().serializeToString(clone);
-  const canvas = document.createElement("canvas");
-  canvas.width = w * 2;
-  canvas.height = h * 2;
-  const ctx = canvas.getContext("2d")!;
-  ctx.scale(2, 2);
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, w, h);
-  const img = new Image();
-  img.onload = () => {
-    ctx.drawImage(img, 0, 0, w, h);
-    canvas.toBlob((blob) => {
-      if (!blob) return;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = `${filename}.png`;
-      a.click(); URL.revokeObjectURL(url);
-      toast.success(`Exported: ${filename}.png`);
-    }, "image/png");
-  };
-  img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
 }
 
 const statDefs = [
@@ -331,7 +300,7 @@ export default function DashboardPage() {
           <CardHeader className="!flex items-center justify-between">
             <CardTitle className="text-[15px] font-semibold">Case Volume</CardTitle>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export PNG" onClick={() => exportChartImageFile("chart-case-volume", "case-volume")}><Camera className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export PNG" onClick={() => exportPNG("chart-case-volume", "case-volume")}><Camera className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
               <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export XLSX" onClick={() => exportDataFile(data?.caseVolumeByMonth || [], "case-volume")}><Download className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
             </div>
           </CardHeader>
@@ -341,7 +310,7 @@ export default function DashboardPage() {
           <CardHeader className="!flex items-center justify-between">
             <CardTitle className="text-[15px] font-semibold">By Department</CardTitle>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export PNG" onClick={() => exportChartImageFile("chart-by-dept", "cases-by-department")}><Camera className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export PNG" onClick={() => exportPNG("chart-by-dept", "cases-by-department")}><Camera className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
               <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export XLSX" onClick={() => exportDataFile(data?.caseByDepartment || [], "cases-by-department")}><Download className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
             </div>
           </CardHeader>
@@ -351,7 +320,7 @@ export default function DashboardPage() {
           <CardHeader className="!flex items-center justify-between">
             <CardTitle className="text-[15px] font-semibold">Material Usage Trend</CardTitle>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export PNG" onClick={() => exportChartImageFile("chart-usage-trend", "material-usage-trend")}><Camera className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export PNG" onClick={() => exportPNG("chart-usage-trend", "material-usage-trend")}><Camera className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
               <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export XLSX" onClick={() => exportDataFile(data?.materialUsageTrend || [], "material-usage-trend")}><Download className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
             </div>
           </CardHeader>
@@ -361,7 +330,7 @@ export default function DashboardPage() {
           <CardHeader className="!flex items-center justify-between">
             <CardTitle className="text-[15px] font-semibold">Usage by Material</CardTitle>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export PNG" onClick={() => exportChartImageFile("chart-usage-by-mat", "usage-by-material")}><Camera className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export PNG" onClick={() => exportPNG("chart-usage-by-mat", "usage-by-material")}><Camera className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
               <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export XLSX" onClick={() => exportDataFile(data?.materialUsageByCategory || [], "usage-by-material")}><Download className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
             </div>
           </CardHeader>
@@ -396,7 +365,7 @@ export default function DashboardPage() {
                   </button>
                 ))}
               </div>
-              <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={() => exportChartImageFile("pres-main-chart", "qeh-cases")}>
+              <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={() => exportPNG("pres-main-chart", "qeh-cases")}>
                 <Camera className="h-3.5 w-3.5" />Export PNG
               </Button>
             </div>

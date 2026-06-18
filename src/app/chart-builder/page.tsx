@@ -11,7 +11,7 @@ import {
   LabelList,
 } from "recharts";
 import {
-  BarChart3, PieChartIcon, TrendingUp, AreaChartIcon, Camera, RefreshCw,
+  BarChart3, PieChartIcon, TrendingUp, AreaChartIcon, Camera, RefreshCw, Download,
   Database, SlidersHorizontal, LayoutGrid, Loader2, Layers,
   Table2, ListTree,
 } from "lucide-react";
@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import { HierarchicalTable } from "@/components/charts/hierarchical-table";
 import type { StackedRow } from "@/components/charts/hierarchical-table";
 import { DrillDownPanel } from "@/components/charts/drill-down-panel";
-import { toPng } from "html-to-image";
+import { exportSVG, exportPNG } from "@/lib/export-utils";
 
 // ─── Color palettes ─────────────────────────────────────────────
 const COLOR_PALETTES: Record<string, string[]> = {
@@ -223,26 +223,9 @@ export default function ChartBuilderPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Export PNG — uses html-to-image for reliable DOM→PNG capture
-  const exportPNG = async () => {
-    const container = document.getElementById("chart-builder-preview");
-    if (!container) { toast.error("No chart to export"); return; }
-    try {
-      const dataUrl = await toPng(container, {
-        backgroundColor: "#ffffff",
-        pixelRatio: 2,
-        cacheBust: true,
-      });
-      const a = document.createElement("a");
-      a.download = `chart-${source}-${xField}.png`;
-      a.href = dataUrl;
-      a.click();
-      toast.success("Chart exported as PNG");
-    } catch (e) {
-      console.error("Export error:", e);
-      toast.error("Export failed — try refreshing the chart");
-    }
-  };
+  // Export handlers
+  const handleExportPNG = () => exportPNG("chart-builder-preview", `chart-${source}-${xField}`);
+  const handleExportSVG = () => exportSVG("chart-builder-preview", `chart-${source}-${xField}`);
 
   // ─── Render chart ──────────────────────────────────────────────
   // Pre-computed grouped data for non-stacked charts with sub-groups
@@ -567,8 +550,11 @@ export default function ChartBuilderPage() {
           <Button variant="outline" size="sm" className="h-9 gap-2" onClick={fetchData} disabled={loading}>
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />Refresh
           </Button>
-          <Button size="sm" className="h-9 gap-2 bg-primary hover:bg-primary/90" onClick={exportPNG}>
-            <Camera className="h-4 w-4" />Export PNG
+          <Button size="sm" variant="outline" className="h-9 gap-2" onClick={handleExportSVG}>
+            <Download className="h-4 w-4" />SVG
+          </Button>
+          <Button size="sm" className="h-9 gap-2 bg-primary hover:bg-primary/90" onClick={handleExportPNG}>
+            <Camera className="h-4 w-4" />PNG
           </Button>
         </div>
       </div>
