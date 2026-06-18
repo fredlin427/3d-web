@@ -580,14 +580,16 @@ export default function ChartBuilderPage() {
     if (!hasStacked) return null;
     const items: { label: string; color: string; bold?: boolean }[] = [];
     stackedData.forEach((group, gi) => {
-      items.push({ label: `${group.label}  ${group.value}`, color: CHART_COLORS[gi % CHART_COLORS.length], bold: true });
-      group.children.forEach((child) => {
-        const ki = stackKeys.indexOf(child.label);
-        items.push({ label: child.label, color: CHART_COLORS[ki >= 0 ? ki % CHART_COLORS.length : 0] });
+      const base = CHART_COLORS[gi % CHART_COLORS.length];
+      items.push({ label: `${group.label}  ${group.value}`, color: base, bold: true });
+      group.children.forEach((child, ci) => {
+        // Match pie/donut outer ring: shadeColor, and bar/line grouped: CHART_COLORS
+        const isPie = chartType === "pie" || chartType === "donut";
+        items.push({ label: child.label, color: isPie ? shadeColor(base, ci, group.children.length) : CHART_COLORS[ci % CHART_COLORS.length] });
       });
     });
     return items;
-  }, [stackedData, hasStacked, CHART_COLORS, stackKeys]);
+  }, [stackedData, hasStacked, CHART_COLORS, chartType]);
 
 
   return (
@@ -755,6 +757,18 @@ export default function ChartBuilderPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* HTML legend for export — html2canvas can capture this */}
+          {hasStacked && legendItems && (
+            <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] px-4 py-2 border rounded-lg bg-white">
+              {legendItems.map((item, i) => (
+                <span key={i} className={`flex items-center gap-1 ${item.bold ? "font-bold text-slate-700 w-full mt-1" : "text-slate-500 ml-5"}`}>
+                  <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: item.color, opacity: item.bold ? 1 : 0.7 }} />
+                  {item.label}
+                </span>
+              ))}
+            </div>
+          )}
 
           {/* ─── Hierarchical Breakdown Table (always expanded) ─── */}
           {showTable && hasStacked && (
