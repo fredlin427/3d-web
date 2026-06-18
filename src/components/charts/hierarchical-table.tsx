@@ -31,7 +31,7 @@ export function HierarchicalTable({ data, total, primaryLabel = "Group", seconda
           <col style={{ width: 120 }} />
         </colgroup>
         <thead>
-          <tr className="border-y border-slate-200">
+          <tr className="border-y border-slate-200 bg-slate-50 sticky top-0">
             <th className="text-left py-2.5 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">{primaryLabel}</th>
             <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Count</th>
             <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">%</th>
@@ -43,7 +43,7 @@ export function HierarchicalTable({ data, total, primaryLabel = "Group", seconda
             const groupPct = total > 0 ? ((group.value / total) * 100).toFixed(1) : "0";
             const groupRows = [
               // Group header row
-              <tr key={`g-${group.label}`} className="border-b border-slate-100 bg-slate-50/40">
+              <tr key={`g-${group.label}`} className="border-b border-slate-200 bg-slate-100/60">
                 <td className="py-2.5 px-4">
                   <div className="flex items-center gap-2">
                     <span className="inline-block w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: colors[gi % colors.length] }} />
@@ -67,7 +67,7 @@ export function HierarchicalTable({ data, total, primaryLabel = "Group", seconda
             group.children.forEach((child, ci) => {
               const childPct = group.value > 0 ? ((child.value / group.value) * 100).toFixed(1) : "0";
               groupRows.push(
-                <tr key={`${group.label}-${child.label}`} className="border-b border-slate-50">
+                <tr key={`${group.label}-${child.label}`} className={ci % 2 === 0 ? "border-b border-slate-50 bg-white" : "border-b border-slate-50 bg-slate-50/30"}>
                   <td className="py-2 pl-10 pr-4 text-sm text-slate-600">
                     <span className="inline-block w-2 h-2 rounded-sm shrink-0 mr-2 align-middle" style={{ backgroundColor: colors[ci % colors.length], opacity: 0.65 }} />
                     {child.label}
