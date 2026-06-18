@@ -42,28 +42,34 @@ export function HierarchicalTable({ data, total, primaryLabel = "Group", seconda
           {data.map((group, gi) => {
             const groupPct = total > 0 ? ((group.value / total) * 100).toFixed(1) : "0";
             const groupRows = [
-              // Group header row
-              <tr key={`g-${group.label}`} className="border-b border-slate-200 bg-slate-100/60">
-                <td className="py-2.5 px-4">
+              // Group header row — with colored left accent
+              <tr key={`g-${group.label}`} className="border-b border-slate-200">
+                <td className="py-3 px-4 border-l-4" style={{ borderLeftColor: colors[gi % colors.length], borderLeftWidth: 4 }}>
                   <div className="flex items-center gap-2">
                     <span className="inline-block w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: colors[gi % colors.length] }} />
                     <span className="text-sm font-bold text-slate-800">{group.label}</span>
+                    <span className="text-xs text-slate-400 font-normal ml-1">{group.children.length} items</span>
                   </div>
                 </td>
-                <td className="py-2.5 px-3 text-right">
-                  <span className="text-sm font-bold text-slate-900 tabular-nums">{group.value}</span>
+                <td className="py-3 px-3 text-right">
+                  <span className="text-base font-extrabold text-slate-900 tabular-nums">{group.value}</span>
                 </td>
-                <td className="py-2.5 px-3 text-right">
-                  <span className="text-sm font-semibold text-slate-600 tabular-nums">{groupPct}%</span>
+                <td className="py-3 px-3 text-right">
+                  <span className="text-sm font-bold text-slate-600 tabular-nums">{groupPct}%</span>
                 </td>
-                <td className="py-2.5 px-3">
-                  <div className="w-full bg-slate-100 rounded-full h-2">
-                    <div className="h-2 rounded-full transition-all" style={{ width: `${groupPct}%`, backgroundColor: colors[gi % colors.length] }} />
+                <td className="py-3 px-3">
+                  <div className="w-full bg-slate-100 rounded-full h-2.5">
+                    <div className="h-2.5 rounded-full transition-all" style={{ width: `${groupPct}%`, backgroundColor: colors[gi % colors.length] }} />
                   </div>
                 </td>
               </tr>,
             ];
             // Sub-item rows — always visible, no collapse
+            // Divider row between groups
+            if (gi > 0) {
+              groupRows.push(<tr key={`div-${group.label}`} className="h-2"><td colSpan={4} /></tr>);
+            }
+            // Sub-item rows
             group.children.forEach((child, ci) => {
               const childPct = group.value > 0 ? ((child.value / group.value) * 100).toFixed(1) : "0";
               groupRows.push(
