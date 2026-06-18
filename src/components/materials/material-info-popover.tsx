@@ -50,7 +50,7 @@ export function MaterialInfoPopover({ materialId, name }: { materialId: string; 
       <span className="text-primary font-medium text-sm cursor-default hover:underline">{name}</span>
 
       {open && (
-        <div className="absolute z-50 left-0 top-full mt-2 w-72 rounded-xl border bg-white shadow-xl animate-in fade-in-0 zoom-in-95 duration-150"
+        <div className="absolute z-40 left-0 top-full mt-2 w-72 rounded-xl border bg-white shadow-xl animate-in fade-in-0 zoom-in-95 duration-150"
           onMouseEnter={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
           onMouseLeave={() => { if (timerRef.current) clearTimeout(timerRef.current); timerRef.current = setTimeout(() => setOpen(false), 500); }}
         >
