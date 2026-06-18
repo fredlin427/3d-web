@@ -303,7 +303,7 @@ export default function ChartBuilderPage() {
                 tickFormatter={(v) => truncateLabel(v)} />
               <YAxis tick={{ fontSize: 12, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={formatYAxis} />
               <Tooltip cursor={{ fill: "#f8f9fc" }} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              <Legend />
+              {legendItems && <Legend content={() => (<div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] px-4">{legendItems.map((item, i) => (<span key={i} className={`flex items-center gap-1 ${item.bold ? "font-bold text-slate-700 w-full mt-1" : "text-slate-500 ml-5"}`}><span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{backgroundColor: item.color, opacity: item.bold ? 1 : 0.7}} />{item.label}</span>))}</div>)} />}
               {barKeys.map((key, i) => (
                 <Bar key={key} dataKey={key} fill={CHART_COLORS[i % CHART_COLORS.length]} name={key} radius={[6, 6, 0, 0]}
                   onClick={(d: any) => {
@@ -333,7 +333,7 @@ export default function ChartBuilderPage() {
               <YAxis type="category" dataKey="label" width={140} tick={{ fontSize: 12, fontWeight: 500, fill: "#334155" }} axisLine={false} tickLine={false}
                 tickFormatter={(v) => truncateLabel(v)} />
               <Tooltip cursor={{ fill: "#f8f9fc" }} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              <Legend />
+              {legendItems && <Legend content={() => (<div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] px-4">{legendItems.map((item, i) => (<span key={i} className={`flex items-center gap-1 ${item.bold ? "font-bold text-slate-700 w-full mt-1" : "text-slate-500 ml-5"}`}><span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{backgroundColor: item.color, opacity: item.bold ? 1 : 0.7}} />{item.label}</span>))}</div>)} />}
               {barKeys.map((key, i) => (
                 <Bar key={key} dataKey={key} fill={CHART_COLORS[i % CHART_COLORS.length]} name={key} radius={[0, 6, 6, 0]}
                   onClick={(d: any) => {
@@ -417,7 +417,7 @@ export default function ChartBuilderPage() {
                 {pieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="#fff" strokeWidth={1.5} />)}
               </Pie>
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              <Legend />
+              {legendItems && <Legend content={() => (<div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] px-4">{legendItems.map((item, i) => (<span key={i} className={`flex items-center gap-1 ${item.bold ? "font-bold text-slate-700 w-full mt-1" : "text-slate-500 ml-5"}`}><span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{backgroundColor: item.color, opacity: item.bold ? 1 : 0.7}} />{item.label}</span>))}</div>)} />}
             </PieChart>
           </ResponsiveContainer>
         );
@@ -489,7 +489,7 @@ export default function ChartBuilderPage() {
                 {donutData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="#fff" strokeWidth={1.5} />)}
               </Pie>
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              <Legend />
+              {legendItems && <Legend content={() => (<div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] px-4">{legendItems.map((item, i) => (<span key={i} className={`flex items-center gap-1 ${item.bold ? "font-bold text-slate-700 w-full mt-1" : "text-slate-500 ml-5"}`}><span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{backgroundColor: item.color, opacity: item.bold ? 1 : 0.7}} />{item.label}</span>))}</div>)} />}
             </PieChart>
           </ResponsiveContainer>
         );
@@ -508,7 +508,7 @@ export default function ChartBuilderPage() {
                 tickFormatter={(v) => truncateLabel(v)} />
               <YAxis tick={{ fontSize: 12, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={formatYAxis} />
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              <Legend />
+              {legendItems && <Legend content={() => (<div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] px-4">{legendItems.map((item, i) => (<span key={i} className={`flex items-center gap-1 ${item.bold ? "font-bold text-slate-700 w-full mt-1" : "text-slate-500 ml-5"}`}><span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{backgroundColor: item.color, opacity: item.bold ? 1 : 0.7}} />{item.label}</span>))}</div>)} />}
               {lineKeys.map((key, i) => (
                 <Line key={key} type="monotone" dataKey={key} stroke={CHART_COLORS[i % CHART_COLORS.length]} strokeWidth={2.5}
                   dot={{ fill: CHART_COLORS[i % CHART_COLORS.length], r: 4 }} activeDot={{ r: 6 }} name={key} />
@@ -532,7 +532,7 @@ export default function ChartBuilderPage() {
                 tickFormatter={(v) => truncateLabel(v)} />
               <YAxis tick={{ fontSize: 12, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={formatYAxis} />
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              <Legend />
+              {legendItems && <Legend content={() => (<div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] px-4">{legendItems.map((item, i) => (<span key={i} className={`flex items-center gap-1 ${item.bold ? "font-bold text-slate-700 w-full mt-1" : "text-slate-500 ml-5"}`}><span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{backgroundColor: item.color, opacity: item.bold ? 1 : 0.7}} />{item.label}</span>))}</div>)} />}
               {areaKeys.map((key, i) => (
                 <Area key={key} type="monotone" dataKey={key} stroke={CHART_COLORS[i % CHART_COLORS.length]} strokeWidth={2}
                   fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.08} name={key} />
@@ -555,7 +555,7 @@ export default function ChartBuilderPage() {
                 tickFormatter={(v) => truncateLabel(v)} />
               <YAxis tick={{ fontSize: 12, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={formatYAxis} />
               <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
-              <Legend />
+              {legendItems && <Legend content={() => (<div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] px-4">{legendItems.map((item, i) => (<span key={i} className={`flex items-center gap-1 ${item.bold ? "font-bold text-slate-700 w-full mt-1" : "text-slate-500 ml-5"}`}><span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{backgroundColor: item.color, opacity: item.bold ? 1 : 0.7}} />{item.label}</span>))}</div>)} />}
               {stackKeys.map((key, i) => (
                 <Bar key={key} dataKey={key} stackId="a" fill={stackColors[i % stackColors.length]} name={key}
                   radius={i === stackKeys.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]} />
@@ -574,6 +574,20 @@ export default function ChartBuilderPage() {
   const title = `${FIELD_LABELS[xField] || xField} by ${source === "cases" ? "Cases" : source === "materials" ? "Materials" : source === "usage" ? "Material Usage" : "Transactions"}`;
   const hasStacked = stackedData.length > 0;
   const flatTotal = total;
+
+  // Build legend items from stacked data, matching chart colors exactly
+  const legendItems = useMemo(() => {
+    if (!hasStacked) return null;
+    const items: { label: string; color: string; bold?: boolean }[] = [];
+    stackedData.forEach((group, gi) => {
+      items.push({ label: `${group.label}  ${group.value}`, color: CHART_COLORS[gi % CHART_COLORS.length], bold: true });
+      group.children.forEach((child) => {
+        const ki = stackKeys.indexOf(child.label);
+        items.push({ label: child.label, color: CHART_COLORS[ki >= 0 ? ki % CHART_COLORS.length : 0] });
+      });
+    });
+    return items;
+  }, [stackedData, hasStacked, CHART_COLORS, stackKeys]);
 
 
   return (
