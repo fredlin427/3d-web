@@ -268,6 +268,17 @@ export default function ChartBuilderPage() {
     });
   }, [stackedData]);
 
+  const renderLegend = () => (
+    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px]">
+      {legendPayload.map((e, i) => (
+        <span key={i} className={`flex items-center gap-1 ${e.bold ? "font-bold text-slate-700 w-full mt-1" : "text-slate-500 ml-5"}`}>
+          <span className="inline-block w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: e.color, opacity: e.bold ? 1 : 0.7 }} />
+          {e.value}
+        </span>
+      ))}
+    </div>
+  );
+
   const renderChart = () => {
     const hasStack = stackedData.length > 0;
     // Simple data (flat, no sub-group)
@@ -366,7 +377,7 @@ export default function ChartBuilderPage() {
           const outerOuter = twoR;
           return (<>
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart margin={{ top: 30, right: 80, bottom: 30, left: 80 }}>
+              <PieChart margin={{ top: 20, right: 60, bottom: 60, left: 60 }}>
                 {/* Inner ring: primary groups */}
                 <Pie data={flatData} dataKey="value" nameKey="label" cx="50%" cy="48%"
                   innerRadius={hole} outerRadius={innerOuter} stroke="#fff" strokeWidth={2}
@@ -439,7 +450,7 @@ export default function ChartBuilderPage() {
           const outerOuter = twoR;
           return (<>
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart margin={{ top: 30, right: 80, bottom: 30, left: 80 }}>
+              <PieChart margin={{ top: 20, right: 60, bottom: 60, left: 60 }}>
                 <Pie data={flatData} dataKey="value" nameKey="label" cx="50%" cy="48%"
                   innerRadius={hole} outerRadius={innerOuter} stroke="#fff" strokeWidth={2}
                   label={({ index }: any) => {
@@ -587,17 +598,6 @@ export default function ChartBuilderPage() {
     return p;
   }, [stackedData, hasStacked, CHART_COLORS, stackKeys]);
 
-  // Custom grouped legend renderer
-  const renderLegend = () => (
-    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px]">
-      {legendPayload.map((e, i) => (
-        <span key={i} className={`flex items-center gap-1 ${e.bold ? "font-bold text-slate-700 w-full mt-1" : "text-slate-500 ml-5"}`}>
-          <span className="inline-block w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: e.color, opacity: e.bold ? 1 : 0.7 }} />
-          {e.value}
-        </span>
-      ))}
-    </div>
-  );
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto">
