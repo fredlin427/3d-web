@@ -130,7 +130,7 @@ export function ProgressTimeline({ caseId, steps, onRefresh }: ProgressTimelineP
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this progress step?")) return;
+    if (!window.confirm("Delete this progress step?")) return;
     try {
       const res = await fetch(`/api/progress/${id}`, { method: "DELETE" });
       if (res.ok) {

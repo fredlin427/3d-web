@@ -63,12 +63,6 @@ export function MaterialUsageTable({ caseId, usageRecords, onRefresh }: Material
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const loadMaterials = async () => {
-    const res = await fetch("/api/materials");
-    const json = await res.json();
-    if (json.success) setMaterials(json.data);
-  };
-
   const resetForm = () => {
     setFormMaterialId("");
     setFormQuantity("");
@@ -114,7 +108,7 @@ export function MaterialUsageTable({ caseId, usageRecords, onRefresh }: Material
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this material usage record? Quantity will be returned to stock.")) return;
+    if (!window.confirm("Delete this material usage record? Quantity will be returned to stock.")) return;
     try {
       const res = await fetch(`/api/material-usage/${id}`, { method: "DELETE" });
       if (res.ok) {
@@ -128,23 +122,29 @@ export function MaterialUsageTable({ caseId, usageRecords, onRefresh }: Material
     }
   };
 
+  const [loadingMats, setLoadingMats] = useState(false);
+
+  const loadMaterials = async () => {
+    setLoadingMats(true);
+    const res = await fetch("/api/materials");
+    const json = await res.json();
+    if (json.success) {
+      const active = (json.data || []).filter((m: any) => m.status !== "Disposed" && m.status !== "Expired");
+      setMaterials(active);
+    }
+    setLoadingMats(false);
+  };
+
   const columns: Column<MaterialUsage>[] = [
     { key: "material", header: "Material", render: (u) => u.material ? <MaterialInfoPopover materialId={u.material.id} name={u.material.materialName} /> : <span className="text-sm">—</span> },
     { key: "category", header: "Category", render: (u) => <Badge variant="secondary" className="text-xs">{u.material?.category || "—"}</Badge> },
     { key: "batch", header: "Batch", render: (u) => <span className="text-xs font-mono">{u.material?.batchNumber || "—"}</span> },
-    {
-      key: "quantity",
-      header: "Qty",
-      render: (u) => <span className="text-sm font-medium">{u.quantityUsed}</span>,
-    },
-    { key: "unit", header: "Unit", render: (u) => <span className="text-xs">{u.unit}</span> },
+    { key: "quantity", header: "Qty", render: (u) => <span className="text-sm font-medium tabular-nums">{u.quantityUsed}</span> },
+    { key: "unit", header: "Unit", render: (u) => <span className="text-xs text-slate-500">{u.unit}</span> },
     { key: "printer", header: "Printer/Tank", render: (u) => <span className="text-xs">{u.printerOrTank || "—"}</span> },
-    { key: "usageDate", header: "Date", render: (u) => <span className="text-xs">{formatDate(u.usageDate)}</span> },
+    { key: "usageDate", header: "Date", render: (u) => <span className="text-xs text-slate-500">{formatDate(u.usageDate)}</span> },
     { key: "staffName", header: "Staff", render: (u) => <span className="text-xs">{u.staffName || "—"}</span> },
-    {
-      key: "actions",
-      header: "",
-      className: "w-12 text-right",
+    { key: "actions", header: "", className: "w-10 text-right",
       render: (u) => (
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDelete(u.id)}>
           <Trash2 className="h-3.5 w-3.5 text-red-400" />
@@ -154,73 +154,52 @@ export function MaterialUsageTable({ caseId, usageRecords, onRefresh }: Material
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-700">Material Usage</h3>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => { resetForm(); loadMaterials(); setShowForm(!showForm); }}
-        >
-          <Plus className="mr-1 h-3.5 w-3.5" /> Add Material Usage
+        <h3 className="text-sm font-semibold text-slate-700">
+          Material Usage
+          {usageRecords.length > 0 && <span className="ml-2 text-xs font-normal text-slate-400">({usageRecords.length} record{usageRecords.length > 1 ? "s" : ""})</span>}
+        </h3>
+        <Button variant="outline" size="sm" onClick={() => { if (!showForm) loadMaterials(); setShowForm(!showForm); }}>
+          {showForm ? <><X className="mr-1 h-3.5 w-3.5" />Cancel</> : <><Plus className="mr-1 h-3.5 w-3.5" />Add Usage</>}
         </Button>
       </div>
 
       {showForm && (
-        <div className="rounded-lg border bg-slate-50 p-4">
+        <div className="rounded-lg border bg-slate-50/50 p-4 space-y-3">
+          <p className="text-xs font-medium text-slate-500">Record material usage for this case</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Select value={formMaterialId} onValueChange={(v) => { if (v) setFormMaterialId(v); }}>
-              <SelectTrigger className="h-9"><SelectValue placeholder="Select material" /></SelectTrigger>
+              <SelectTrigger className="h-9 bg-white"><SelectValue placeholder={loadingMats ? "Loading..." : "Select material"} /></SelectTrigger>
               <SelectContent>
+                {materials.length === 0 && !loadingMats && <p className="text-xs text-slate-400 px-2 py-4 text-center">No materials available</p>}
                 {materials.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>
-                    {m.materialName} ({m.currentQuantity} {m.unit} available)
-                  </SelectItem>
+                  <SelectItem key={m.id} value={m.id}>{m.materialName} <span className="text-slate-400 text-xs">({m.currentQuantity} {m.unit})</span></SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Input
-              type="number"
-              step="0.01"
-              placeholder="Quantity used"
-              value={formQuantity}
-              onChange={(e) => setFormQuantity(e.target.value)}
-              className="h-9"
-            />
-            <Input
-              placeholder="Staff name"
-              value={formStaff}
-              onChange={(e) => setFormStaff(e.target.value)}
-              className="h-9"
-            />
-            <Input
-              placeholder="Printer / Tank"
-              value={formPrinter}
-              onChange={(e) => setFormPrinter(e.target.value)}
-              className="h-9"
-            />
+            <Input type="number" step="0.01" placeholder="Quantity used" value={formQuantity} onChange={(e) => setFormQuantity(e.target.value)} className="h-9 bg-white" />
+            <Input placeholder="Staff name" value={formStaff} onChange={(e) => setFormStaff(e.target.value)} className="h-9 bg-white" />
+            <Input placeholder="Printer / Tank" value={formPrinter} onChange={(e) => setFormPrinter(e.target.value)} className="h-9 bg-white" />
           </div>
-          <div className="flex gap-2 mt-3">
-            <Input
-              placeholder="Notes"
-              value={formNotes}
-              onChange={(e) => setFormNotes(e.target.value)}
-              className="h-9 flex-1"
-            />
-            <Button size="sm" onClick={handleAdd} disabled={saving} className="bg-teal-600 hover:bg-teal-700">
-              {saving ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Plus className="mr-1 h-3.5 w-3.5" />}
-              Record Usage
+          <div className="flex gap-2">
+            <Input placeholder="Notes (optional)" value={formNotes} onChange={(e) => setFormNotes(e.target.value)} className="h-9 flex-1 bg-white" />
+            <Button size="sm" onClick={handleAdd} disabled={saving || !formMaterialId || !formQuantity}>
+              {saving ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
+              Record
             </Button>
-            <Button size="sm" variant="ghost" onClick={resetForm}><X className="h-3.5 w-3.5" /></Button>
           </div>
         </div>
       )}
 
-      {usageRecords.length === 0 ? (
-        <p className="text-sm text-slate-400 py-4 text-center">No material usage recorded for this case.</p>
-      ) : (
+      {usageRecords.length === 0 && !showForm ? (
+        <div className="text-center py-8 border-2 border-dashed rounded-lg border-slate-200">
+          <p className="text-sm text-slate-400">No material usage recorded</p>
+          <p className="text-xs text-slate-300 mt-1">Click "Add Usage" to record material consumption</p>
+        </div>
+      ) : usageRecords.length > 0 ? (
         <DataTable data={usageRecords} columns={columns} keyField="id" pageSize={10} />
-      )}
+      ) : null}
     </div>
   );
 }
