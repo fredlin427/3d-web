@@ -230,7 +230,7 @@ async function main() {
         priority: c.priority, currentStatus: c.status,
         currentProgressStep: progressStepNames[c.progressStepIndex] || progressStepNames[0],
         technician: c.technician, printingParty: c.printingParty,
-        modelImageUrl: `/cases/case-0${((caseIdx % 9) + 1)}.svg`, photoFolderUrl: null, remarks: null,
+        modelImageUrl: `/cases/case-0${((caseIdx % 9) + 1)}.jpg`, photoFolderUrl: null, remarks: null,
       },
     });
 
