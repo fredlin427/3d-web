@@ -276,34 +276,6 @@ export default function ChartBuilderPage() {
     const manyItems = flatData.length > 15;
     const pieRadius = Math.min(containerWidth * 0.28, 180);
 
-    // Grouped legend shared across chart types
-    const groupedLegend = hasStack && (
-      <div className="mt-2 px-2 text-[11px]" style={{ fontFamily: "system-ui, sans-serif" }}>
-        {stackedData.map((group, gi) => (
-          <div key={group.label} className="mb-1.5">
-            <div className="flex items-center gap-1.5 font-semibold text-slate-700">
-              <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: CHART_COLORS[gi % CHART_COLORS.length] }} />
-              {group.label} <span className="text-slate-400 font-normal">({group.value})</span>
-            </div>
-            <div className="ml-4 grid grid-cols-2 gap-x-3">
-              {group.children.map((child, ci) => {
-                const shades = [CHART_COLORS[gi % CHART_COLORS.length],
-                  shadeColor(CHART_COLORS[gi % CHART_COLORS.length], 1, 4),
-                  shadeColor(CHART_COLORS[gi % CHART_COLORS.length], 2, 4),
-                ];
-                return (
-                  <div key={child.label} className="flex items-center gap-1 text-slate-500">
-                    <span className="inline-block w-1.5 h-1.5 rounded-sm shrink-0" style={{ backgroundColor: shades[ci % 3], opacity: 0.7 }} />
-                    {truncateLabel(child.label, 14)}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-
     if (!hasData) {
       return (
         <div className="flex items-center justify-center h-full">
@@ -344,7 +316,7 @@ export default function ChartBuilderPage() {
               ))}
             </BarChart>
           </ResponsiveContainer>
-          {groupedLegend}
+          
         </>);
       }
 
@@ -372,7 +344,7 @@ export default function ChartBuilderPage() {
               ))}
             </BarChart>
           </ResponsiveContainer>
-          {groupedLegend}
+          
         </>);
       }
 
@@ -426,7 +398,7 @@ export default function ChartBuilderPage() {
                 <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
               </PieChart>
             </ResponsiveContainer>
-            {groupedLegend}
+            
           </>
           );
         }
@@ -497,7 +469,7 @@ export default function ChartBuilderPage() {
                 <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13 }} />
               </PieChart>
             </ResponsiveContainer>
-            {groupedLegend}
+            
           </>
           );
         }
@@ -542,7 +514,7 @@ export default function ChartBuilderPage() {
               ))}
             </LineChart>
           </ResponsiveContainer>
-          {groupedLegend}
+          
         </>);
       }
 
@@ -566,7 +538,7 @@ export default function ChartBuilderPage() {
               ))}
             </AreaChart>
           </ResponsiveContainer>
-          {groupedLegend}
+          
         </>);
       }
 
@@ -604,10 +576,12 @@ export default function ChartBuilderPage() {
   const legendPayload = useMemo(() => {
     if (!hasStacked) return [] as { value: string; color: string; bold?: boolean }[];
     const p: { value: string; color: string; bold?: boolean }[] = [];
+    let colorIdx = 0;
     stackedData.forEach((group, gi) => {
       p.push({ value: `${group.label}  ${group.value}`, color: CHART_COLORS[gi % CHART_COLORS.length], bold: true });
-      group.children.forEach((child, ci) => {
-        p.push({ value: child.label, color: shadeColor(CHART_COLORS[gi % CHART_COLORS.length], ci, group.children.length) });
+      group.children.forEach((child) => {
+        p.push({ value: child.label, color: CHART_COLORS[colorIdx % CHART_COLORS.length] });
+        colorIdx++;
       });
     });
     return p;
