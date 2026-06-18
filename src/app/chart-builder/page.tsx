@@ -746,7 +746,7 @@ export default function ChartBuilderPage() {
               </Button>
             </CardHeader>
             <CardContent className="px-2 pb-4">
-              <div id="chart-builder-preview" ref={containerRef} className="w-full" style={{ height: showTable ? 400 : 500 }}>
+              <div id="chart-builder-preview" ref={containerRef} className="w-full" style={{ height: showTable ? 500 : 600 }}>
                 {loading ? (
                   <div className="flex items-center justify-center h-full">
                     <Loader2 className="h-8 w-8 text-primary animate-spin" />
