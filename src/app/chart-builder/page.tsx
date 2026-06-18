@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { HierarchicalTable } from "@/components/charts/hierarchical-table";
 import type { StackedRow } from "@/components/charts/hierarchical-table";
 import { DrillDownPanel } from "@/components/charts/drill-down-panel";
+import { toPng } from "html-to-image";
 
 // ─── Color palettes ─────────────────────────────────────────────
 const COLOR_PALETTES: Record<string, string[]> = {
@@ -222,83 +223,25 @@ export default function ChartBuilderPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Export PNG
-  const exportPNG = () => {
+  // Export PNG — uses html-to-image for reliable DOM→PNG capture
+  const exportPNG = async () => {
     const container = document.getElementById("chart-builder-preview");
-    const svg = container?.querySelector("svg");
-    if (!svg) { toast.error("No chart to export"); return; }
-
-    const rect = svg.getBoundingClientRect();
-    const w = Math.max(400, Math.ceil(rect.width));
-    const h = Math.max(300, Math.ceil(rect.height));
-
-    // Clone and inline ALL visual properties from computed styles
-    const clone = svg.cloneNode(true) as SVGElement;
-    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-    clone.setAttribute("width", String(w));
-    clone.setAttribute("height", String(h));
-    clone.setAttribute("viewBox", `0 0 ${w} ${h}`);
-
-    // Walk both trees simultaneously, copy computed styles → inline attributes
-    const walk = (orig: Element, cloned: Element) => {
-      const cs = window.getComputedStyle(orig);
-      const fill = cs.fill;
-      const stroke = cs.stroke;
-      // Always copy fill if it's a visible color (skip "none" and transparent black)
-      if (fill && fill !== "none" && fill !== "rgba(0, 0, 0, 0)") {
-        cloned.setAttribute("fill", fill);
-      }
-      if (stroke && stroke !== "none" && stroke !== "rgba(0, 0, 0, 0)") {
-        cloned.setAttribute("stroke", stroke);
-      }
-      const sw = cs.strokeWidth;
-      if (sw && sw !== "0px") cloned.setAttribute("stroke-width", sw);
-      if (cs.opacity && cs.opacity !== "1") cloned.setAttribute("opacity", cs.opacity);
-      if (cs.fontSize) cloned.setAttribute("font-size", cs.fontSize);
-      if (cs.fontWeight && cs.fontWeight !== "400") cloned.setAttribute("font-weight", cs.fontWeight);
-      if (cs.fontFamily) cloned.setAttribute("font-family", cs.fontFamily);
-      if (cs.textAnchor) cloned.setAttribute("text-anchor", cs.textAnchor);
-      // Recurse children
-      for (let i = 0; i < orig.children.length; i++) {
-        if (cloned.children[i]) walk(orig.children[i], cloned.children[i]);
-      }
-    };
-    walk(svg, clone);
-
-    // Remove class attributes (styles now inlined)
-    clone.querySelectorAll("[class]").forEach((el) => el.removeAttribute("class"));
-
-    // Use Blob URL instead of data URI for reliability
-    const svgData = new XMLSerializer().serializeToString(clone);
-    const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
-    const svgUrl = URL.createObjectURL(svgBlob);
-
-    const canvas = document.createElement("canvas");
-    canvas.width = w * 2;
-    canvas.height = h * 2;
-    const ctx = canvas.getContext("2d")!;
-
-    const img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(svgUrl);
-      ctx.scale(2, 2);
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, w, h);
-      ctx.drawImage(img, 0, 0, w, h);
-      canvas.toBlob((blob) => {
-        if (!blob) { toast.error("Export failed"); return; }
-        const a = document.createElement("a");
-        a.download = `chart-${source}-${xField}.png`;
-        a.href = URL.createObjectURL(blob);
-        a.click();
-        toast.success("Chart exported as PNG");
-      }, "image/png");
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(svgUrl);
-      toast.error("Export failed — try refreshing the chart first");
-    };
-    img.src = svgUrl;
+    if (!container) { toast.error("No chart to export"); return; }
+    try {
+      const dataUrl = await toPng(container, {
+        backgroundColor: "#ffffff",
+        pixelRatio: 2,
+        cacheBust: true,
+      });
+      const a = document.createElement("a");
+      a.download = `chart-${source}-${xField}.png`;
+      a.href = dataUrl;
+      a.click();
+      toast.success("Chart exported as PNG");
+    } catch (e) {
+      console.error("Export error:", e);
+      toast.error("Export failed — try refreshing the chart");
+    }
   };
 
   // ─── Render chart ──────────────────────────────────────────────
