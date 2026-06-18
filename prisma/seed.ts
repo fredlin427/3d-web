@@ -210,6 +210,7 @@ async function main() {
   ];
 
   const createdCases = [];
+  let caseIdx = 0;
   for (const c of caseData) {
     const appDate = new Date(c.applicationDate);
     const newCase = await prisma.case.create({
@@ -229,11 +230,12 @@ async function main() {
         priority: c.priority, currentStatus: c.status,
         currentProgressStep: progressStepNames[c.progressStepIndex] || progressStepNames[0],
         technician: c.technician, printingParty: c.printingParty,
-        modelImageUrl: null, photoFolderUrl: null, remarks: null,
+        modelImageUrl: `/cases/case-0${((caseIdx % 9) + 1)}.svg`, photoFolderUrl: null, remarks: null,
       },
     });
 
     createdCases.push(newCase);
+    caseIdx++;
 
     // Create progress steps
     for (let i = 0; i < progressStepNames.length; i++) {
