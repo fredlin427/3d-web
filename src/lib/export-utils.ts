@@ -18,10 +18,11 @@ export interface ExportResult {
   error?: string;
 }
 
-/** Export chart as PNG via html2canvas — direct DOM→pixel rendering, no SVG serialization */
+/** Export chart as PNG via html2canvas — direct DOM→pixel rendering */
 export async function exportPNG(
   containerId: string,
   filename: string,
+  legendItems?: { label: string; color: string; bold?: boolean }[],
   onState?: (state: "rendering" | "done") => void,
 ): Promise<ExportResult> {
   const container = document.getElementById(containerId);
@@ -29,13 +30,12 @@ export async function exportPNG(
 
   try {
     onState?.("rendering");
-    const canvas = await html2canvas(container, {
+    let canvas = await html2canvas(container, {
       backgroundColor: "#ffffff",
       scale: 3,
       useCORS: true,
       logging: false,
       onclone: (clonedDoc) => {
-        // Strip oklch/lab from cloned stylesheets AND inline styles
         try {
           for (const sheet of Array.from(clonedDoc.styleSheets)) {
             try {
@@ -49,7 +49,6 @@ export async function exportPNG(
             } catch (_) { /* cross-origin */ }
           }
         } catch (_) { /* ignore */ }
-        // Also strip from inline styles
         clonedDoc.querySelectorAll("*").forEach((el) => {
           const s = (el as HTMLElement).style;
           for (let i = s.length - 1; i >= 0; i--) {
@@ -59,6 +58,45 @@ export async function exportPNG(
         });
       },
     });
+
+    // Draw legend directly on canvas (html2canvas can't capture Recharts Legend)
+    if (legendItems && legendItems.length > 0) {
+      const scale = 3;
+      const legendH = Math.ceil(legendItems.length * 18 * scale / scale) + 20;
+      const newCanvas = document.createElement("canvas");
+      newCanvas.width = canvas.width;
+      newCanvas.height = canvas.height + legendH * scale;
+      const ctx = newCanvas.getContext("2d")!;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, newCanvas.width, newCanvas.height);
+      ctx.drawImage(canvas, 0, 0);
+      // Draw legend
+      const lx = 20 * scale;
+      let ly = canvas.height + 10 * scale;
+      ctx.font = `${11 * scale}px -apple-system, "Segoe UI", Arial, sans-serif`;
+      for (const item of legendItems) {
+        if (item.bold) {
+          ly += 10 * scale;
+          ctx.font = `bold ${11 * scale}px -apple-system, "Segoe UI", Arial, sans-serif`;
+          ctx.fillStyle = "#334155";
+        } else {
+          ctx.font = `${11 * scale}px -apple-system, "Segoe UI", Arial, sans-serif`;
+          ctx.fillStyle = "#64748b";
+        }
+        const ix = item.bold ? lx : lx + 20 * scale;
+        // Color swatch
+        ctx.fillStyle = item.color;
+        ctx.globalAlpha = item.bold ? 1 : 0.7;
+        ctx.fillRect(ix, ly - 8 * scale, 8 * scale, 8 * scale);
+        ctx.globalAlpha = 1;
+        // Text
+        ctx.fillStyle = item.bold ? "#334155" : "#64748b";
+        ctx.fillText(item.label, ix + 10 * scale, ly);
+        ly += 16 * scale;
+      }
+      canvas = newCanvas;
+    }
+
     const blob = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob(resolve, "image/png")
     );
