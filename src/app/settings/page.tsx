@@ -265,8 +265,10 @@ export default function SettingsPage() {
                       const item = MASTER_DATA_TYPES.find((t) => t.key === key);
                       if (!item) return null;
                       const stored = (settings[key] || []);
-                      const defCount = materialCatMap[key] ? (MATERIAL_CATEGORY_FIELDS[materialCatMap[key]] || []).length : 0;
-                      const count = stored.length > 0 ? stored.filter((s) => s.isActive).length : defCount;
+                      const activeCount = stored.filter((s: any) => s.isActive).length;
+                      const cat = materialCatMap[key];
+                      const defCount = cat ? (MATERIAL_CATEGORY_FIELDS[cat] || []).length : 0;
+                      const count = activeCount > 0 ? activeCount : defCount;
                       const total = stored.length > 0 ? stored.length : defCount;
                       return (
                         <button
