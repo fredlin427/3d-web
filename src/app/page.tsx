@@ -152,7 +152,7 @@ export default function DashboardPage() {
             setPresTableTotal(json.data.total);
           }
         }
-      } catch (e) { console.error(e); }
+      } catch (e) { console.error(e); toast.error("Failed to load data"); }
       finally { setPresTableLoading(false); }
     };
     fetchTable();
@@ -180,7 +180,7 @@ export default function DashboardPage() {
       const res = await fetch(`/api/dashboard?${params}`);
       const json = await res.json();
       if (json.success) setData(json.data);
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error(e); toast.error("Failed to load data"); }
     finally { setLoading(false); }
   }, [dateFrom, dateTo, deptFilter, catFilter]);
 
@@ -191,7 +191,7 @@ export default function DashboardPage() {
     fetch("/api/cases")
       .then((r) => r.json())
       .then((j) => { if (j.success) setRecentCases(j.data.slice(0, 6)); })
-      .catch((e) => { console.error(e); });
+      .catch((e) => { console.error(e); toast.error("Failed to load"); });
     // Fetch materials with alerts
     fetch("/api/materials")
       .then((r) => r.json())
@@ -205,7 +205,7 @@ export default function DashboardPage() {
           setAlerts(critical);
         }
       })
-      .catch(() => {});
+      .catch(() => toast.error("Failed to load"));
   }, []);
 
   if (!data && loading) return <LoadingState />;

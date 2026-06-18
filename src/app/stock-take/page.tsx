@@ -33,7 +33,7 @@ export default function StockTakePage() {
     fetch(`/api/materials?${params}`)
       .then((r) => r.json())
       .then((j) => { if (j.success) setMaterials(j.data); })
-      .catch(() => {})
+      .catch(() => toast.error("Failed to load"))
       .finally(() => setLoading(false));
   };
 

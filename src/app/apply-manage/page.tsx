@@ -297,9 +297,9 @@ export default function ApplyManagePage() {
                 applySettings(refreshed.data);
               }
             })
-          ).catch(() => {});
+          ).catch(() => toast.error("Failed to load"));
         }
-      }).catch(() => {});
+      }).catch(() => toast.error("Failed to load"));
     CATEGORIES.forEach((cat) => loadPurposeOptions(cat));
   }, []);
 

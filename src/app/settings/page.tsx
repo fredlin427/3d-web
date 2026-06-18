@@ -113,7 +113,7 @@ export default function SettingsPage() {
         }
         setSettings(grouped);
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error(e); toast.error("Failed to load data"); }
     finally { setLoading(false); }
   }, []);
 

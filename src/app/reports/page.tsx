@@ -103,7 +103,7 @@ export default function ReportsPage() {
           );
         }
       })
-      .catch((e) => { console.error(e); });
+      .catch((e) => { console.error(e); toast.error("Failed to load"); });
   }, []);
 
   // ─── Load presets from localStorage ─────────────────────────
@@ -111,7 +111,7 @@ export default function ReportsPage() {
     try {
       const saved = localStorage.getItem(PRESETS_KEY);
       if (saved) setPresets(JSON.parse(saved));
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error(e); toast.error("Failed to load data"); }
   }, []);
 
   const savePresets = (p: FilterPreset[]) => {
