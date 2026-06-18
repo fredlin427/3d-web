@@ -64,6 +64,7 @@ export const MATERIAL_FIELD_REGISTRY: Record<string, FieldDef> = {
   compatiblePrinter: { key: "compatiblePrinter", label: "Compatible Printer", section: "Material Details", type: "combobox", options: "compatible_printer" },
   colour: { key: "colour", label: "Colour", section: "Material Details", type: "text" },
   diameter: { key: "diameter", label: "Diameter (mm)", section: "Material Details", type: "number" },
+  volume: { key: "volume", label: "Volume (mL)", section: "Material Details", type: "number" },
   productCode: { key: "productCode", label: "Product Code", section: "Material Details", type: "text" },
   materialId: { key: "materialId", label: "Material ID (auto, editable)", section: "Material Details", type: "text" },
   batchNumber: { key: "batchNumber", label: "Batch No.", section: "Material Details", type: "text" },
@@ -160,7 +161,7 @@ export const MATERIAL_CATEGORY_FIELDS: Record<string, string[]> = {
   "SLA Resins": [
     "materialId",
     "batchNumber",
-    "materialName", "colour",
+    "materialName", "colour", "volume",
     "productCode",
     "materialType", "compatiblePrinter", "brand", "supplier",
     "initialQuantity", "unusedQuantity", "currentQuantity",

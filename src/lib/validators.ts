@@ -57,6 +57,7 @@ export const materialFormSchema = z.object({
   compatiblePrinter: z.string().optional().or(z.literal("")),
   colour: z.string().optional().or(z.literal("")),
   diameter: z.coerce.number().optional(),
+  volume: z.coerce.number().optional(),
   productCode: z.string().optional().or(z.literal("")),
   materialId: z.string().optional().or(z.literal("")),
   batchNumber: z.string().optional().or(z.literal("")),

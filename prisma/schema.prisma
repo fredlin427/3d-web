@@ -83,6 +83,7 @@ model Material {
   compatiblePrinter String?             @map("compatible_printer")
   colour           String?
   diameter         Float?               @map("diameter")
+  volume           Float?               @map("volume")
   productCode      String?              @map("product_code")
   materialId       String?              @map("material_id")
   batchNumber      String               @map("batch_number")
