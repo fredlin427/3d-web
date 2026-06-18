@@ -177,6 +177,16 @@ export default function ChartBuilderPage() {
       .catch((e) => console.error(e));
   }, []);
 
+  // Parent-child field relationships for auto-grouping
+  const FIELD_PARENTS: Record<string, string> = {
+    purpose: "category",
+    modelType: "category",
+    requiredService: "category",
+    currentStatus: "category",
+    "case.purpose": "case.category",
+    "material.materialName": "material.category",
+  };
+
   // Auto-switch xField when source changes
   useEffect(() => {
     const fields = SOURCE_FIELDS[source] || [];
@@ -188,6 +198,14 @@ export default function ChartBuilderPage() {
     setFilterField("");
     setFilterValue("");
   }, [source]);
+
+  // Auto-set stackBy when xField changes (parent-child grouping)
+  useEffect(() => {
+    if (xField && FIELD_PARENTS[xField] && SOURCE_FIELDS[source]?.includes(FIELD_PARENTS[xField])) {
+      setStackBy(FIELD_PARENTS[xField]);
+      setShowTable(true);
+    }
+  }, [xField]);
 
   // Fetch data
   const fetchData = useCallback(async () => {
@@ -658,27 +676,6 @@ export default function ChartBuilderPage() {
                   ))}
                 </SelectContent>
               </Select>
-            </CardContent>
-          </Card>
-
-          {/* Grouping */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-1.5 pt-4 px-4"><CardTitle className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Grouping</CardTitle></CardHeader>
-            <CardContent className="space-y-2 px-3 pb-3">
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-medium text-slate-500">Top N + Other</label>
-                <Select value={String(groupTop)} onValueChange={(v) => setGroupTop(Number(v))}>
-                  <SelectTrigger className="w-20 h-7 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0">All</SelectItem>
-                    <SelectItem value="5">Top 5</SelectItem>
-                    <SelectItem value="8">Top 8</SelectItem>
-                    <SelectItem value="12">Top 12</SelectItem>
-                    <SelectItem value="20">Top 20</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <p className="text-[10px] text-slate-400 leading-tight">Auto-groups smaller items into "Other" for cleaner charts with many categories.</p>
             </CardContent>
           </Card>
 
