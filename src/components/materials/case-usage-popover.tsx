@@ -40,7 +40,7 @@ export function CaseUsagePopover({ materialId, count }: { materialId: string; co
   };
   const handleMouseLeave = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setOpen(false), 500);
+    timerRef.current = setTimeout(() => setOpen(false), 1000);
   };
 
   useEffect(() => { return () => { if (timerRef.current) clearTimeout(timerRef.current); }; }, []);
@@ -49,7 +49,10 @@ export function CaseUsagePopover({ materialId, count }: { materialId: string; co
 
   return (
     <span ref={containerRef} className="relative inline-flex" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
-      <span className="inline-flex items-center gap-0.5 text-xs text-primary font-semibold bg-accent rounded-full px-2 py-0.5 cursor-default">
+      <span
+        className="inline-flex items-center gap-0.5 text-xs text-primary font-semibold bg-accent rounded-full px-2 py-0.5 cursor-pointer hover:bg-primary/10"
+        onClick={() => { if (timerRef.current) clearTimeout(timerRef.current); setOpen(!open); setHasFetched(true); }}
+      >
         {count} case{count > 1 ? "s" : ""}
       </span>
 
