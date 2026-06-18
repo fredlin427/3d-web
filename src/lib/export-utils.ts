@@ -102,8 +102,20 @@ function buildStandaloneSVG(containerId: string): string | null {
 export function exportSVG(containerId: string, filename: string): void {
   const svg = buildStandaloneSVG(containerId);
   if (!svg) { toast.error("No chart to export"); return; }
+
+  // Debug: also log first 300 chars to check if inline styles are present
+  console.log("EXPORT SVG preview:", svg.substring(0, 500));
+
   downloadBlob(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }), `${filename}.svg`);
   toast.success(`Exported: ${filename}.svg`);
+}
+
+/** Debug: open SVG in a new browser tab to inspect */
+export function debugOpenSVG(containerId: string): void {
+  const svg = buildStandaloneSVG(containerId);
+  if (!svg) { toast.error("No chart to export"); return; }
+  const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+  window.open(URL.createObjectURL(blob), "_blank");
 }
 
 export async function exportPNG(containerId: string, filename: string): Promise<void> {
