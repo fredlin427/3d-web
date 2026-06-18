@@ -583,13 +583,17 @@ export default function ChartBuilderPage() {
       const base = CHART_COLORS[gi % CHART_COLORS.length];
       items.push({ label: `${group.label}  ${group.value}`, color: base, bold: true });
       group.children.forEach((child, ci) => {
-        // Match pie/donut outer ring: shadeColor, and bar/line grouped: CHART_COLORS
         const isPie = chartType === "pie" || chartType === "donut";
-        items.push({ label: child.label, color: isPie ? shadeColor(base, ci, group.children.length) : CHART_COLORS[ci % CHART_COLORS.length] });
+        if (isPie) {
+          items.push({ label: child.label, color: shadeColor(base, ci, group.children.length) });
+        } else {
+          const ki = stackKeys.indexOf(child.label);
+          items.push({ label: child.label, color: CHART_COLORS[ki >= 0 ? ki % CHART_COLORS.length : ci % CHART_COLORS.length] });
+        }
       });
     });
     return items;
-  }, [stackedData, hasStacked, CHART_COLORS, chartType]);
+  }, [stackedData, hasStacked, CHART_COLORS, chartType, stackKeys]);
 
 
   return (
