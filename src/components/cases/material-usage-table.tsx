@@ -170,11 +170,18 @@ export function MaterialUsageTable({ caseId, usageRecords, onRefresh }: Material
           <p className="text-xs font-medium text-slate-500">Record material usage for this case</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Select value={formMaterialId} onValueChange={(v) => { if (v) setFormMaterialId(v); }}>
-              <SelectTrigger className="h-9 bg-white"><SelectValue placeholder={loadingMats ? "Loading..." : "Select material"} /></SelectTrigger>
-              <SelectContent>
+              <SelectTrigger className="h-9 bg-white">
+                <SelectValue placeholder={loadingMats ? "Loading..." : "Select material..."}>
+                  {formMaterialId && materials.find((m) => m.id === formMaterialId)?.materialName}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="max-w-[360px]">
                 {materials.length === 0 && !loadingMats && <p className="text-xs text-slate-400 px-2 py-4 text-center">No materials available</p>}
                 {materials.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>{m.materialName} <span className="text-slate-400 text-xs">({m.currentQuantity} {m.unit})</span></SelectItem>
+                  <SelectItem key={m.id} value={m.id} className="text-sm">
+                    <span className="truncate max-w-[280px] inline-block">{m.materialName}</span>
+                    <span className="text-slate-400 text-xs ml-2 shrink-0">{m.currentQuantity} {m.unit}</span>
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
