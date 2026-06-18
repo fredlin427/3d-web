@@ -758,21 +758,22 @@ export default function ChartBuilderPage() {
                     <Loader2 className="h-8 w-8 text-primary animate-spin" />
                   </div>
                 ) : renderChart()}
+                {/* Export-only legend — invisible, captured by html2canvas */}
+                {legendItems && (
+                  <div className="absolute opacity-0 pointer-events-none" aria-hidden="true">
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] px-4 py-1 bg-white">
+                      {legendItems.map((item: any, i: number) => (
+                        <span key={i} className={`flex items-center gap-1 ${item.bold ? "font-bold text-slate-700 w-full" : "text-slate-500 ml-5"}`}>
+                          <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: item.color, opacity: item.bold ? 1 : 0.7 }} />
+                          {item.label}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
-
-          {/* HTML legend for export — html2canvas can capture this */}
-          {hasStacked && legendItems && (
-            <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] px-4 py-2 border rounded-lg bg-white">
-              {legendItems.map((item, i) => (
-                <span key={i} className={`flex items-center gap-1 ${item.bold ? "font-bold text-slate-700 w-full mt-1" : "text-slate-500 ml-5"}`}>
-                  <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: item.color, opacity: item.bold ? 1 : 0.7 }} />
-                  {item.label}
-                </span>
-              ))}
-            </div>
-          )}
 
           {/* ─── Hierarchical Breakdown Table (always expanded) ─── */}
           {showTable && hasStacked && (
