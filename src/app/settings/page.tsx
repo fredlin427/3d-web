@@ -150,11 +150,12 @@ export default function SettingsPage() {
     fetchSettings();
   };
 
+  const materialCatMap: Record<string, string> = { fdm_form_field: "FDM Filaments", sla_form_field: "SLA Resins", tank_form_field: "Resin Tanks", ipa_form_field: "IPA" };
+
   const getDefaultFieldKeys = (type: string): string[] => {
     if (type === "case_form_field") return Object.keys(CASE_FIELD_REGISTRY);
     if (type === "apply_form_field") return Object.keys(APPLY_FIELD_REGISTRY);
-    const catMap: Record<string, string> = { fdm_form_field: "FDM Filaments", sla_form_field: "SLA Resins", tank_form_field: "Resin Tanks", ipa_form_field: "IPA" };
-    if (catMap[type]) return MATERIAL_CATEGORY_FIELDS[catMap[type]] || [];
+    if (materialCatMap[type]) return MATERIAL_CATEGORY_FIELDS[materialCatMap[type]] || [];
     return [];
   };
 
@@ -263,8 +264,10 @@ export default function SettingsPage() {
                     {group.items.map((key) => {
                       const item = MASTER_DATA_TYPES.find((t) => t.key === key);
                       if (!item) return null;
-                      const count = (settings[key] || []).filter((s) => s.isActive).length;
-                      const total = (settings[key] || []).length;
+                      const stored = (settings[key] || []);
+                      const defCount = materialCatMap[key] ? (MATERIAL_CATEGORY_FIELDS[materialCatMap[key]] || []).length : 0;
+                      const count = stored.length > 0 ? stored.filter((s) => s.isActive).length : defCount;
+                      const total = stored.length > 0 ? stored.length : defCount;
                       return (
                         <button
                           key={key}
