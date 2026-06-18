@@ -82,7 +82,7 @@ const GROUPS = [
 ];
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState<Record<string, Array<{ id: string; value: string; sortOrder: number; isActive: boolean }>>>({});
+  const [settings, setSettings] = useState<Record<string, Array<{ id: string; type: string; value: string; sortOrder: number; isActive: boolean }>>>({});
   const [loading, setLoading] = useState(true);
   const [activeKey, setActiveKey] = useState("department");
   const [search, setSearch] = useState("");
@@ -103,7 +103,7 @@ export default function SettingsPage() {
       const res = await fetch("/api/settings");
       const json = await res.json();
       if (json.success) {
-        const grouped: Record<string, Array<{ id: string; value: string; sortOrder: number; isActive: boolean }>> = {};
+        const grouped: Record<string, Array<{ id: string; type: string; value: string; sortOrder: number; isActive: boolean }>> = {};
         for (const item of json.data) {
           if (!grouped[item.type]) grouped[item.type] = [];
           grouped[item.type].push(item);

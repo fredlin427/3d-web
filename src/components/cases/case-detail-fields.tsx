@@ -11,36 +11,42 @@ export function CaseDetailFields({ caseData }: { caseData: Record<string, any> }
   const [sections, setSections] = useState<{ name: string; fields: (FieldDef & { displayValue: string })[] }[]>([]);
 
   useEffect(() => {
-    fetch("/api/settings?type=case_form_field")
-      .then((r) => r.json())
-      .then((j) => {
-        if (!j.success || !j.data?.length) return;
-        const active = j.data.filter((s: any) => s.isActive).sort((a: any, b: any) => a.sortOrder - b.sortOrder);
-        const fields: (FieldDef & { displayValue: string })[] = [];
-        const seen = new Set<string>();
-        for (const item of active) {
-          const val = item.value.trim();
-          if (seen.has(val)) continue;
-          seen.add(val);
-          let field: FieldDef | null = null;
-          if (val.startsWith("custom::")) {
-            const parts = val.split("::");
-            field = { key: val, label: parts[1] || "Custom", section: parts[3] || "Additional", type: (parts[2] || "text") as FieldDef["type"] };
-          } else if (CASE_FIELD_REGISTRY[val]) {
-            field = { ...CASE_FIELD_REGISTRY[val] };
+    let cancelled = false;
+    const load = () => {
+      fetch("/api/settings?type=case_form_field")
+        .then((r) => r.json())
+        .then((j) => {
+          if (cancelled || !j.success || !j.data?.length) return;
+          const active = j.data.filter((s: any) => s.isActive).sort((a: any, b: any) => a.sortOrder - b.sortOrder);
+          const fields: (FieldDef & { displayValue: string })[] = [];
+          const seen = new Set<string>();
+          for (const item of active) {
+            const val = item.value.trim();
+            if (seen.has(val)) continue;
+            seen.add(val);
+            let field: FieldDef | null = null;
+            if (val.startsWith("custom::")) {
+              const parts = val.split("::");
+              field = { key: val, label: parts[1] || "Custom", section: parts[3] || "Additional", type: (parts[2] || "text") as FieldDef["type"] };
+            } else if (CASE_FIELD_REGISTRY[val]) {
+              field = { ...CASE_FIELD_REGISTRY[val] };
+            }
+            if (!field) continue;
+            let dv = caseData[field.key] ?? "";
+            if (field.type === "date" && dv) dv = formatDate(dv);
+            else if (dv === "" || dv === null || dv === undefined) dv = "—";
+            fields.push({ ...field, displayValue: String(dv) });
           }
-          if (!field) continue;
-          let dv = caseData[field.key] ?? "";
-          if (field.type === "date" && dv) dv = formatDate(dv);
-          else if (dv === "" || dv === null || dv === undefined) dv = "—";
-          fields.push({ ...field, displayValue: String(dv) });
-        }
-        const grouped = CASE_SECTION_ORDER
-          .map((name) => ({ name, fields: fields.filter((f) => f.section === name) }))
-          .filter((s) => s.fields.length > 0);
-        setSections(grouped);
-      })
-      .catch(() => {});
+          const grouped = CASE_SECTION_ORDER
+            .map((name) => ({ name, fields: fields.filter((f) => f.section === name) }))
+            .filter((s) => s.fields.length > 0);
+          if (!cancelled) setSections(grouped);
+        })
+        .catch(() => {});
+    };
+    load();
+    window.addEventListener("form-fields-changed", load);
+    return () => { cancelled = true; window.removeEventListener("form-fields-changed", load); };
   }, [caseData]);
 
   if (sections.length === 0) return null;

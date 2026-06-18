@@ -268,6 +268,7 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
   const refreshFields = async () => {
     const res = await fetch(`/api/settings?type=${settingsType}`).then((r) => r.json());
     if (res.success) { setAllSettings(res.data); pushHistory(res.data); await apply(res.data); }
+    window.dispatchEvent(new Event("form-fields-changed"));
   };
   const removeField = async (key: string) => {
     const e = allSettings.find((s: any) => s.value === key);
@@ -348,10 +349,11 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
     setEditingType(null);
   };
   const moveField = async (key: string, dir: -1 | 1) => {
-    const sorted = [...allSettings].sort((a: any, b: any) => a.sortOrder - b.sortOrder);
-    const idx = sorted.findIndex((s: any) => s.value === key);
-    if (idx < 0 || !sorted[idx + dir]) return;
-    const a = sorted[idx], b = sorted[idx + dir];
+    // Only consider active items for reordering — inactive items are invisible
+    const active = [...allSettings].filter((s: any) => s.isActive).sort((a: any, b: any) => a.sortOrder - b.sortOrder);
+    const idx = active.findIndex((s: any) => s.value === key);
+    if (idx < 0 || !active[idx + dir]) return;
+    const a = active[idx], b = active[idx + dir];
     try {
       await fetch(`/api/settings/${a.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: a.type, value: a.value, sortOrder: b.sortOrder, isActive: a.isActive }) });
       await fetch(`/api/settings/${b.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: b.type, value: b.value, sortOrder: a.sortOrder, isActive: b.isActive }) });

@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 
 interface MasterDataItem {
   id: string;
+  type: string;
   value: string;
   sortOrder: number;
   isActive: boolean;
@@ -78,6 +79,8 @@ export function MasterDataTable({ title, type, items, onRefresh, showReorder, di
         body: JSON.stringify({ ...item, isActive: !item.isActive }),
       });
       onRefresh();
+      // Notify detail pages to re-fetch dynamic fields
+      if (item.type.endsWith("_form_field")) window.dispatchEvent(new Event("form-fields-changed"));
     } catch { toast.error("Failed"); }
   };
 
@@ -88,6 +91,8 @@ export function MasterDataTable({ title, type, items, onRefresh, showReorder, di
       await fetch(`/api/settings/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...item, isActive: false }) });
       toast.success("Deactivated");
       onRefresh();
+      // Notify detail pages to re-fetch dynamic fields
+      if (item.type.endsWith("_form_field")) window.dispatchEvent(new Event("form-fields-changed"));
     } catch { toast.error("Failed"); }
   };
 

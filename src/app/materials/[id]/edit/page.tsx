@@ -17,35 +17,18 @@ export default function EditMaterialPage() {
         const json = await res.json();
         if (json.success) {
         const m = json.data;
-        setDefaultValues({
-          category: m.category,
-          materialName: m.materialName,
-          productCode: m.productCode || "",
-          materialId: m.materialId || "",
-          brand: m.brand || "",
-          materialType: m.materialType || "",
-          compatiblePrinter: m.compatiblePrinter || "",
-          colour: m.colour || "",
-          diameter: m.diameter ?? "",
-          batchNumber: m.batchNumber || "",
-          supplier: m.supplier || "",
-          purchaseDate: m.purchaseDate ? new Date(m.purchaseDate).toISOString().split("T")[0] : "",
-          receivedDate: m.receivedDate ? new Date(m.receivedDate).toISOString().split("T")[0] : "",
-          openDate: m.openDate ? new Date(m.openDate).toISOString().split("T")[0] : "",
-          expiryDate: m.expiryDate ? new Date(m.expiryDate).toISOString().split("T")[0] : "",
-          disposalDate: m.disposalDate ? new Date(m.disposalDate).toISOString().split("T")[0] : "",
-          manufacturingDate: m.manufacturingDate ? new Date(m.manufacturingDate).toISOString().split("T")[0] : "",
-          initialQuantity: m.initialQuantity,
-          currentQuantity: m.currentQuantity,
-          unusedQuantity: m.unusedQuantity ?? 0,
-          openedQuantity: m.openedQuantity ?? 0,
-          expiredQuantity: m.expiredQuantity ?? 0,
-          unit: m.unit,
-          reorderThreshold: m.reorderThreshold,
-          storageLocation: m.storageLocation || "",
-          status: m.status,
-          remarks: m.remarks || "",
-        });
+        // Dynamically include ALL fields from the API response (not a hardcoded subset)
+        const vals: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(m)) {
+          if (v instanceof Date) {
+            vals[k] = v.toISOString().split("T")[0];
+          } else if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}T/.test(v)) {
+            vals[k] = v.split("T")[0];
+          } else {
+            vals[k] = v ?? "";
+          }
+        }
+        setDefaultValues(vals);
         }
       } catch {
         // keep defaultValues null

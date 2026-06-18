@@ -12,49 +12,50 @@ export function MaterialDetailFields({ material }: { material: Record<string, an
   const [sections, setSections] = useState<{ name: string; fields: (FieldDef & { displayValue: string })[] }[]>([]);
 
   useEffect(() => {
-    const cat = material.category || "";
-    const settingsType = MATERIAL_CATEGORY_SETTINGS_TYPE[cat];
-    if (!settingsType) return;
-
-    fetch(`/api/settings?type=${settingsType}`)
-      .then((r) => r.json())
-      .then((j) => {
-        if (!j.success || !j.data?.length) return;
-        const active = j.data.filter((s: any) => s.isActive).sort((a: any, b: any) => a.sortOrder - b.sortOrder);
-
-        const fields: (FieldDef & { displayValue: string })[] = [];
-        const seen = new Set<string>();
-        for (const item of active) {
-          const val = item.value.trim();
-          if (seen.has(val)) continue;
-          seen.add(val);
-
-          let field: FieldDef | null = null;
-          if (val.startsWith("custom::")) {
-            const parts = val.split("::");
-            field = { key: val, label: parts[1] || "Custom", section: parts[3] || "Additional", type: (parts[2] || "text") as FieldDef["type"] };
-          } else if (MATERIAL_FIELD_REGISTRY[val]) {
-            field = { ...MATERIAL_FIELD_REGISTRY[val] };
+    let cancelled = false;
+    const load = () => {
+      const cat = material.category || "";
+      const settingsType = MATERIAL_CATEGORY_SETTINGS_TYPE[cat];
+      if (!settingsType) return;
+      fetch(`/api/settings?type=${settingsType}`)
+        .then((r) => r.json())
+        .then((j) => {
+          if (cancelled || !j.success || !j.data?.length) return;
+          // ... rest stays same
+          const active = j.data.filter((s: any) => s.isActive).sort((a: any, b: any) => a.sortOrder - b.sortOrder);
+          const fields: (FieldDef & { displayValue: string })[] = [];
+          const seen = new Set<string>();
+          for (const item of active) {
+            const val = item.value.trim();
+            if (seen.has(val)) continue;
+            seen.add(val);
+            let field: FieldDef | null = null;
+            if (val.startsWith("custom::")) {
+              const parts = val.split("::");
+              field = { key: val, label: parts[1] || "Custom", section: parts[3] || "Additional", type: (parts[2] || "text") as FieldDef["type"] };
+            } else if (MATERIAL_FIELD_REGISTRY[val]) {
+              field = { ...MATERIAL_FIELD_REGISTRY[val] };
+            }
+            if (!field) continue;
+            let displayValue = material[field.key] ?? "";
+            if (field.type === "date" && displayValue) displayValue = formatDate(displayValue);
+            else if (field.type === "number" && displayValue !== "") displayValue = `${displayValue} ${material.unit || ""}`;
+            else if (displayValue === "" || displayValue === null || displayValue === undefined) displayValue = "—";
+            fields.push({ ...field, displayValue: String(displayValue) });
           }
-          if (!field) continue;
-
-          // Get display value from material data
-          let displayValue = material[field.key] ?? "";
-          if (field.type === "date" && displayValue) displayValue = formatDate(displayValue);
-          else if (field.type === "number" && displayValue !== "") displayValue = `${displayValue} ${material.unit || ""}`;
-          else if (displayValue === "" || displayValue === null || displayValue === undefined) displayValue = "—";
-
-          fields.push({ ...field, displayValue: String(displayValue) });
-        }
-
-        const sectionOrder = MATERIAL_CATEGORY_SECTION_ORDERS[cat] ||
-          [...new Set(fields.map((f) => f.section))];
-        const grouped = sectionOrder
-          .map((name) => ({ name, fields: fields.filter((f) => f.section === name) }))
-          .filter((s) => s.fields.length > 0);
-        setSections(grouped);
-      })
-      .catch(() => {});
+          const sectionOrder = MATERIAL_CATEGORY_SECTION_ORDERS[cat] ||
+            [...new Set(fields.map((f) => f.section))];
+          const grouped = sectionOrder
+            .map((name) => ({ name, fields: fields.filter((f) => f.section === name) }))
+            .filter((s) => s.fields.length > 0);
+          if (!cancelled) setSections(grouped);
+        })
+        .catch(() => {});
+    };
+    load();
+    // Re-fetch when settings change (e.g. field deactivated in Settings page)
+    window.addEventListener("form-fields-changed", load);
+    return () => { cancelled = true; window.removeEventListener("form-fields-changed", load); };
   }, [material.category, material]);
 
   if (sections.length === 0) return null;
