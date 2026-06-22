@@ -7,12 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingState } from "@/components/shared/loading-state";
 import { ProgressTimeline } from "@/components/cases/progress-timeline";
-import { ProgressStepper } from "@/components/cases/progress-stepper";
 import { MaterialUsageTable } from "@/components/cases/material-usage-table";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { toast } from "sonner";
 import { Pencil, Copy, Trash2, ImageIcon, ExternalLink, Calendar, User, Building2, Tag } from "lucide-react";
-import { formatDate, formatDateTime, getStatusBadgeVariant } from "@/lib/utils";
+import { formatDate, formatDateTime, getStatusBadgeVariant, cn } from "@/lib/utils";
 import { DEPARTMENT_LABELS } from "@/lib/constants";
 import { CaseDetailFields } from "@/components/cases/case-detail-fields";
 
@@ -104,11 +103,49 @@ export default function CaseDetailPage() {
         <div className="space-y-2">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">{caseData.caseNumber}</h1>
-            <Badge variant={getStatusBadgeVariant(caseData.currentStatus)}>{caseData.currentStatus}</Badge>
+            <Badge variant={getStatusBadgeVariant(caseData.currentStatus)} className="text-sm px-3 py-1">{caseData.currentStatus}</Badge>
             <Badge variant={getStatusBadgeVariant(caseData.priority)}>{caseData.priority}</Badge>
             <Badge variant="secondary">{caseData.category}</Badge>
           </div>
           <h2 className="text-lg font-medium text-slate-700">{caseData.projectTitle}</h2>
+          {/* Progress mini-bar — replaces separate stepper card */}
+          {(() => {
+            const steps = caseData.progressSteps || [];
+            const done = steps.filter((s: any) => s.status === "Completed").length;
+            const total = 8;
+            const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+            const stepColors: Record<string, string> = {
+              "Application Received": "bg-amber-400","Approval": "bg-orange-400","Segmentation / Design": "bg-purple-400",
+              "Verify Segmentation / Design": "bg-blue-400","Printing": "bg-cyan-400",
+              "Post-processing": "bg-teal-400","Final Product": "bg-emerald-400","Completion": "bg-green-400",
+            };
+            return (
+              <div className="flex items-center gap-3 mt-1">
+                <div className="flex items-center gap-2 flex-1 max-w-md">
+                  <div className="flex-1 h-2 rounded-full bg-slate-200 overflow-hidden flex">
+                    {Array.from({length: total}).map((_, i) => {
+                      const step = steps.find((s: any) => s.stepOrder === i || s.stepName === [
+                        "Application Received","Approval","Segmentation / Design","Verify Segmentation / Design",
+                        "Printing","Post-processing","Final Product","Completion"][i]);
+                      const isDone = step?.status === "Completed";
+                      const isActive = step?.status === "In progress";
+                      const color = stepColors[step?.stepName || ""] || "bg-slate-300";
+                      return (
+                        <div key={i} className={cn(
+                          "h-full flex-1 transition-all duration-300 border-r border-white last:border-r-0",
+                          isDone ? color : isActive ? `${color} animate-pulse` : "bg-slate-200"
+                        )} title={step?.stepName || `Step ${i+1}`} />
+                      );
+                    })}
+                  </div>
+                  <span className="text-xs font-bold text-slate-600 tabular-nums whitespace-nowrap">{done}/{total} <span className="text-slate-400 font-normal">{pct}%</span></span>
+                </div>
+                {caseData.currentProgressStep && (
+                  <span className="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-0.5 rounded-full">{caseData.currentProgressStep}</span>
+                )}
+              </div>
+            );
+          })()}
           <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm text-slate-500">
             <span className="flex items-center gap-1"><Building2 className="h-3.5 w-3.5" />{caseData.department}{DEPARTMENT_LABELS[caseData.department] ? ` (${DEPARTMENT_LABELS[caseData.department]})` : ""}</span>
             <span className="flex items-center gap-1"><User className="h-3.5 w-3.5" />{caseData.applicantName}</span>
@@ -123,13 +160,6 @@ export default function CaseDetailPage() {
         </div>
       </div>
 
-      {/* === PROGRESS STEPPER — VISUAL OVERVIEW BAR === */}
-      <Card className="border-0 shadow-sm ring-2 ring-blue-200 bg-gradient-to-r from-blue-50/50 to-emerald-50/50">
-        <CardContent className="py-4">
-          <ProgressStepper steps={caseData.progressSteps || []} />
-        </CardContent>
-      </Card>
-
       {/* === PROGRESS TIMELINE === */}
       <Card className="border-0 shadow-sm ring-1 ring-blue-100">
         <CardHeader className="pb-2">
@@ -138,9 +168,6 @@ export default function CaseDetailPage() {
               <svg className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
             </div>
             Progress Timeline
-            {caseData.currentProgressStep && (
-              <Badge variant="outline" className="ml-2 text-xs font-normal">{caseData.currentProgressStep}</Badge>
-            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="pb-6">
