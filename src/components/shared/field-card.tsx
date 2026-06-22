@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useRef, type ReactNode } from "react";
-import { GripVertical, ChevronUp, ChevronDown, Trash2, Check } from "lucide-react";
+import { GripVertical, ChevronUp, ChevronDown, Trash2, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { FieldDef } from "@/lib/field-registry";
 
-// ─── Type badge color mapping (matches Google Forms + E-form aesthetic) ───
+// ─── Type badge color mapping ──────────────────────────────────────
 const TYPE_STYLE: Record<string, { bg: string; text: string; label: string; icon: string }> = {
   text:       { bg: "bg-blue-50",  text: "text-blue-700",  label: "Text",       icon: "Aa" },
   combobox:   { bg: "bg-purple-50", text: "text-purple-700", label: "Dropdown",  icon: "☰" },
@@ -29,7 +29,7 @@ interface FieldCardProps {
   onMove: (dir: -1 | 1) => Promise<void>;
   onLabelChange: (newLabel: string) => Promise<void>;
   onTypeChange: (newType: FieldDef["type"]) => Promise<void>;
-  /** The actual form field to render inside the card */
+  /** The actual form field to render — always visible */
   children: ReactNode;
 }
 
@@ -70,25 +70,28 @@ export function FieldCard({
   return (
     <div
       className={cn(
-        "field-card group relative rounded-xl bg-white transition-all duration-150",
+        "field-card group rounded-xl bg-white transition-all duration-150",
         "ring-1 ring-slate-200",
         isExpanded
           ? "ring-2 ring-blue-500 shadow-sm"
           : "hover:ring-2 hover:ring-blue-300 hover:shadow-sm"
       )}
     >
-      {/* ─── Header row ─────────────────────────────────────────────── */}
-      <button
-        type="button"
-        onClick={(e) => {
-          const target = e.target as HTMLElement;
-          // Don't toggle if clicking buttons or inputs
-          if (target.closest("button:not(.field-header-btn), input, select")) return;
-          onExpand();
-        }}
-        className="field-header-btn w-full flex items-center gap-2.5 px-3 py-2.5 text-left cursor-pointer"
+      {/* ─── Header bar ────────────────────────────────────────── */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onExpand}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onExpand(); }}
+        className="flex items-center gap-2.5 px-3 py-2.5 cursor-pointer select-none"
       >
-        {/* Grip handle — hidden on touch, fade-in on hover */}
+        {/* Expand chevron */}
+        <ChevronRight className={cn(
+          "h-3.5 w-3.5 text-slate-300 transition-transform shrink-0",
+          isExpanded && "rotate-90"
+        )} />
+
+        {/* Grip handle */}
         <div
           ref={gripRef}
           className={cn(
@@ -112,27 +115,11 @@ export function FieldCard({
           {style.icon} {style.label}
         </span>
 
-        {/* Label preview */}
+        {/* Label */}
         <span className="flex-1 text-[13px] font-medium text-slate-700 truncate min-w-0">
           {field.label || "(no label)"}
+          {field.required && <span className="text-red-400 ml-0.5">*</span>}
         </span>
-
-        {/* Required toggle pill */}
-        <div
-          className={cn(
-            "shrink-0 text-[10px] font-semibold px-2.5 py-1 rounded-full border-2 transition-all cursor-pointer select-none",
-            field.required
-              ? "bg-red-500 text-white border-red-500"
-              : "bg-white text-slate-400 border-slate-200 hover:border-slate-300"
-          )}
-          onClick={(e) => {
-            e.stopPropagation();
-            onTypeChange(field.type); // This is a no-op for type, but we need a callback for required
-          }}
-          title={field.required ? "Required" : "Click to set required"}
-        >
-          {field.required ? "Required ✓" : "Required?"}
-        </div>
 
         {/* Action buttons — fade-in on hover */}
         <div className={cn(
@@ -140,7 +127,6 @@ export function FieldCard({
           isTouchDevice.current ? "opacity-100" : "opacity-0 group-hover:opacity-100",
           isExpanded && "opacity-100"
         )}>
-          {/* Move up */}
           <button
             type="button"
             className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600 disabled:opacity-20 disabled:cursor-not-allowed"
@@ -150,7 +136,6 @@ export function FieldCard({
           >
             <ChevronUp className="h-3.5 w-3.5" />
           </button>
-          {/* Move down */}
           <button
             type="button"
             className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600 disabled:opacity-20 disabled:cursor-not-allowed"
@@ -160,7 +145,6 @@ export function FieldCard({
           >
             <ChevronDown className="h-3.5 w-3.5" />
           </button>
-          {/* Delete */}
           <button
             type="button"
             className="p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-500"
@@ -170,12 +154,17 @@ export function FieldCard({
             <Trash2 className="h-3.5 w-3.5" />
           </button>
         </div>
-      </button>
+      </div>
 
-      {/* ─── Expandable body ────────────────────────────────────────── */}
+      {/* ─── Form field — ALWAYS visible ────────────────────────── */}
+      <div className="px-3 pb-3">
+        {children}
+      </div>
+
+      {/* ─── Edit panel — only when expanded ────────────────────── */}
       {isExpanded && (
-        <div className="px-3 pb-3 pt-0 border-t border-slate-100">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+        <div className="px-3 pb-3 -mt-1 border-t border-slate-100 pt-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Label editor */}
             <div className="space-y-1">
               <label className="text-[11px] font-medium text-slate-400 uppercase tracking-wide">Label</label>
@@ -204,11 +193,6 @@ export function FieldCard({
                 })}
               </select>
             </div>
-          </div>
-
-          {/* Rendered form field preview */}
-          <div className="mt-3 p-3 rounded-lg bg-slate-50 border border-slate-100">
-            {children}
           </div>
         </div>
       )}
