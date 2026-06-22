@@ -74,6 +74,8 @@ export default function DashboardPage() {
   const [deptFilter, setDeptFilter] = useState("all");
   const [catFilter, setCatFilter] = useState("all");
   const [recentCases, setRecentCases] = useState<any[]>([]);
+  const [allCases, setAllCases] = useState<any[]>([]); // for expandable stat cards
+  const [expandedStat, setExpandedStat] = useState<string | null>(null);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [dismissed, setDismissed] = useState(false);
   const [presMode, setPresMode] = useState(false);
@@ -157,9 +159,9 @@ export default function DashboardPage() {
 
   // Fetch recent cases + critical stock alerts
   useEffect(() => {
-    fetch("/api/cases")
+    fetch("/api/cases?pageSize=50")
       .then((r) => r.json())
-      .then((j) => { if (j.success) setRecentCases(j.data.slice(0, 6)); })
+      .then((j) => { if (j.success) { setRecentCases(j.data.slice(0, 6)); setAllCases(j.data); } })
       .catch((e) => { console.error(e); toast.error("Failed to load"); });
     // Fetch materials with alerts
     fetch("/api/materials")
@@ -244,10 +246,15 @@ export default function DashboardPage() {
       {/* Stat Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
         {statDefs.map((s) => (
-          <Card key={s.key} className={cn(
-            "border-0 border hover:shadow-md transition-all duration-200 overflow-hidden",
-            (s as any).highlight && "ring-2 ring-amber-200 bg-gradient-to-b from-amber-50/30 to-white"
-          )}>
+          <Card
+            key={s.key}
+            onClick={() => setExpandedStat(expandedStat === s.key ? null : s.key)}
+            className={cn(
+              "border-0 border hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer",
+              (s as any).highlight && "ring-2 ring-amber-200 bg-gradient-to-b from-amber-50/30 to-white",
+              expandedStat === s.key && "ring-2 ring-blue-400 shadow-md"
+            )}
+          >
             <CardContent className="p-5">
               <div className="flex items-start justify-between mb-3">
                 <div className={cn(
@@ -256,6 +263,7 @@ export default function DashboardPage() {
                 )} style={{ backgroundColor: s.bg }}>
                   <s.icon className="h-5 w-5" style={{ color: s.color }} />
                 </div>
+                <span className="text-[10px] text-slate-300 font-medium">{expandedStat === s.key ? "▲" : "▼"}</span>
               </div>
               <p className="text-[28px] font-bold tracking-tight text-slate-900 tabular-nums leading-none">{(data?.stats as any)?.[s.key] || 0}</p>
               <p className="text-[13px] text-slate-500 mt-1 font-medium">{s.title}</p>
@@ -263,6 +271,112 @@ export default function DashboardPage() {
           </Card>
         ))}
       </div>
+
+      {/* Expandable stat detail panel */}
+      {expandedStat && (
+        <Card className="border-0 shadow-sm ring-1 ring-blue-100 animate-in fade-in slide-in-from-top-2">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-semibold text-slate-700">
+              {statDefs.find(s => s.key === expandedStat)?.title || "Details"}
+            </CardTitle>
+            <button onClick={() => setExpandedStat(null)} className="text-xs text-slate-400 hover:text-slate-600">✕ Close</button>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              // Case-related stats
+              if (expandedStat === "casesInProgress" || expandedStat === "completedCases") {
+                const status = expandedStat === "casesInProgress" ? "In progress" : "Completed";
+                const filtered = allCases.filter((c: any) => c.currentStatus === status);
+                if (filtered.length === 0) return <p className="text-sm text-slate-400 py-4 text-center">No {status.toLowerCase()} cases</p>;
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {filtered.slice(0, 12).map((c: any) => (
+                      <Link key={c.id} href={`/cases/${c.id}`} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors ring-1 ring-slate-100">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-slate-800 truncate">{c.caseNumber}</p>
+                          <p className="text-xs text-slate-500 truncate">{c.projectTitle}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="secondary" className="text-[10px]">{c.category}</Badge>
+                            {c.currentProgressStep && (
+                              <span className="text-[10px] text-blue-500 font-medium truncate">{c.currentProgressStep}</span>
+                            )}
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                );
+              }
+              // Total cases — show recent
+              if (expandedStat === "totalCases") {
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {allCases.slice(0, 12).map((c: any) => (
+                      <Link key={c.id} href={`/cases/${c.id}`} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors ring-1 ring-slate-100">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-slate-800 truncate">{c.caseNumber}</p>
+                          <p className="text-xs text-slate-500 truncate">{c.projectTitle}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant={getStatusBadgeVariant(c.currentStatus)} className="text-[10px]">{c.currentStatus}</Badge>
+                            <span className="text-[10px] text-slate-400">{c.department}</span>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                );
+              }
+              // Cases this month
+              if (expandedStat === "casesThisMonth") {
+                const thisMonth = new Date().getMonth();
+                const thisYear = new Date().getFullYear();
+                const filtered = allCases.filter((c: any) => {
+                  const d = new Date(c.applicationDate);
+                  return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+                });
+                if (filtered.length === 0) return <p className="text-sm text-slate-400 py-4 text-center">No cases this month</p>;
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {filtered.slice(0, 12).map((c: any) => (
+                      <Link key={c.id} href={`/cases/${c.id}`} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors ring-1 ring-slate-100">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-slate-800 truncate">{c.caseNumber} <span className="text-xs text-slate-400 font-normal">{formatDate(c.applicationDate)}</span></p>
+                          <p className="text-xs text-slate-500 truncate">{c.projectTitle}</p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                );
+              }
+              // Material stats
+              if (expandedStat === "lowStockItems" || expandedStat === "expiringMaterials" || expandedStat === "materialsOpened") {
+                const statusMap: Record<string, string> = {
+                  lowStockItems: "Low stock", materialsOpened: "Opened", expiringMaterials: "expiring",
+                };
+                const status = statusMap[expandedStat];
+                const filtered = alerts.filter((m: any) => {
+                  if (status === "expiring") return m.expiryDate && new Date(m.expiryDate) <= new Date(Date.now() + 30*24*60*60*1000) && m.status !== "Expired";
+                  return m.status === status;
+                });
+                if (filtered.length === 0) return <p className="text-sm text-slate-400 py-4 text-center">No items</p>;
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {filtered.slice(0, 12).map((m: any) => (
+                      <Link key={m.id} href={`/materials/${m.id}`} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors ring-1 ring-slate-100">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-slate-800 truncate">{m.materialName}</p>
+                          <p className="text-xs text-slate-500">{m.currentQuantity}{m.unit} · {m.brand || m.category}</p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                );
+              }
+              return null;
+            })()}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Recent Cases Gallery */}
       {recentCases.length > 0 && (
