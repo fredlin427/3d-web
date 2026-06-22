@@ -46,6 +46,7 @@ export function CaseForm({ defaultValues, isEditing, caseId }: CaseFormProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [orderedFields, setOrderedFields] = useState<FieldDef[]>([]);
+  const [editMode, setEditMode] = useState(false);
   const [expandedField, setExpandedField] = useState<string | null>(null);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [addModalSection, setAddModalSection] = useState("");
@@ -401,30 +402,56 @@ export function CaseForm({ defaultValues, isEditing, caseId }: CaseFormProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {/* ─── Toolbar ──────────────────────────────────────────────── */}
-      <FormLayoutToolbar
-        fieldCount={totalFields}
-        canUndo={historyIdx > 0}
-        canRedo={historyIdx < history.length - 1}
-        onUndo={undo}
-        onRedo={redo}
-        onReset={resetToDefault}
-        className="-mt-2"
-      />
+      {/* ─── Mode toggle ───────────────────────────────────────── */}
+      <div className="flex items-center justify-between">
+        <div />
+        <button
+          type="button"
+          onClick={async () => {
+            if (!editMode) {
+              const res = await fetch("/api/settings?type=case_form_field").then((r) => r.json());
+              if (res.success) {
+                setAllSettings(res.data);
+                setHistory([JSON.parse(JSON.stringify(res.data))]);
+                setHistoryIdx(0);
+                await applySettings(res.data);
+              }
+            }
+            setEditMode(!editMode);
+            setExpandedField(null);
+          }}
+          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+            editMode
+              ? "bg-blue-600 text-white hover:bg-blue-700"
+              : "bg-white text-slate-600 border border-slate-200 hover:border-blue-300 hover:text-blue-600"
+          }`}
+        >
+          {editMode ? "✓ Done" : "✎ Edit Form"}
+        </button>
+      </div>
 
-      {/* ─── Sections ─────────────────────────────────────────────── */}
-      {sections.map((section) => {
-        const sectionFields = section.fields;
-        const secIdx = orderedFields.filter(f => f.section === section.name);
-        return (
-          <Card key={section.name} className="overflow-visible">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">{section.name}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {/* Fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {sectionFields.map((field, fi) => {
+      {/* ─── EDIT MODE: Toolbar ────────────────────────────────── */}
+      {editMode && (
+        <FormLayoutToolbar
+          fieldCount={totalFields}
+          canUndo={historyIdx > 0}
+          canRedo={historyIdx < history.length - 1}
+          onUndo={undo}
+          onRedo={redo}
+          onReset={resetToDefault}
+        />
+      )}
+
+      {/* ─── Sections ─────────────────────────────────────────── */}
+      {sections.map((section) => (
+        <Card key={section.name} className={editMode ? "overflow-visible ring-2 ring-blue-100" : "overflow-visible"}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">{section.name}</CardTitle>
+          </CardHeader>
+          <CardContent className={editMode ? "space-y-3" : ""}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {section.fields.map((field, fi) => {
+                if (editMode) {
                   const sectionFieldIndices = orderedFields
                     .map((f, i) => f.section === section.name ? i : -1)
                     .filter(i => i >= 0);
@@ -436,7 +463,7 @@ export function CaseForm({ defaultValues, isEditing, caseId }: CaseFormProps) {
                       key={field.key}
                       field={field}
                       index={idxInSection}
-                      totalInSection={sectionFields.length}
+                      totalInSection={section.fields.length}
                       isExpanded={expandedField === field.key}
                       onExpand={() => setExpandedField(expandedField === field.key ? null : field.key)}
                       onRemove={() => removeField(field.key)}
@@ -447,24 +474,28 @@ export function CaseForm({ defaultValues, isEditing, caseId }: CaseFormProps) {
                       {renderField(field)}
                     </FieldCard>
                   );
-                })}
-              </div>
+                }
+                // Fill mode: clean, just the field
+                return renderField(field);
+              })}
+            </div>
 
-              {/* Add field button */}
+            {/* Add field button — only in edit mode */}
+            {editMode && (
               <button
                 type="button"
                 onClick={() => { setAddModalSection(section.name); setAddModalOpen(true); }}
-                className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 py-3 text-sm text-slate-400 hover:text-slate-600 hover:border-slate-300 hover:bg-slate-50 transition-colors"
+                className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 py-3 text-sm text-slate-400 hover:text-slate-600 hover:border-slate-300 hover:bg-slate-50 transition-colors mt-3"
               >
                 <Plus className="h-4 w-4" />
                 Add field to "{section.name}"
               </button>
-            </CardContent>
-          </Card>
-        );
-      })}
+            )}
+          </CardContent>
+        </Card>
+      ))}
 
-      {/* ─── Submit buttons ────────────────────────────────────── */}
+      {/* ─── Submit ────────────────────────────────────────────── */}
       <div className="flex gap-3 justify-end">
         <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
         <Button type="submit" disabled={saving} className="bg-primary hover:bg-primary/90">
@@ -473,7 +504,7 @@ export function CaseForm({ defaultValues, isEditing, caseId }: CaseFormProps) {
         </Button>
       </div>
 
-      {/* ─── Add Field Modal ───────────────────────────────────── */}
+      {/* ─── Add Field Modal ────────────────────────────────────── */}
       <AddFieldModal
         open={addModalOpen}
         onClose={() => setAddModalOpen(false)}
