@@ -14,35 +14,31 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ComboBox } from "@/components/ui/combobox";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { Loader2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Loader2, Settings2, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { MATERIAL_FIELD_REGISTRY, MATERIAL_SECTION_ORDER, MATERIAL_CATEGORY_FIELDS, MATERIAL_CATEGORY_SECTION_ORDERS, MATERIAL_CATEGORY_SETTINGS_TYPE, FieldDef } from "@/lib/field-registry";
 import { TANK_PRODUCT_CODES, SLA_MATERIAL_CODES, FDM_MATERIAL_TYPES, SLA_RESIN_PRODUCTS, SLA_PRINTERS, TANK_PRODUCTS } from "@/lib/constants";
+import { FieldCard } from "@/components/shared/field-card";
+import { AddFieldModal } from "@/components/shared/add-field-modal";
+import { FormLayoutToolbar } from "@/components/shared/form-layout-toolbar";
 
-// Base options for combo fields. Options defined in constants.ts are imported;
-// only form-specific options (brands, units, statuses) are defined here.
 const BASE_OPTIONS: Record<string, string[]> = {
-  // FDM
   fdm_brand: ["[UM] Ultimaker","[R3D] Raise 3D","[DC] 3dRe","[RE] Recreus","[eSUN] eSUN","[BBL] Bambu Lab","[AC] Anycubic","Other"],
   fdm_material_type: [...FDM_MATERIAL_TYPES],
   fdm_unit: ["roll","kg","g","unit"],
   fdm_status: ["New","Opened","Disposed"],
-  // SLA
   sla_product: [...SLA_RESIN_PRODUCTS, "Other"],
   sla_printer: [...SLA_PRINTERS, "Other"],
   sla_unit: ["bottle","cartridge","litre","ml","unit"],
   sla_status: ["New","Opened","Disposed"],
-  // Resin Tanks
   tank_product: [...TANK_PRODUCTS, "Other"],
   tank_resin_type: [...SLA_RESIN_PRODUCTS, "Other"],
   tank_unit: ["unit"],
   tank_status: ["New","Opened","Disposed"],
-  // IPA
   ipa_unit: ["litre","ml","bottle","unit"],
   ipa_status: ["In stock","Low stock","Expired"],
 };
 
-// Map each category's combo fields to its own option types (NOT shared)
 const CATEGORY_OPTION_OVERRIDES: Record<string, Record<string, string>> = {
   "FDM Filaments": { brand: "fdm_brand", materialType: "fdm_material_type", unit: "fdm_unit", status: "fdm_status" },
   "SLA Resins": { materialType: "sla_product", compatiblePrinter: "sla_printer", unit: "sla_unit", status: "sla_status" },
@@ -60,16 +56,18 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [orderedFields, setOrderedFields] = useState<FieldDef[]>([]);
-  const [editMode, setEditMode] = useState(false);
+  const [expandedField, setExpandedField] = useState<string | null>(null);
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [addModalSection, setAddModalSection] = useState("");
   const [allSettings, setAllSettings] = useState<any[]>([]);
   const [optionsMap, setOptionsMap] = useState<Record<string, string[]>>(BASE_OPTIONS);
-  const [defaultSettings, setDefaultSettings] = useState<any[]>([]);
   const [history, setHistory] = useState<any[][]>([]);
   const [historyIdx, setHistoryIdx] = useState(-1);
   const [selectedCategory, setSelectedCategory] = useState<string>(defaultValues?.category || "");
 
   const categoryFields = selectedCategory ? MATERIAL_CATEGORY_FIELDS[selectedCategory] : null;
   const categorySectionOrder = selectedCategory ? (MATERIAL_CATEGORY_SECTION_ORDERS[selectedCategory] || MATERIAL_SECTION_ORDER) : MATERIAL_SECTION_ORDER;
+  const settingsType = selectedCategory ? (MATERIAL_CATEGORY_SETTINGS_TYPE[selectedCategory] || "") : "";
 
   const pushHistory = (s: any[]) => {
     const h = history.slice(0, historyIdx + 1);
@@ -77,6 +75,7 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
     if (h.length > 50) h.shift();
     setHistory(h); setHistoryIdx(h.length - 1);
   };
+
   const apply = async (s: any[]) => {
     const active = s.filter((x: any) => x.isActive).sort((a: any, b: any) => a.sortOrder - b.sortOrder);
     const fields: FieldDef[] = [];
@@ -87,10 +86,7 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
       seen.add(val);
       if (val.startsWith("custom::")) {
         const parts = val.split("::");
-        const label = parts[1] || "Custom Field";
-        const type = (parts[2] || "text") as FieldDef["type"];
-        const section = parts[3] || "Additional";
-        fields.push({ key: val, label, section, type });
+        fields.push({ key: val, label: parts[1] || "Custom Field", section: parts[3] || "Additional", type: (parts[2] || "text") as FieldDef["type"] });
       } else if (MATERIAL_FIELD_REGISTRY[val]) {
         fields.push({ ...MATERIAL_FIELD_REGISTRY[val] });
       }
@@ -103,8 +99,7 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
     defaultValues: defaultValues || { status: "In stock", unit: "unit", initialQuantity: 0, currentQuantity: 0, reorderThreshold: 0 },
   });
 
-  const settingsType = selectedCategory ? (MATERIAL_CATEGORY_SETTINGS_TYPE[selectedCategory] || "") : "";
-
+  // ─── Load settings ──────────────────────────────────────────────
   useEffect(() => {
     if (!settingsType) return;
     fetch(`/api/settings?type=${settingsType}`)
@@ -112,34 +107,26 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
       .then((j) => {
         if (j.success && j.data.length > 0) {
           setAllSettings(j.data);
-          setDefaultSettings(JSON.parse(JSON.stringify(j.data)));
           setHistory([JSON.parse(JSON.stringify(j.data))]);
           setHistoryIdx(0);
           apply(j.data);
         } else if (j.success) {
-          // No settings yet for this category — seed defaults from MATERIAL_CATEGORY_FIELDS
           const catFields = MATERIAL_CATEGORY_FIELDS[selectedCategory] || [];
           const defaults = catFields.map((key, i) => ({
-            id: `default-${key}`,
-            type: settingsType,
-            value: key,
-            sortOrder: i,
-            isActive: true,
+            id: `default-${key}`, type: settingsType, value: key, sortOrder: i, isActive: true,
           }));
           setAllSettings(defaults);
-          setDefaultSettings(JSON.parse(JSON.stringify(defaults)));
           setHistory([JSON.parse(JSON.stringify(defaults))]);
           setHistoryIdx(0);
           apply(defaults);
-          // Persist defaults & refresh to get real IDs
           Promise.all(defaults.map((d) =>
             fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: settingsType, value: d.value, sortOrder: d.sortOrder, isActive: true }) })
           )).then(() =>
             fetch(`/api/settings?type=${settingsType}`).then((r) => r.json()).then((refreshed) => {
               if (refreshed.success && refreshed.data.length > 0) {
                 setAllSettings(refreshed.data);
-                setDefaultSettings(JSON.parse(JSON.stringify(refreshed.data)));
                 setHistory([JSON.parse(JSON.stringify(refreshed.data))]);
+                setHistoryIdx(0);
                 apply(refreshed.data);
               }
             })
@@ -149,7 +136,7 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
       .catch(() => {});
   }, [settingsType, selectedCategory]);
 
-  // Load all option settings for combobox fields
+  // Load option settings
   useEffect(() => {
     fetch("/api/settings")
       .then((r) => r.json())
@@ -168,7 +155,6 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
       .catch(() => {});
   }, []);
 
-  // Refresh options when a new option is created via any ComboBox
   useEffect(() => {
     const handler = () => {
       fetch("/api/settings").then((r) => r.json()).then((j) => {
@@ -188,14 +174,13 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
     return () => window.removeEventListener("settings-updated", handler);
   }, []);
 
-  // Sync category from defaultValues (for edit page where data loads async)
   useEffect(() => {
     if (defaultValues?.category && defaultValues.category !== selectedCategory) {
       setSelectedCategory(defaultValues.category as string);
     }
   }, [defaultValues?.category]);
 
-  // Auto-calculate status from dates (matches Excel formulas per category)
+  // Auto-calculate status & remain
   const watchedOpenDate = watch("openDate");
   const watchedDisposalDate = watch("disposalDate");
   const watchedExpiryDate = watch("expiryDate");
@@ -206,169 +191,53 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
     const hasDisposal = watchedDisposalDate && String(watchedDisposalDate).trim() !== "";
     const hasOpen = watchedOpenDate && String(watchedOpenDate).trim() !== "";
     const hasBatch = watchedBatch && String(watchedBatch).trim() !== "";
-
     if (cat === "SLA Resins") {
-      // SLA Excel formula:
-      // No batch → ""
-      // Expired → Disposed (if disposal date) or "Trial Only"
-      // Not expired + has open date → Disposed (if disposal date) or "Opened" (if not N/A) or "N/A"
-      // Not expired + no open date → "New"
-      if (!hasBatch) {
-        setValue("status", "");
-        return;
-      }
+      if (!hasBatch) { setValue("status", ""); return; }
       const isExpired = watchedExpiryDate && new Date(String(watchedExpiryDate)) < new Date();
-      if (isExpired) {
-        setValue("status", hasDisposal ? "Disposed" : "Trial Only");
-      } else if (hasOpen) {
-        if (hasDisposal) {
-          setValue("status", "Disposed");
-        } else if (String(watchedOpenDate) !== "N/A") {
-          setValue("status", "Opened");
-        } else {
-          setValue("status", "N/A");
-        }
-      } else {
-        setValue("status", "New");
-      }
+      if (isExpired) { setValue("status", hasDisposal ? "Disposed" : "Trial Only"); }
+      else if (hasOpen) { setValue("status", hasDisposal ? "Disposed" : String(watchedOpenDate) !== "N/A" ? "Opened" : "N/A"); }
+      else { setValue("status", "New"); }
     } else if (cat === "FDM Filaments" || cat === "Resin Tanks") {
-      if (hasDisposal) {
-        setValue("status", "Disposed");
-      } else if (hasOpen) {
-        setValue("status", "Opened");
-      } else {
-        setValue("status", "New");
-      }
-    } else {
-      // IPA — no auto status
+      if (hasDisposal) { setValue("status", "Disposed"); }
+      else if (hasOpen) { setValue("status", "Opened"); }
+      else { setValue("status", "New"); }
     }
   }, [watchedOpenDate, watchedDisposalDate, watchedExpiryDate, watchedCategory, watchedBatch]);
 
-  // Auto-calculate Remain = Initial − Used − Opened − Expired (matches server formula)
   const watchedWeight = watch("initialQuantity");
   const watchedUsed = watch("unusedQuantity");
-  const watchedOpened = watch("openedQuantity");
-  const watchedExpired = watch("expiredQuantity");
+  const watchedOpenedQty = watch("openedQuantity");
+  const watchedExpiredQty = watch("expiredQuantity");
   useEffect(() => {
     const w = Number(watchedWeight) || 0;
     const u = Number(watchedUsed) || 0;
-    const o = Number(watchedOpened) || 0;
-    const e = Number(watchedExpired) || 0;
+    const o = Number(watchedOpenedQty) || 0;
+    const e = Number(watchedExpiredQty) || 0;
     setValue("currentQuantity", Math.max(0, w - u - o - e));
-  }, [watchedWeight, watchedUsed, watchedOpened, watchedExpired]);
+  }, [watchedWeight, watchedUsed, watchedOpenedQty, watchedExpiredQty]);
 
-  // Re-apply field filter when category changes
   useEffect(() => {
-    if (selectedCategory && allSettings.length > 0) {
-      apply(allSettings);
-    }
+    if (selectedCategory && allSettings.length > 0) apply(allSettings);
   }, [selectedCategory]);
 
-  // === EDIT MODE ===
+  // ─── Field editing ──────────────────────────────────────────────
+
   const refreshFields = async () => {
     const res = await fetch(`/api/settings?type=${settingsType}`).then((r) => r.json());
     if (res.success) { setAllSettings(res.data); pushHistory(res.data); await apply(res.data); }
     window.dispatchEvent(new Event("form-fields-changed"));
   };
-  const removeField = async (key: string) => {
-    const e = allSettings.find((s: any) => s.value === key);
-    if (!e) { toast.error("Field not found"); return; }
-    // Persist first, then update UI
-    const res = await fetch(`/api/settings/${e.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: e.type, value: e.value, sortOrder: e.sortOrder, isActive: false }) });
-    if (!res.ok) { toast.error("Failed to remove"); return; }
-    // Reload from server to confirm
-    const check = await fetch(`/api/settings?type=${e.type}`).then(r => r.json());
-    if (check.success) {
-      setAllSettings(check.data);
-      pushHistory(check.data);
-      await apply(check.data);
-    }
-    const label = key.startsWith("custom::") ? key.split("::")[1] : (MATERIAL_FIELD_REGISTRY[key]?.label || key);
-    toast.success(`Removed: ${label}`);
-  };
-  const editField = async (oldValue: string, newKey: string) => {
-    const e = allSettings.find((s: any) => s.value === oldValue);
-    if (!e || oldValue === newKey) { setEditingField(null); return; }
-    try {
-      const u = { type: e.type, value: newKey, sortOrder: e.sortOrder, isActive: e.isActive };
-      const res = await fetch(`/api/settings/${e.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
-      if (!res.ok) throw new Error("API error");
-      const ns = allSettings.map((s: any) => s.id === e.id ? { ...s, value: newKey } : s);
-      setAllSettings(ns); pushHistory(ns); await apply(ns);
-      const newLabel = newKey.startsWith("custom::") ? newKey.split("::")[1] : (MATERIAL_FIELD_REGISTRY[newKey]?.label || newKey);
-      toast.success(`Changed: ${newLabel}`);
-    } catch (e) { console.error(e); toast.error("Failed to change field"); }
-    setEditingField(null);
-  };
-  const [editingField, setEditingField] = useState<string | null>(null);
-  const [editingLabel, setEditingLabel] = useState<string | null>(null);
-  const [editingType, setEditingType] = useState<string | null>(null);
 
-  const parseFieldValue = (val: string, currentSection: string) => {
-    if (val.startsWith("custom::")) {
-      const parts = val.split("::");
-      return { key: val, label: parts[1] || "", type: (parts[2] || "text") as FieldDef["type"], section: parts[3] || currentSection, isCustom: true };
-    }
-    const reg = MATERIAL_FIELD_REGISTRY[val];
-    if (reg) return { key: val, label: reg.label, type: reg.type, section: reg.section, isCustom: false };
-    return { key: val, label: val, type: "text" as FieldDef["type"], section: currentSection, isCustom: false };
-  };
-
-  const updateFieldLabel = async (settingKey: string, newLabel: string) => {
-    const trimmed = newLabel.trim();
-    if (!trimmed || trimmed === parseFieldValue(settingKey, MATERIAL_SECTION_ORDER[0]).label) { setEditingLabel(null); return; }
-    const setting = allSettings.find((s: any) => s.value === settingKey);
-    if (!setting) { toast.error("Field not found"); setEditingLabel(null); return; }
-    try {
-      const parsed = parseFieldValue(setting.value, MATERIAL_SECTION_ORDER[0]);
-      const newValue = `custom::${trimmed}::${parsed.type}::${parsed.section}`;
-      const u = { type: setting.type, value: newValue, sortOrder: setting.sortOrder, isActive: setting.isActive };
-      const res = await fetch(`/api/settings/${setting.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
-      if (!res.ok) throw new Error("Failed");
-      const ns = allSettings.map((s: any) => s.id === setting.id ? { ...s, value: newValue } : s);
-      setAllSettings(ns); pushHistory(ns); await apply(ns);
-      toast.success(`Renamed: ${trimmed}`);
-    } catch (e) { console.error(e); toast.error("Failed to rename field"); }
-    setEditingLabel(null);
-  };
-
-  const updateFieldType = async (settingKey: string, newType: FieldDef["type"]) => {
-    const setting = allSettings.find((s: any) => s.value === settingKey);
-    if (!setting) { toast.error("Field not found"); setEditingType(null); return; }
-    try {
-      const parsed = parseFieldValue(setting.value, MATERIAL_SECTION_ORDER[0]);
-      if (parsed.type === newType) { setEditingType(null); return; }
-      const newValue = `custom::${parsed.label}::${newType}::${parsed.section}`;
-      const u = { type: setting.type, value: newValue, sortOrder: setting.sortOrder, isActive: setting.isActive };
-      const res = await fetch(`/api/settings/${setting.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
-      if (!res.ok) throw new Error("Failed");
-      const ns = allSettings.map((s: any) => s.id === setting.id ? { ...s, value: newValue } : s);
-      setAllSettings(ns); pushHistory(ns); await apply(ns);
-      toast.success(`Type changed: ${parsed.label} → ${newType}`);
-    } catch (e) { console.error(e); toast.error("Failed to change type"); }
-    setEditingType(null);
-  };
-  const moveField = async (key: string, dir: -1 | 1) => {
-    // Only consider active items for reordering — inactive items are invisible
-    const active = [...allSettings].filter((s: any) => s.isActive).sort((a: any, b: any) => a.sortOrder - b.sortOrder);
-    const idx = active.findIndex((s: any) => s.value === key);
-    if (idx < 0 || !active[idx + dir]) return;
-    const a = active[idx], b = active[idx + dir];
-    try {
-      await fetch(`/api/settings/${a.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: a.type, value: a.value, sortOrder: b.sortOrder, isActive: a.isActive }) });
-      await fetch(`/api/settings/${b.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: b.type, value: b.value, sortOrder: a.sortOrder, isActive: b.isActive }) });
-      const ns = allSettings.map((s: any) => s.id === a.id ? { ...s, sortOrder: b.sortOrder } : s.id === b.id ? { ...s, sortOrder: a.sortOrder } : s);
-      setAllSettings(ns); pushHistory(ns); await apply(ns);
-    } catch (e) { console.error(e); toast.error("Failed to reorder"); }
-  };
   const undo = async () => {
     if (historyIdx <= 0) return;
     const p = history[historyIdx - 1]; setHistoryIdx(historyIdx - 1); setAllSettings(p); await apply(p);
   };
+
   const redo = async () => {
     if (historyIdx >= history.length - 1) return;
     const n = history[historyIdx + 1]; setHistoryIdx(historyIdx + 1); setAllSettings(n); await apply(n);
   };
+
   const resetToDefault = async () => {
     const cat = selectedCategory || "";
     const defaultKeys = MATERIAL_CATEGORY_FIELDS[cat] || Object.keys(MATERIAL_FIELD_REGISTRY);
@@ -378,78 +247,114 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
       await fetch(`/api/settings/${s.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...s, isActive: shouldBeActive, sortOrder: shouldBeActive ? defaultOrder : s.sortOrder }) });
     }
     const res = await fetch(`/api/settings?type=${settingsType}`).then((r) => r.json());
-    if (res.success) {
-      setAllSettings(res.data);
-      pushHistory(res.data);
-      await apply(res.data);
-    }
+    if (res.success) { setAllSettings(res.data); pushHistory(res.data); await apply(res.data); }
     toast.success("Reset to default");
   };
 
-  const addNewField = async (fieldInput: string, sectionName: string) => {
-    const registryKey = fieldInput.includes(" — ") ? fieldInput.split(" — ")[0] : null;
-    const fieldDef = registryKey ? MATERIAL_FIELD_REGISTRY[registryKey] : null;
+  const removeField = async (key: string) => {
+    const e = allSettings.find((s: any) => s.value === key);
+    if (!e) { toast.error("Field not found"); return; }
+    const res = await fetch(`/api/settings/${e.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: e.type, value: e.value, sortOrder: e.sortOrder, isActive: false }) });
+    if (!res.ok) { toast.error("Failed to remove"); return; }
+    const check = await fetch(`/api/settings?type=${e.type}`).then(r => r.json());
+    if (check.success) { setAllSettings(check.data); pushHistory(check.data); await apply(check.data); }
+    const label = key.startsWith("custom::") ? key.split("::")[1] : (MATERIAL_FIELD_REGISTRY[key]?.label || key);
+    toast.success(`Removed: ${label}`);
+    if (expandedField === key) setExpandedField(null);
+    window.dispatchEvent(new Event("form-fields-changed"));
+  };
 
-    try {
-      if (fieldDef) {
-        const existing = allSettings.find((s: any) => s.value === registryKey);
-        if (existing) {
-          if (existing.isActive) { toast.info(`${fieldDef.label} is already visible`); return; }
-          const u = { type: existing.type, value: existing.value, sortOrder: existing.sortOrder, isActive: true };
-          const res = await fetch(`/api/settings/${existing.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
-          if (!res.ok) throw new Error("API error");
-          const ns = allSettings.map((s: any) => s.id === existing.id ? { ...s, isActive: true } : s);
-          setAllSettings(ns); pushHistory(ns); await apply(ns);
-          toast.success(`Shown: ${fieldDef.label}`);
-          return;
-        }
-        const lastInSection = allSettings.filter((s: any) => {
-          const reg = MATERIAL_FIELD_REGISTRY[s.value];
-          return reg && reg.section === fieldDef.section;
-        });
-        const maxSort = lastInSection.length > 0 ? Math.max(...lastInSection.map((s: any) => s.sortOrder)) : allSettings.length;
-        const postRes = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: settingsType, value: registryKey, sortOrder: maxSort + 1, isActive: true }) });
-        if (!postRes.ok) throw new Error("API error");
-        toast.success(`Added: ${fieldDef.label} → ${fieldDef.section}`);
+  const handleLabelChange = async (fieldKey: string, newLabel: string) => {
+    const setting = allSettings.find((s: any) => s.value === fieldKey);
+    if (!setting) return;
+    const parsed = fieldKey.startsWith("custom::") ? { label: fieldKey.split("::")[1] || "", type: fieldKey.split("::")[2] || "text", section: fieldKey.split("::")[3] || MATERIAL_SECTION_ORDER[0] }
+      : { label: MATERIAL_FIELD_REGISTRY[fieldKey]?.label || fieldKey, type: MATERIAL_FIELD_REGISTRY[fieldKey]?.type || "text", section: MATERIAL_FIELD_REGISTRY[fieldKey]?.section || MATERIAL_SECTION_ORDER[0] };
+    const newValue = `custom::${newLabel}::${parsed.type}::${parsed.section}`;
+    const u = { type: setting.type, value: newValue, sortOrder: setting.sortOrder, isActive: setting.isActive };
+    await fetch(`/api/settings/${setting.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
+    const ns = allSettings.map((s: any) => s.id === setting.id ? { ...s, value: newValue } : s);
+    setAllSettings(ns); pushHistory(ns); await apply(ns);
+    toast.success(`Renamed: ${newLabel}`);
+    window.dispatchEvent(new Event("form-fields-changed"));
+  };
+
+  const handleTypeChange = async (fieldKey: string, newType: FieldDef["type"]) => {
+    const setting = allSettings.find((s: any) => s.value === fieldKey);
+    if (!setting) return;
+    const parsed = fieldKey.startsWith("custom::") ? { label: fieldKey.split("::")[1] || "", section: fieldKey.split("::")[3] || MATERIAL_SECTION_ORDER[0] }
+      : { label: MATERIAL_FIELD_REGISTRY[fieldKey]?.label || fieldKey, section: MATERIAL_FIELD_REGISTRY[fieldKey]?.section || MATERIAL_SECTION_ORDER[0] };
+    const newValue = `custom::${parsed.label}::${newType}::${parsed.section}`;
+    const u = { type: setting.type, value: newValue, sortOrder: setting.sortOrder, isActive: setting.isActive };
+    await fetch(`/api/settings/${setting.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
+    const ns = allSettings.map((s: any) => s.id === setting.id ? { ...s, value: newValue } : s);
+    setAllSettings(ns); pushHistory(ns); await apply(ns);
+    toast.success(`Type changed: ${parsed.label} → ${newType}`);
+    window.dispatchEvent(new Event("form-fields-changed"));
+  };
+
+  const moveField = async (key: string, dir: -1 | 1) => {
+    const active = [...allSettings].filter((s: any) => s.isActive).sort((a: any, b: any) => a.sortOrder - b.sortOrder);
+    const idx = active.findIndex((s: any) => s.value === key);
+    if (idx < 0 || !active[idx + dir]) return;
+    const a = active[idx], b = active[idx + dir];
+    await fetch(`/api/settings/${a.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: a.type, value: a.value, sortOrder: b.sortOrder, isActive: a.isActive }) });
+    await fetch(`/api/settings/${b.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: b.type, value: b.value, sortOrder: a.sortOrder, isActive: b.isActive }) });
+    const ns = allSettings.map((s: any) => s.id === a.id ? { ...s, sortOrder: b.sortOrder } : s.id === b.id ? { ...s, sortOrder: a.sortOrder } : s);
+    setAllSettings(ns); pushHistory(ns); await apply(ns);
+  };
+
+  const addNewField = async (label: string, type: string, sectionName: string) => {
+    const trimmed = label.trim();
+    if (!trimmed) return;
+    const registryKey = Object.keys(MATERIAL_FIELD_REGISTRY).find(k => MATERIAL_FIELD_REGISTRY[k].label.toLowerCase() === trimmed.toLowerCase() || k === trimmed);
+    if (registryKey) {
+      const fieldDef = MATERIAL_FIELD_REGISTRY[registryKey];
+      const existing = allSettings.find((s: any) => s.value === registryKey);
+      if (existing) {
+        if (existing.isActive) { toast.info(`${fieldDef.label} is already visible`); return; }
+        const u = { type: existing.type, value: existing.value, sortOrder: existing.sortOrder, isActive: true };
+        await fetch(`/api/settings/${existing.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
+        const ns = allSettings.map((s: any) => s.id === existing.id ? { ...s, isActive: true } : s);
+        setAllSettings(ns); pushHistory(ns); await apply(ns);
+        toast.success(`Shown: ${fieldDef.label}`);
       } else {
-        const label = fieldInput.trim();
-        if (!label) return;
-        const customValue = `custom::${label}::text::${sectionName}`;
-        const existing = allSettings.find((s: any) => s.value === customValue);
-        if (existing) {
-          if (existing.isActive) { toast.info(`${label} is already visible`); return; }
-          const u = { type: existing.type, value: existing.value, sortOrder: existing.sortOrder, isActive: true };
-          const res = await fetch(`/api/settings/${existing.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
-          if (!res.ok) throw new Error("API error");
-          const ns = allSettings.map((s: any) => s.id === existing.id ? { ...s, isActive: true } : s);
-          setAllSettings(ns); pushHistory(ns); await apply(ns);
-          toast.success(`Shown: ${label}`);
-          return;
-        }
-        const maxSort = allSettings.length;
-        const postRes = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: settingsType, value: customValue, sortOrder: maxSort + 1, isActive: true }) });
-        if (!postRes.ok) throw new Error("API error");
-        toast.success(`Added custom field: ${label} → ${sectionName}`);
+        const postRes = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: settingsType, value: registryKey, sortOrder: allSettings.length + 1, isActive: true }) });
+        if (!postRes.ok) { toast.error("Failed to save field"); return; }
+        toast.success(`Added: ${fieldDef.label}`);
+        const refresh = await fetch(`/api/settings?type=${settingsType}`).then((r) => r.json());
+        if (refresh.success) { setAllSettings(refresh.data); await apply(refresh.data); }
       }
-      // Refresh from server to get real IDs
-      const refresh = await fetch(`/api/settings?type=${settingsType}`).then((r) => r.json());
-      if (refresh.success) { setAllSettings(refresh.data); await apply(refresh.data); }
-    } catch (e) { console.error(e); toast.error("Failed to add field"); }
+    } else {
+      const customValue = `custom::${trimmed}::${type}::${sectionName}`;
+      const existing = allSettings.find((s: any) => s.value === customValue);
+      if (existing) {
+        if (existing.isActive) { toast.info(`${trimmed} is already visible`); return; }
+        const u = { type: existing.type, value: existing.value, sortOrder: existing.sortOrder, isActive: true };
+        await fetch(`/api/settings/${existing.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
+        const ns = allSettings.map((s: any) => s.id === existing.id ? { ...s, isActive: true } : s);
+        setAllSettings(ns); pushHistory(ns); await apply(ns);
+        toast.success(`Shown: ${trimmed}`);
+      } else {
+        const postRes = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: settingsType, value: customValue, sortOrder: allSettings.length + 1, isActive: true }) });
+        if (!postRes.ok) { toast.error("Failed to save field"); return; }
+        toast.success(`Added custom field: ${trimmed}`);
+        const refresh = await fetch(`/api/settings?type=${settingsType}`).then((r) => r.json());
+        if (refresh.success) { setAllSettings(refresh.data); pushHistory(refresh.data); await apply(refresh.data); }
+      }
+    }
+    window.dispatchEvent(new Event("form-fields-changed"));
   };
 
   const sections = categorySectionOrder.map((secName) => ({
     name: secName,
     fields: orderedFields.filter((f) => f.section === secName),
-  })).filter((s) => s.fields.length > 0 || editMode);
-
+  }));
 
   const onSubmit = async (formData: MaterialFormValues) => {
     setSaving(true);
     try {
-      // Always get fresh values from form state
       const fresh = getValues();
       const data = { ...(defaultValues || {}), ...fresh, ...formData };
-      // VLOOKUP (materialId auto-generated server-side)
       const cat = data.category || selectedCategory;
       if (!data.category) data.category = selectedCategory;
       if (cat === "SLA Resins" && data.materialName && !data.productCode) {
@@ -498,15 +403,10 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
                   <div className="flex flex-wrap gap-3">
                     {multiOptions.map((opt) => (
                       <label key={opt} className="flex items-center gap-2 cursor-pointer">
-                        <Checkbox
-                          checked={selected.includes(opt)}
-                          onCheckedChange={(checked) => {
-                            const next = checked
-                              ? [...selected, opt]
-                              : selected.filter((v: string) => v !== opt);
-                            f.onChange(next.join(","));
-                          }}
-                        />
+                        <Checkbox checked={selected.includes(opt)} onCheckedChange={(checked) => {
+                          const next = checked ? [...selected, opt] : selected.filter((v: string) => v !== opt);
+                          f.onChange(next.join(","));
+                        }} />
                         <span className="text-sm text-slate-700">{opt}</span>
                       </label>
                     ))}
@@ -514,7 +414,6 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
                 );
               }}
             />
-            {(errors as any)[key] && <p className="text-xs text-red-500">{(errors as any)[key]?.message}</p>}
           </div>
         );
       }
@@ -526,13 +425,9 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
             <Label>{field.label}{field.required ? " *" : ""}</Label>
             <Controller name={key as any} control={control}
               render={({ field: f }) => (
-                <ComboBox
-                  value={(f.value as string) || ""}
-                  onChange={f.onChange}
+                <ComboBox value={(f.value as string) || ""} onChange={f.onChange}
                   options={optType ? (optionsMap[optType] || BASE_OPTIONS[optType] || []) : []}
-                  placeholder={`Select ${field.label.toLowerCase()}`}
-                  settingsType={optType}
-                />
+                  placeholder={`Select ${field.label.toLowerCase()}`} settingsType={optType} />
               )}
             />
           </div>
@@ -545,35 +440,24 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
     }
   };
 
+  const totalFields = orderedFields.length;
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {editMode && (
-            <>
-              <Button type="button" variant="outline" size="sm" className="text-xs gap-1" onClick={undo} disabled={historyIdx <= 0}>↶ Undo</Button>
-              <Button type="button" variant="outline" size="sm" className="text-xs gap-1" onClick={redo} disabled={historyIdx >= history.length - 1}>↷ Redo</Button>
-              <Button type="button" variant="outline" size="sm" className="text-xs text-red-500" onClick={resetToDefault}>Reset to default</Button>
-            </>
-          )}
-        </div>
-        <Button type="button" variant={editMode ? "default" : "outline"} size="sm" className="gap-2" onClick={async () => {
-          if (!editMode && settingsType) {
-            const res = await fetch(`/api/settings?type=${settingsType}`).then((r) => r.json());
-            if (res.success) {
-              setAllSettings(res.data);
-              setHistory([JSON.parse(JSON.stringify(res.data))]);
-              setHistoryIdx(0);
-              await apply(res.data);
-            }
-          }
-          setEditMode(!editMode); setEditingField(null); setEditingLabel(null); setEditingType(null);
-        }}>
-          <Settings2 className="h-4 w-4" />{editMode ? "Done Editing" : "Edit Layout"}
-        </Button>
-      </div>
+      {/* ─── Toolbar (only when category selected) ────────────────── */}
+      {selectedCategory && (
+        <FormLayoutToolbar
+          fieldCount={totalFields}
+          canUndo={historyIdx > 0}
+          canRedo={historyIdx < history.length - 1}
+          onUndo={undo}
+          onRedo={redo}
+          onReset={resetToDefault}
+          className="-mt-2"
+        />
+      )}
 
-      {/* Category Picker — shown when no category selected yet */}
+      {/* ─── Category Picker ──────────────────────────────────────── */}
       {!selectedCategory && (
         <div className="space-y-4">
           <div className="text-center">
@@ -588,12 +472,8 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
               { key: "IPA", label: "IPA", desc: "Isopropyl Alcohol — QTY only", color: "border-teal-200 hover:border-teal-400 bg-teal-50/50" },
             ].map((cat) => (
               <button
-                key={cat.key}
-                type="button"
-                onClick={() => {
-                  setSelectedCategory(cat.key);
-                  setValue("category", cat.key);
-                }}
+                key={cat.key} type="button"
+                onClick={() => { setSelectedCategory(cat.key); setValue("category", cat.key); }}
                 className={`flex flex-col items-center gap-3 p-6 rounded-xl border-2 transition-all duration-200 hover:shadow-md hover:scale-[1.02] ${cat.color}`}
               >
                 <span className="text-xl font-bold text-slate-700">{cat.label}</span>
@@ -605,6 +485,7 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
         </div>
       )}
 
+      {/* ─── Category badge ───────────────────────────────────────── */}
       {selectedCategory && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 border">
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Category:</span>
@@ -617,68 +498,74 @@ export function MaterialForm({ defaultValues, isEditing, materialId }: MaterialF
         </div>
       )}
 
-      {selectedCategory && sections.map((section) => (
-        <Card key={section.name} className={cn("overflow-visible", editMode && "ring-2 ring-primary/20")}>
-          <CardHeader className="pb-2"><CardTitle className="text-base">{section.name}</CardTitle></CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {section.fields.map((field) => (
-                <div key={field.key} className={cn(editMode && "rounded-lg border-2 border-dashed border-slate-200 p-3 hover:border-primary/30")}>
-                  {editMode && (
-                    <div className="flex items-center gap-1 mb-2 bg-slate-50 rounded-lg px-2 py-1 flex-wrap">
-                      <button type="button" onClick={() => moveField(field.key, -1)} className="text-slate-500 hover:text-slate-700 p-0.5"><ChevronUp className="h-3.5 w-3.5" /></button>
-                      <button type="button" onClick={() => moveField(field.key, 1)} className="text-slate-500 hover:text-slate-700 p-0.5"><ChevronDown className="h-3.5 w-3.5" /></button>
-                      {/* Key */}
-                      {editingField === field.key ? (
-                        <ComboBox value="" onChange={(v) => { if (v) { const nk = v.split(" — ")[0]; if (MATERIAL_FIELD_REGISTRY[nk]) editField(field.key, nk); } }}
-                          options={Object.keys(MATERIAL_FIELD_REGISTRY).filter((k) => k !== field.key).map((k) => `${k} — ${MATERIAL_FIELD_REGISTRY[k].label}`)}
-                          placeholder="Replace..." className="min-w-[120px]" />
-                      ) : (
-                        <button type="button" onClick={() => setEditingField(field.key)}
-                          className="text-[10px] font-mono text-slate-400 hover:text-primary hover:bg-accent rounded px-1 py-0.5 transition-colors shrink-0" title="Replace field">
-                          {field.key.startsWith("custom::") ? "custom" : field.key}
-                        </button>
-                      )}
-                      {/* Type selector — always visible in edit mode */}
-                      <select value={field.type} onChange={(e) => updateFieldType(field.key, e.target.value as FieldDef["type"])}
-                        className={cn("text-[10px] px-1 py-0.5 rounded font-medium border cursor-pointer shrink-0",
-                          field.type==="combobox"?"bg-purple-100 text-purple-700 border-purple-200":field.type==="checkbox"?"bg-amber-100 text-amber-700 border-amber-200":field.type==="date"?"bg-blue-100 text-blue-700 border-blue-200":field.type==="number"?"bg-teal-100 text-teal-700 border-teal-200":field.type==="textarea"?"bg-pink-100 text-pink-700 border-pink-200":"bg-slate-100 text-slate-600 border-slate-200")}>
-                        {(["text","combobox","checkbox","date","number","textarea"] as FieldDef["type"][]).map((t) => (<option key={t} value={t}>{t}</option>))}
-                      </select>
-                      {/* Label input — always editable in edit mode */}
-                      <input type="text" defaultValue={field.label}
-                        onBlur={(e) => updateFieldLabel(field.key, e.target.value)}
-                        onKeyDown={(e) => { if (e.key==="Enter") { e.preventDefault(); updateFieldLabel(field.key, (e.target as HTMLInputElement).value); } }}
-                        className="text-xs font-medium text-slate-700 border-b-2 border-slate-200 focus:border-primary/60 outline-none px-1 min-w-[80px] bg-transparent"
-                        placeholder="Field name" />
-                      <button type="button" onClick={() => removeField(field.key)} className="p-0.5 shrink-0 ml-auto" title="Remove"><Trash2 className="h-3.5 w-3.5 text-slate-400 hover:text-red-500" /></button>
-                    </div>
-                  )}
-                  {renderField(field)}
-                </div>
-              ))}
-              {editMode && (
-                <div className="flex items-center justify-center rounded-lg border-2 border-dashed border-slate-200 p-6 min-h-[80px]">
-                  <ComboBox
-                    value=""
-                    onChange={(v) => { if (v) addNewField(v, section.name); }}
-                    options={Object.keys(MATERIAL_FIELD_REGISTRY).filter((k) => !orderedFields.find((f) => f.key === k)).map((k) => `${k} — ${MATERIAL_FIELD_REGISTRY[k].label}`)}
-                    placeholder="Type or select field..."
-                  />
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+      {/* ─── Sections ─────────────────────────────────────────────── */}
+      {selectedCategory && sections.map((section) => {
+        const sectionFields = section.fields;
+        return (
+          <Card key={section.name} className="overflow-visible">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">{section.name}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {sectionFields.map((field, fi) => {
+                  const sectionFieldIndices = orderedFields
+                    .map((f, i) => f.section === section.name ? i : -1)
+                    .filter(i => i >= 0);
+                  const idxInSection = sectionFieldIndices.indexOf(
+                    orderedFields.findIndex(f => f.key === field.key)
+                  );
+                  return (
+                    <FieldCard
+                      key={field.key}
+                      field={field}
+                      index={idxInSection}
+                      totalInSection={sectionFields.length}
+                      isExpanded={expandedField === field.key}
+                      onExpand={() => setExpandedField(expandedField === field.key ? null : field.key)}
+                      onRemove={() => removeField(field.key)}
+                      onMove={(dir) => moveField(field.key, dir)}
+                      onLabelChange={(newLabel) => handleLabelChange(field.key, newLabel)}
+                      onTypeChange={(newType) => handleTypeChange(field.key, newType)}
+                    >
+                      {renderField(field)}
+                    </FieldCard>
+                  );
+                })}
+              </div>
 
-      <div className="flex gap-3 justify-end">
-        <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
-        <Button type="submit" disabled={saving} className="bg-primary hover:bg-primary/90">
-          {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {isEditing ? "Update Material" : "Create Material"}
-        </Button>
-      </div>
+              <button
+                type="button"
+                onClick={() => { setAddModalSection(section.name); setAddModalOpen(true); }}
+                className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 py-3 text-sm text-slate-400 hover:text-slate-600 hover:border-slate-300 hover:bg-slate-50 transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                Add field to "{section.name}"
+              </button>
+            </CardContent>
+          </Card>
+        );
+      })}
+
+      {/* ─── Submit buttons ──────────────────────────────────────── */}
+      {selectedCategory && (
+        <div className="flex gap-3 justify-end">
+          <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
+          <Button type="submit" disabled={saving} className="bg-primary hover:bg-primary/90">
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isEditing ? "Update Material" : "Create Material"}
+          </Button>
+        </div>
+      )}
+
+      {/* ─── Add Field Modal ──────────────────────────────────────── */}
+      <AddFieldModal
+        open={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        onAdd={(label, type, section) => addNewField(label, type, section)}
+        sections={sections}
+        defaultSection={addModalSection}
+      />
     </form>
   );
 }
