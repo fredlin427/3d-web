@@ -4,12 +4,13 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ComboBox } from "@/components/ui/combobox";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Settings2, Trash2, ChevronUp, ChevronDown, Plus, RotateCcw } from "lucide-react";
+import { ChevronUp, ChevronDown, Plus, Eye, EyeOff, Trash2 } from "lucide-react";
 import { APPLY_FIELD_REGISTRY, APPLY_SECTION_ORDER, FieldDef } from "@/lib/field-registry";
 import { CATEGORIES, PURPOSES } from "@/lib/constants";
+import { AddFieldModal } from "@/components/shared/add-field-modal";
+import { FormLayoutToolbar } from "@/components/shared/form-layout-toolbar";
 
 export default function ApplyManagePage() {
   const [orderedFields, setOrderedFields] = useState<FieldDef[]>([]);
@@ -18,9 +19,8 @@ export default function ApplyManagePage() {
   const [defaultSettings, setDefaultSettings] = useState<any[]>([]);
   const [history, setHistory] = useState<any[][]>([]);
   const [historyIdx, setHistoryIdx] = useState(-1);
-  const [editingField, setEditingField] = useState<string | null>(null);
-  const [editingLabel, setEditingLabel] = useState<string | null>(null);
-  const [editingType, setEditingType] = useState<string | null>(null);
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [addModalSection, setAddModalSection] = useState("");
 
   // --- Purpose options management ---
   const [purposeTab, setPurposeTab] = useState<string>(CATEGORIES[0]);
@@ -50,8 +50,7 @@ export default function ApplyManagePage() {
     const h = history.slice(0, historyIdx + 1);
     h.push(JSON.parse(JSON.stringify(s)));
     if (h.length > 50) h.shift();
-    setHistory(h);
-    setHistoryIdx(h.length - 1);
+    setHistory(h); setHistoryIdx(h.length - 1);
   };
 
   const undo = async () => { if (historyIdx <= 0) return; const p = history[historyIdx - 1]; setHistoryIdx(historyIdx - 1); setAllSettings(p); await applySettings(p); };
@@ -75,6 +74,7 @@ export default function ApplyManagePage() {
     setAllSettings(ns); pushHistory(ns); await applySettings(ns);
     const label = key.startsWith("custom::") ? key.split("::")[1] : (APPLY_FIELD_REGISTRY[key]?.label || key);
     toast.success(u.isActive ? `Shown: ${label}` : `Hidden: ${label}`);
+    window.dispatchEvent(new Event("form-fields-changed"));
   };
 
   const removeField = async (key: string) => {
@@ -86,18 +86,7 @@ export default function ApplyManagePage() {
     setAllSettings(ns); pushHistory(ns); await applySettings(ns);
     const label = key.startsWith("custom::") ? key.split("::")[1] : (APPLY_FIELD_REGISTRY[key]?.label || key);
     toast.success(`Removed: ${label}`);
-  };
-
-  const editField = async (oldValue: string, newKey: string) => {
-    const e = allSettings.find((s: any) => s.value === oldValue);
-    if (!e || oldValue === newKey) { setEditingField(null); return; }
-    const u = { ...e, value: newKey };
-    await fetch(`/api/settings/${e.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
-    const ns = allSettings.map((s: any) => s.id === e.id ? u : s);
-    setAllSettings(ns); pushHistory(ns); await applySettings(ns);
-    const newLabel = newKey.startsWith("custom::") ? newKey.split("::")[1] : (APPLY_FIELD_REGISTRY[newKey]?.label || newKey);
-    toast.success(`Changed: ${newLabel}`);
-    setEditingField(null);
+    window.dispatchEvent(new Event("form-fields-changed"));
   };
 
   const moveField = async (key: string, dir: -1 | 1) => {
@@ -112,105 +101,46 @@ export default function ApplyManagePage() {
     setAllSettings(ns); pushHistory(ns); await applySettings(ns);
   };
 
-  // Parse a setting value into { key, label, type, section }
-  const parseFieldValue = (val: string, currentSection: string) => {
-    if (val.startsWith("custom::")) {
-      const parts = val.split("::");
-      return { key: val, label: parts[1] || "", type: (parts[2] || "text") as FieldDef["type"], section: parts[3] || currentSection, isCustom: true };
-    }
-    const reg = APPLY_FIELD_REGISTRY[val];
-    if (reg) return { key: val, label: reg.label, type: reg.type, section: reg.section, isCustom: false };
-    return { key: val, label: val, type: "text" as FieldDef["type"], section: currentSection, isCustom: false };
-  };
-
-  const updateFieldLabel = async (settingKey: string, newLabel: string) => {
-    const trimmed = newLabel.trim();
-    if (!trimmed || trimmed === parseFieldValue(settingKey, APPLY_SECTION_ORDER[0]).label) { setEditingLabel(null); return; }
-    const setting = allSettings.find((s: any) => s.value === settingKey);
-    if (!setting) { toast.error("Field not found"); setEditingLabel(null); return; }
-    try {
-      const parsed = parseFieldValue(setting.value, APPLY_SECTION_ORDER[0]);
-      const newValue = `custom::${trimmed}::${parsed.type}::${parsed.section}`;
-      const u = { type: setting.type, value: newValue, sortOrder: setting.sortOrder, isActive: setting.isActive };
-      const res = await fetch(`/api/settings/${setting.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
-      if (!res.ok) throw new Error("Failed");
-      const ns = allSettings.map((s: any) => s.id === setting.id ? { ...s, value: newValue } : s);
-      setAllSettings(ns); pushHistory(ns); await applySettings(ns);
-      toast.success(`Renamed: ${trimmed}`);
-    } catch { toast.error("Failed to rename field"); }
-    setEditingLabel(null);
-  };
-
-  const updateFieldType = async (settingKey: string, newType: FieldDef["type"]) => {
-    const setting = allSettings.find((s: any) => s.value === settingKey);
-    if (!setting) { toast.error("Field not found"); setEditingType(null); return; }
-    try {
-      const parsed = parseFieldValue(setting.value, APPLY_SECTION_ORDER[0]);
-      if (parsed.type === newType) { setEditingType(null); return; }
-      const newValue = `custom::${parsed.label}::${newType}::${parsed.section}`;
-      const u = { type: setting.type, value: newValue, sortOrder: setting.sortOrder, isActive: setting.isActive };
-      const res = await fetch(`/api/settings/${setting.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
-      if (!res.ok) throw new Error("Failed");
-      const ns = allSettings.map((s: any) => s.id === setting.id ? { ...s, value: newValue } : s);
-      setAllSettings(ns); pushHistory(ns); await applySettings(ns);
-      toast.success(`Type changed: ${parsed.label} → ${newType}`);
-    } catch { toast.error("Failed to change type"); }
-    setEditingType(null);
-  };
-
-  const addCustomField = async (label: string, sectionName: string) => {
+  const addNewField = async (label: string, type: string, sectionName: string) => {
     const trimmed = label.trim();
     if (!trimmed) return;
-    const customValue = `custom::${trimmed}::text::${sectionName}`;
-    const existing = allSettings.find((s: any) => s.value === customValue);
-    if (existing) {
-      if (existing.isActive) { toast.info(`"${trimmed}" already exists`); return; }
-      const u = { ...existing, isActive: true };
-      await fetch(`/api/settings/${existing.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
-      const ns = allSettings.map((s: any) => s.id === existing.id ? u : s);
-      setAllSettings(ns); pushHistory(ns); await applySettings(ns);
-      toast.success(`Restored: ${trimmed}`);
-      return;
+    const registryKey = Object.keys(APPLY_FIELD_REGISTRY).find(k => APPLY_FIELD_REGISTRY[k].label.toLowerCase() === trimmed.toLowerCase() || k === trimmed);
+    if (registryKey) {
+      const fd = APPLY_FIELD_REGISTRY[registryKey];
+      const existing = allSettings.find((s: any) => s.value === registryKey);
+      if (existing) {
+        if (existing.isActive) { toast.info(`${fd.label} is already visible`); return; }
+        const u = { ...existing, isActive: true };
+        await fetch(`/api/settings/${existing.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
+        const ns = allSettings.map((s: any) => s.id === existing.id ? u : s);
+        setAllSettings(ns); pushHistory(ns); await applySettings(ns);
+        toast.success(`Shown: ${fd.label}`);
+      } else {
+        const maxSort = Math.max(0, ...allSettings.filter((s: any) => APPLY_FIELD_REGISTRY[s.value]?.section === fd.section).map((s: any) => s.sortOrder));
+        await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: settingsType, value: registryKey, sortOrder: maxSort + 1, isActive: true }) });
+        toast.success(`Added: ${fd.label} → ${fd.section}`);
+        const refresh = await fetch(`/api/settings?type=${settingsType}`).then((r) => r.json());
+        if (refresh.success) { setAllSettings(refresh.data); await applySettings(refresh.data); }
+      }
+    } else {
+      const customValue = `custom::${trimmed}::${type}::${sectionName}`;
+      const existing = allSettings.find((s: any) => s.value === customValue);
+      if (existing) {
+        if (existing.isActive) { toast.info(`"${trimmed}" already exists`); return; }
+        const u = { ...existing, isActive: true };
+        await fetch(`/api/settings/${existing.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
+        const ns = allSettings.map((s: any) => s.id === existing.id ? u : s);
+        setAllSettings(ns); pushHistory(ns); await applySettings(ns);
+        toast.success(`Restored: ${trimmed}`);
+      } else {
+        const maxSort = allSettings.length;
+        await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: settingsType, value: customValue, sortOrder: maxSort + 1, isActive: true }) });
+        toast.success(`Added: ${trimmed} → ${sectionName}`);
+        const refresh = await fetch(`/api/settings?type=${settingsType}`).then((r) => r.json());
+        if (refresh.success) { setAllSettings(refresh.data); pushHistory(refresh.data); await applySettings(refresh.data); }
+      }
     }
-    const lastInSection = allSettings.filter((s: any) => {
-      const reg = APPLY_FIELD_REGISTRY[s.value];
-      return reg && reg.section === sectionName;
-    });
-    const maxSort = lastInSection.length > 0 ? Math.max(...lastInSection.map((s: any) => s.sortOrder)) : allSettings.length;
-    const newEntry = { id: `temp-${Date.now()}`, type: settingsType, value: customValue, sortOrder: maxSort + 1, isActive: true };
-    const updatedSettings = [...allSettings, newEntry];
-    setAllSettings(updatedSettings); pushHistory(updatedSettings); await applySettings(updatedSettings);
-    const res = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: settingsType, value: customValue, sortOrder: maxSort + 1, isActive: true }) });
-    if (res.ok) toast.success(`Added: ${trimmed} → ${sectionName}`);
-    const refresh = await fetch(`/api/settings?type=${settingsType}`).then((r) => r.json());
-    if (refresh.success) { setAllSettings(refresh.data); await applySettings(refresh.data); }
-  };
-
-  const addRegistryField = async (fieldKey: string) => {
-    const fd = APPLY_FIELD_REGISTRY[fieldKey];
-    if (!fd) return;
-    const existing = allSettings.find((s: any) => s.value === fieldKey);
-    if (existing) {
-      if (existing.isActive) { toast.info(`${fd.label} is already visible`); return; }
-      const u = { ...existing, isActive: true };
-      await fetch(`/api/settings/${existing.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) });
-      const ns = allSettings.map((s: any) => s.id === existing.id ? u : s);
-      setAllSettings(ns); pushHistory(ns); await applySettings(ns);
-      toast.success(`Shown: ${fd.label}`);
-      return;
-    }
-    const inSection = allSettings.filter((s: any) => {
-      const reg = APPLY_FIELD_REGISTRY[s.value];
-      return reg && reg.section === fd.section;
-    });
-    const maxSort = inSection.length > 0 ? Math.max(...inSection.map((s: any) => s.sortOrder)) : allSettings.length;
-    const newEntry = { id: `temp-${Date.now()}`, type: settingsType, value: fieldKey, sortOrder: maxSort + 1, isActive: true };
-    const updatedSettings = [...allSettings, newEntry];
-    setAllSettings(updatedSettings); pushHistory(updatedSettings); await applySettings(updatedSettings);
-    await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: settingsType, value: fieldKey, sortOrder: maxSort + 1, isActive: true }) });
-    toast.success(`Added: ${fd.label} → ${fd.section}`);
-    const refresh = await fetch(`/api/settings?type=${settingsType}`).then((r) => r.json());
-    if (refresh.success) { setAllSettings(refresh.data); await applySettings(refresh.data); }
+    window.dispatchEvent(new Event("form-fields-changed"));
   };
 
   // --- Purpose options management ---
@@ -228,9 +158,7 @@ export default function ApplyManagePage() {
     const st = `purpose_${cat}`;
     const updated = { ...item, isActive: !item.isActive };
     await fetch(`/api/settings/${item.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updated) });
-    setPurposeItems((prev) => ({
-      ...prev, [cat]: (prev[cat] || []).map((p: any) => p.id === item.id ? updated : p),
-    }));
+    setPurposeItems((prev) => ({ ...prev, [cat]: (prev[cat] || []).map((p: any) => p.id === item.id ? updated : p) }));
   };
 
   const addPurposeOption = async (cat: string, value: string) => {
@@ -274,7 +202,6 @@ export default function ApplyManagePage() {
           setHistoryIdx(0);
           applySettings(j.data);
         } else {
-          // Seed defaults from registry
           const defaults = APPLY_SECTION_ORDER.flatMap((section, si) =>
             Object.values(APPLY_FIELD_REGISTRY)
               .filter((f) => f.section === section)
@@ -285,7 +212,6 @@ export default function ApplyManagePage() {
           setHistory([JSON.parse(JSON.stringify(defaults))]);
           setHistoryIdx(0);
           applySettings(defaults);
-          // Persist defaults & refresh to get real IDs
           Promise.all(defaults.map((d) =>
             fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: settingsType, value: d.value, sortOrder: d.sortOrder, isActive: true }) })
           )).then(() =>
@@ -316,47 +242,69 @@ export default function ApplyManagePage() {
   const sections = APPLY_SECTION_ORDER.map((name) => ({
     name,
     fields: orderedFields.filter((f) => f.section === name),
-  })).filter((s) => s.fields.length > 0 || editMode);
+  }));
 
-  // All registry keys not yet in orderedFields
-  const availableRegistryKeys = Object.keys(APPLY_FIELD_REGISTRY).filter(
-    (k) => !orderedFields.find((f) => f.key === k)
-  );
+  const totalFields = orderedFields.length;
+
+  // Type badge color map
+  const typeColor = (t: string) => {
+    switch (t) {
+      case "combobox": return "text-purple-600 bg-purple-50";
+      case "checkbox": return "text-amber-600 bg-amber-50";
+      case "date": return "text-blue-600 bg-blue-50";
+      case "number": return "text-teal-600 bg-teal-50";
+      case "textarea": return "text-pink-600 bg-pink-50";
+      default: return "text-slate-500 bg-slate-100";
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold tracking-tight text-slate-900">Manage Application Form</h2>
-        <p className="text-sm text-slate-500 mt-1">
-          Edit the public <code className="bg-slate-100 px-1 rounded text-xs">/apply</code> form layout.
-          Toggle fields, reorder, or add custom fields. Changes are live.
-        </p>
-      </div>
-
-      {/* Toolbar */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-2">
-          {editMode && (
-            <>
-              <Button type="button" variant="outline" size="sm" className="text-xs gap-1" onClick={undo} disabled={historyIdx <= 0}>↶ Undo</Button>
-              <Button type="button" variant="outline" size="sm" className="text-xs gap-1" onClick={redo} disabled={historyIdx >= history.length - 1}>↷ Redo</Button>
-              <Button type="button" variant="outline" size="sm" className="text-xs text-red-500 gap-1" onClick={resetToDefault}><RotateCcw className="h-3 w-3" />Reset to default</Button>
-            </>
-          )}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight text-slate-900">Manage Application Form</h2>
+          <p className="text-sm text-slate-500 mt-1">
+            Edit the public <code className="bg-slate-100 px-1 rounded text-xs">/apply</code> form layout
+          </p>
         </div>
-        <Button type="button" variant={editMode ? "default" : "outline"} size="sm" className="gap-2"
+        <button
+          type="button"
           onClick={async () => {
             if (!editMode) {
-              const r = await fetch(`/api/settings?type=${settingsType}`).then((r) => r.json());
-              if (r.success) { setAllSettings(r.data); setDefaultSettings(JSON.parse(JSON.stringify(r.data))); setHistory([JSON.parse(JSON.stringify(r.data))]); setHistoryIdx(0); await applySettings(r.data); }
+              const res = await fetch(`/api/settings?type=${settingsType}`).then((r) => r.json());
+              if (res.success) {
+                setAllSettings(res.data);
+                setDefaultSettings(JSON.parse(JSON.stringify(res.data)));
+                setHistory([JSON.parse(JSON.stringify(res.data))]);
+                setHistoryIdx(0);
+                await applySettings(res.data);
+              }
             }
-            setEditMode(!editMode); setEditingField(null); setEditingLabel(null); setEditingType(null);
-          }}>
-          <Settings2 className="h-4 w-4" />{editMode ? "Done Editing" : "Edit Layout"}
-        </Button>
+            setEditMode(!editMode);
+          }}
+          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+            editMode
+              ? "bg-blue-600 text-white hover:bg-blue-700"
+              : "bg-white text-slate-600 border border-slate-200 hover:border-blue-300 hover:text-blue-600"
+          }`}
+        >
+          {editMode ? "✓ Done" : "✎ Edit Form"}
+        </button>
       </div>
 
-      {/* Form sections preview */}
+      {/* EDIT MODE: Toolbar */}
+      {editMode && (
+        <FormLayoutToolbar
+          fieldCount={totalFields}
+          canUndo={historyIdx > 0}
+          canRedo={historyIdx < history.length - 1}
+          onUndo={undo}
+          onRedo={redo}
+          onReset={resetToDefault}
+        />
+      )}
+
+      {/* Sections */}
       <div className="space-y-6">
         {sections.map((section) => {
           const activeFields = section.fields.filter((f) =>
@@ -365,107 +313,61 @@ export default function ApplyManagePage() {
           if (!editMode && activeFields.length === 0) return null;
 
           return (
-            <Card key={section.name} className={cn("overflow-visible border-0 shadow-sm", editMode && "ring-2 ring-primary/20")}>
+            <Card key={section.name} className={cn("overflow-visible border-0 shadow-sm", editMode && "ring-2 ring-blue-100")}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">{section.name}</CardTitle>
-                {editMode && <p className="text-[11px] text-slate-400">↑↓ reorder · toggle to show/hide · trash to remove · click tag to change field</p>}
               </CardHeader>
               <CardContent>
                 {editMode ? (
-                  /* EDIT MODE: all fields with controls */
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {section.fields.map((field, idx) => {
                       const setting = allSettings.find((s: any) => s.value === field.key);
                       const isActive = setting?.isActive !== false;
                       return (
                         <div key={field.key} className={cn(
-                          "flex items-center gap-3 rounded-lg border-2 border-dashed p-3 transition-colors",
-                          isActive ? "border-slate-200 hover:border-primary/30" : "border-red-100 bg-red-50/30 opacity-60"
+                          "flex items-center gap-3 rounded-xl ring-1 ring-slate-200 p-3 transition-all group",
+                          isActive ? "bg-white hover:ring-blue-300 hover:shadow-sm" : "bg-red-50/30 ring-red-100 opacity-60"
                         )}>
-                          {/* Reorder */}
-                          <div className="flex flex-col gap-0.5">
+                          <div className="flex flex-col gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button type="button" onClick={() => moveField(field.key, -1)} className="text-slate-400 hover:text-slate-600 p-0.5"><ChevronUp className="h-3.5 w-3.5" /></button>
                             <button type="button" onClick={() => moveField(field.key, 1)} className="text-slate-400 hover:text-slate-600 p-0.5"><ChevronDown className="h-3.5 w-3.5" /></button>
                           </div>
-
-                          {/* Field info */}
-                          <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
-                            {/* Key (click to replace) */}
-                            {editingField === field.key ? (
-                              <ComboBox value="" onChange={(v) => { if (v) { const nk = v.split(" — ")[0]; if (APPLY_FIELD_REGISTRY[nk]) editField(field.key, nk); } }}
-                                options={Object.keys(APPLY_FIELD_REGISTRY).filter((k) => k !== field.key).map((k) => `${k} — ${APPLY_FIELD_REGISTRY[k].label}`)}
-                                placeholder="Replace with..." className="min-w-[140px]" />
-                            ) : (
-                              <button type="button" onClick={() => setEditingField(field.key)}
-                                className="text-[10px] font-mono text-slate-400 hover:text-primary hover:bg-accent rounded px-1 py-0.5 transition-colors shrink-0" title="Click to replace with another field">
-                                {field.key.startsWith("custom::") ? "custom" : field.key}
-                              </button>
-                            )}
-
-                            {/* Type selector — always visible in edit mode */}
-                            <select
-                              value={field.type}
-                              onChange={(e) => updateFieldType(field.key, e.target.value as FieldDef["type"])}
-                              className={cn("text-[10px] px-1 py-0.5 rounded font-medium border cursor-pointer shrink-0",
-                                field.type === "combobox" ? "bg-purple-100 text-purple-700 border-purple-200" :
-                                field.type === "checkbox" ? "bg-amber-100 text-amber-700 border-amber-200" :
-                                field.type === "date" ? "bg-blue-100 text-blue-700 border-blue-200" :
-                                field.type === "number" ? "bg-teal-100 text-teal-700 border-teal-200" :
-                                field.type === "textarea" ? "bg-pink-100 text-pink-700 border-pink-200" :
-                                "bg-slate-100 text-slate-600 border-slate-200")}
-                            >
-                              {(["text", "combobox", "checkbox", "date", "number", "textarea"] as FieldDef["type"][]).map((t) => (
-                                <option key={t} value={t}>{t}</option>
-                              ))}
-                            </select>
-
-                            {/* Label input — always editable in edit mode */}
-                            <input
-                              type="text"
-                              defaultValue={field.label}
-                              onBlur={(e) => updateFieldLabel(field.key, e.target.value)}
-                              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); updateFieldLabel(field.key, (e.target as HTMLInputElement).value); } }}
-                              className="text-sm font-medium text-slate-700 border-b-2 border-slate-200 focus:border-primary/60 outline-none px-1 min-w-[80px] bg-transparent"
-                              placeholder="Field name"
-                            />
+                          <div className="flex-1 min-w-0 flex items-center gap-2">
+                            <span className={cn("text-[10px] font-bold uppercase px-1.5 py-0.5 rounded", typeColor(field.type))}>{field.type}</span>
+                            <span className="text-sm font-medium text-slate-700 truncate">{field.label}</span>
                             {field.required && <span className="text-red-400 text-xs">*</span>}
                           </div>
-
-                          {/* Controls */}
                           <button type="button" onClick={() => toggleField(field.key)}
-                            className={cn("px-2 py-1 text-xs font-medium rounded transition-colors", isActive ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-slate-100 text-slate-500 hover:bg-slate-200")}>
+                            className={cn("shrink-0 px-2.5 py-1 text-[10px] font-semibold rounded-full transition-colors", isActive ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-slate-100 text-slate-500 hover:bg-slate-200")}>
+                            {isActive ? <Eye className="h-3 w-3 inline mr-0.5" /> : <EyeOff className="h-3 w-3 inline mr-0.5" />}
                             {isActive ? "Visible" : "Hidden"}
                           </button>
                           <button type="button" onClick={() => removeField(field.key)}
-                            className="p-1 text-slate-400 hover:text-red-500 shrink-0" title="Remove field">
+                            className="shrink-0 p-1 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Remove">
                             <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
                       );
                     })}
-                    {/* Add field to this section */}
-                    <div className="flex items-center gap-2 pt-2">
-                      <ComboBox value="" onChange={(v) => { if (v) addRegistryField(v); }}
-                        options={availableRegistryKeys.filter((k) => APPLY_FIELD_REGISTRY[k].section === section.name).map((k) => `${k} — ${APPLY_FIELD_REGISTRY[k].label}`)}
-                        placeholder="Add field from registry..." className="flex-1" />
-                      <span className="text-xs text-slate-300">or</span>
-                      <div className="flex gap-1 flex-1">
-                        <Input placeholder="Custom field name..." className="h-9 text-sm" onKeyDown={(e) => { if (e.key === "Enter") { addCustomField((e.target as HTMLInputElement).value, section.name); (e.target as HTMLInputElement).value = ""; } }} />
-                        <Button type="button" size="sm" variant="ghost" className="shrink-0" onClick={(e) => { const inp = (e.currentTarget.parentElement?.querySelector("input") as HTMLInputElement); if (inp?.value) { addCustomField(inp.value, section.name); inp.value = ""; } }}><Plus className="h-4 w-4" /></Button>
-                      </div>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setAddModalSection(section.name); setAddModalOpen(true); }}
+                      className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 py-3 text-sm text-slate-400 hover:text-slate-600 hover:border-slate-300 hover:bg-slate-50 transition-colors"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add field to "{section.name}"
+                    </button>
                   </div>
                 ) : (
-                  /* PREVIEW MODE: show active fields compactly */
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap gap-2">
                     {activeFields.map((field) => (
                       <div key={field.key} className="flex items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-1.5 text-sm">
-                        <span className={cn("text-[10px] font-bold uppercase px-1 rounded", field.type === "combobox" ? "text-purple-600" : field.type === "checkbox" ? "text-amber-600" : field.type === "date" ? "text-blue-600" : "text-slate-500")}>{field.type}</span>
+                        <span className={cn("text-[10px] font-bold uppercase px-1 rounded", typeColor(field.type))}>{field.type}</span>
                         <span className="text-slate-700">{field.label}</span>
                         {field.required && <span className="text-red-400 text-xs">*</span>}
                       </div>
                     ))}
-                    {activeFields.length === 0 && <p className="text-sm text-slate-400 py-4">No fields visible. Click Edit Layout to add fields.</p>}
+                    {activeFields.length === 0 && <p className="text-sm text-slate-400 py-4">No fields visible. Click ✎ Edit Form to add fields.</p>}
                   </div>
                 )}
               </CardContent>
@@ -487,7 +389,6 @@ export default function ApplyManagePage() {
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${purposeTab === cat ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>{cat}</button>
             ))}
           </div>
-
           <div className="space-y-1">
             {(purposeItems[purposeTab] || []).sort((a, b) => a.sortOrder - b.sortOrder).map((item: any, idx: number) => (
               <div key={item.id} className={cn("flex items-center gap-2 px-3 py-2 rounded-lg group", !item.isActive && "opacity-40")}>
@@ -504,7 +405,6 @@ export default function ApplyManagePage() {
               </div>
             ))}
           </div>
-
           <div className="flex gap-2 pt-2 border-t border-slate-100">
             <Input placeholder="New checkbox option..." className="max-w-xs" id="purpose-new-input"
               onKeyDown={(e) => { if (e.key === "Enter") { addPurposeOption(purposeTab, (e.target as HTMLInputElement).value); (e.target as HTMLInputElement).value = ""; } }} />
@@ -515,6 +415,15 @@ export default function ApplyManagePage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Add Field Modal */}
+      <AddFieldModal
+        open={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        onAdd={(label, type, section) => addNewField(label, type, section)}
+        sections={sections}
+        defaultSection={addModalSection}
+      />
     </div>
   );
 }
