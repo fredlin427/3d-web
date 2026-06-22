@@ -103,7 +103,12 @@ export default function CaseDetailPage() {
         <div className="space-y-2">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">{caseData.caseNumber}</h1>
-            <Badge variant={getStatusBadgeVariant(caseData.currentStatus)} className="text-sm px-3 py-1">{caseData.currentStatus}</Badge>
+            <Badge variant={getStatusBadgeVariant(caseData.currentStatus)} className="text-sm px-3 py-1">
+              {caseData.currentStatus}
+              {caseData.currentProgressStep && caseData.currentStatus === "In progress" && (
+                <span className="font-normal opacity-70 ml-1">· {caseData.currentProgressStep}</span>
+              )}
+            </Badge>
             <Badge variant={getStatusBadgeVariant(caseData.priority)}>{caseData.priority}</Badge>
             <Badge variant="secondary">{caseData.category}</Badge>
           </div>
@@ -140,9 +145,6 @@ export default function CaseDetailPage() {
                   </div>
                   <span className="text-xs font-bold text-slate-600 tabular-nums whitespace-nowrap">{done}/{total} <span className="text-slate-400 font-normal">{pct}%</span></span>
                 </div>
-                {caseData.currentProgressStep && (
-                  <span className="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-0.5 rounded-full">{caseData.currentProgressStep}</span>
-                )}
               </div>
             );
           })()}
