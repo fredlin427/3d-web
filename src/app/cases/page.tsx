@@ -112,7 +112,21 @@ export default function CasesPage() {
     { key: "purpose", header: "Purpose", className: "max-w-[130px] truncate", render: (c) => <span className="text-xs">{c.purpose}</span> },
     { key: "applicantName", header: "Applicant", sortable: true, className: "max-w-[100px] truncate" },
     { key: "projectTitle", header: "Project", className: "max-w-[140px] truncate", render: (c) => <span className="text-xs">{c.projectTitle}</span> },
-    { key: "currentProgressStep", header: "Progress", render: (c) => <span className="text-xs">{c.currentProgressStep || "—"}</span> },
+    { key: "currentProgressStep", header: "Progress", render: (c) => {
+      if (!c.currentProgressStep) return <span className="text-xs text-slate-300">—</span>;
+      const stepColors: Record<string, string> = {
+        "Application Received": "bg-amber-100 text-amber-700",
+        "Approval": "bg-orange-100 text-orange-700",
+        "Segmentation / Design": "bg-purple-100 text-purple-700",
+        "Verify Segmentation / Design": "bg-blue-100 text-blue-700",
+        "Printing": "bg-cyan-100 text-cyan-700",
+        "Post-processing": "bg-teal-100 text-teal-700",
+        "Final Product": "bg-emerald-100 text-emerald-700",
+        "Completion": "bg-green-100 text-green-700",
+      };
+      const color = stepColors[c.currentProgressStep] || "bg-slate-100 text-slate-600";
+      return <Badge className={`text-[11px] font-medium ${color} border-0`}>{c.currentProgressStep}</Badge>;
+    }},
     { key: "currentStatus", header: "Status", sortable: true, render: (c) => <Badge variant={getStatusBadgeVariant(c.currentStatus)}>{c.currentStatus}</Badge> },
     { key: "technician", header: "Tech", render: (c) => <span className="text-xs">{c.technician || "—"}</span> },
     { key: "priority", header: "Priority", sortable: true, render: (c) => <Badge variant={getStatusBadgeVariant(c.priority)} className="text-xs">{c.priority}</Badge> },

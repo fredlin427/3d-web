@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingState } from "@/components/shared/loading-state";
 import { ProgressTimeline } from "@/components/cases/progress-timeline";
+import { ProgressStepper } from "@/components/cases/progress-stepper";
 import { MaterialUsageTable } from "@/components/cases/material-usage-table";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { toast } from "sonner";
@@ -122,7 +123,14 @@ export default function CaseDetailPage() {
         </div>
       </div>
 
-      {/* === PROGRESS — MOST IMPORTANT, FRONT AND CENTER === */}
+      {/* === PROGRESS STEPPER — VISUAL OVERVIEW BAR === */}
+      <Card className="border-0 shadow-sm ring-2 ring-blue-200 bg-gradient-to-r from-blue-50/50 to-emerald-50/50">
+        <CardContent className="py-4">
+          <ProgressStepper steps={caseData.progressSteps || []} />
+        </CardContent>
+      </Card>
+
+      {/* === PROGRESS TIMELINE === */}
       <Card className="border-0 shadow-sm ring-1 ring-blue-100">
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-semibold flex items-center gap-2">

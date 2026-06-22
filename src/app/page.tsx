@@ -59,7 +59,7 @@ function exportDataFile(rows: Record<string, unknown>[], filename: string) {
 const statDefs = [
   { key: "totalCases", title: "Total Cases", icon: FolderOpen, color: "#0077c8", bg: "#e6f4fc" },
   { key: "casesThisMonth", title: "This Month", icon: Clock, color: "#06b6d4", bg: "#ecfeff" },
-  { key: "casesInProgress", title: "In Progress", icon: Clock, color: "#f59e0b", bg: "#fffbeb" },
+  { key: "casesInProgress", title: "In Progress", icon: Clock, color: "#f59e0b", bg: "#fffbeb", highlight: true },
   { key: "completedCases", title: "Completed", icon: CheckCircle2, color: "#10b981", bg: "#ecfdf5" },
   { key: "lowStockItems", title: "Low Stock", icon: TrendingDown, color: "#ef4444", bg: "#fef2f2" },
   { key: "expiringMaterials", title: "Expiring", icon: AlertTriangle, color: "#f97316", bg: "#fff7ed" },
@@ -244,10 +244,16 @@ export default function DashboardPage() {
       {/* Stat Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
         {statDefs.map((s) => (
-          <Card key={s.key} className="border-0 border hover:shadow-md transition-shadow duration-200 overflow-hidden">
+          <Card key={s.key} className={cn(
+            "border-0 border hover:shadow-md transition-all duration-200 overflow-hidden",
+            (s as any).highlight && "ring-2 ring-amber-200 bg-gradient-to-b from-amber-50/30 to-white"
+          )}>
             <CardContent className="p-5">
               <div className="flex items-start justify-between mb-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ backgroundColor: s.bg }}>
+                <div className={cn(
+                  "flex h-10 w-10 items-center justify-center rounded-xl",
+                  (s as any).highlight && "animate-pulse"
+                )} style={{ backgroundColor: s.bg }}>
                   <s.icon className="h-5 w-5" style={{ color: s.color }} />
                 </div>
               </div>
@@ -282,10 +288,16 @@ export default function DashboardPage() {
                   <CardContent className="p-3">
                     <p className="text-xs font-semibold text-slate-800 truncate">{c.caseNumber}</p>
                     <p className="text-[11px] text-slate-500 truncate mt-0.5">{c.projectTitle}</p>
-                    <div className="flex items-center gap-2 mt-2">
+                    <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                       <Badge variant={getStatusBadgeVariant(c.currentStatus)} className="text-[10px] px-1.5 py-0 h-4">{c.currentStatus}</Badge>
                       <span className="text-[10px] text-slate-400">{c.department}</span>
                     </div>
+                    {c.currentProgressStep && (
+                      <div className="mt-1.5 flex items-center gap-1">
+                        <div className="w-1 h-1 rounded-full bg-blue-400" />
+                        <span className="text-[10px] text-blue-600 font-medium truncate">{c.currentProgressStep}</span>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </Link>
