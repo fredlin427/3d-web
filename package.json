@@ -1,6 +1,6 @@
 {
-  "name": "qeh-3d-print",
-  "version": "0.1.0",
+  "name": "qeh-3d-print-hub",
+  "version": "1.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev -p 8080",
