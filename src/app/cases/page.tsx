@@ -13,9 +13,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { DataTable, Column } from "@/components/shared/data-table";
-import { Plus, MoreHorizontal, Eye, Pencil, Copy, Trash2 } from "lucide-react";
+import { Plus, MoreHorizontal, Eye, Pencil, Copy, Trash2, Upload, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-import { formatDate, getStatusBadgeVariant } from "@/lib/utils";
+import { formatDate, getStatusBadgeVariant, cn } from "@/lib/utils";
 import { DEPARTMENTS, DEPARTMENT_LABELS, CATEGORIES } from "@/lib/constants";
 
 interface CaseItem {
@@ -46,6 +46,8 @@ export default function CasesPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteCaseNumber, setDeleteCaseNumber] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<any>(null);
 
   const fetchCases = useCallback(async () => {
     setLoading(true);
@@ -140,8 +142,47 @@ export default function CasesPage() {
           <h2 className="text-xl font-semibold text-slate-900">Cases</h2>
           <p className="text-sm text-slate-500 mt-1">Manage 3D printing case records</p>
         </div>
-        <Link href="/cases/new"><Button className="bg-teal-600 hover:bg-teal-700"><Plus className="mr-2 h-4 w-4" />New Case</Button></Link>
+        <div className="flex gap-2">
+          {/* Import old master list */}
+          <label className={cn("inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer transition-colors", importing ? "bg-slate-100 text-slate-400" : "bg-white text-slate-600 border border-slate-200 hover:border-blue-300 hover:text-blue-600")}>
+            {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            {importing ? "Importing..." : "Import"}
+            <input
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+              disabled={importing}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setImporting(true); setImportResult(null);
+                const fd = new FormData();
+                fd.append("file", file);
+                try {
+                  const res = await fetch("/api/cases/import", { method: "POST", body: fd });
+                  const json = await res.json();
+                  if (json.success) { setImportResult(json.data); toast.success(`${json.data.imported} cases imported`); fetchCases(); }
+                  else toast.error(json.error || "Import failed");
+                } catch { toast.error("Failed to import"); }
+                finally { setImporting(false); }
+              }}
+            />
+          </label>
+          <Link href="/cases/new"><Button className="bg-teal-600 hover:bg-teal-700"><Plus className="mr-2 h-4 w-4" />New Case</Button></Link>
+        </div>
       </div>
+
+      {/* Import result banner */}
+      {importResult && (
+        <div className={cn("rounded-xl p-4 flex items-center gap-4", importResult.errorCount > 0 ? "bg-amber-50 border border-amber-200" : "bg-emerald-50 border border-emerald-200")}>
+          <CheckCircle2 className={cn("h-5 w-5", importResult.errorCount > 0 ? "text-amber-500" : "text-emerald-500")} />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-slate-700">{importResult.imported} of {importResult.totalRows} cases imported{importResult.skipped > 0 ? ` (${importResult.skipped} skipped)` : ""}</p>
+            {importResult.errorCount > 0 && <p className="text-xs text-amber-600">{importResult.errorCount} errors</p>}
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setImportResult(null)}>Dismiss</Button>
+        </div>
+      )}
 
       <DataTable
         data={cases} columns={columns} keyField="id"
