@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+// Known DB fields (must exist in Prisma Case model)
+const KNOWN_FIELDS = new Set([
+  "caseNumber","applicationDate","expectedCompletionDate","approvalDate",
+  "applicantName","hospital","department","rank","specification",
+  "modelType","requiredService","requiresSterilization","quantity","totalComponents",
+  "technician","printingParty","completionDate","remarks",
+  "projectTitle","priority","currentStatus","purpose","category",
+]);
+
 // Map old master list column names to current schema fields
 const COLUMN_MAP: Record<string, string> = {
   "Case No.": "caseNumber",
@@ -21,12 +30,7 @@ const COLUMN_MAP: Record<string, string> = {
   "In charge Technician": "technician",
   "Vendor / Dept of Service": "printingParty",
   "Completion Date": "completionDate",
-  "Financial Year": "financialYear",
   "Remarks": "remarks",
-  "Receiving Centre": "receivingCentre",
-  "Segmentation Region": "segmentationRegion",
-  "Design Requirement": "designRequirement",
-  "Printing Requirements": "printingRequirements",
 };
 
 function parseExcelDate(val: unknown): string | null {
@@ -114,8 +118,16 @@ export async function POST(request: NextRequest) {
             data[destKey] = String(val).toLowerCase() === "yes" ? "Yes" : "No";
           }
           else {
+            // Skip fields not in DB schema
+            if (!KNOWN_FIELDS.has(destKey)) continue;
             data[destKey] = String(val).trim();
           }
+        }
+
+        // Skip if no meaningful data mapped
+        if (Object.keys(data).length === 0) {
+          errors.push(`Row has no mappable data`);
+          continue;
         }
 
         // Combine purpose fields
