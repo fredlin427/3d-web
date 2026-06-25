@@ -67,6 +67,8 @@ export default function MaterialsPage() {
     "Material", "Brand / Type", "Capacity", "Remaining", "Expiry",
   ]);
   const [expandedMatStat, setExpandedMatStat] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   // SWR: current category for table display
   const swrKey = apiUrl("/api/materials", { category: activeCat, ...(search && { search }) });
@@ -163,11 +165,16 @@ export default function MaterialsPage() {
       </div>
     )},
     { key: "batchNumber", header: "Batch", render: (m) => <span className="text-xs font-mono text-slate-500">{m.batchNumber || "—"}</span> },
-    // Capacity = initial amount + unit
+    // Capacity = initial amount + unit (Tank has no weight — show count)
     { key: "initialQuantity", header: "Capacity", sortable: true, render: (m) => (
-      <span className="text-sm font-medium tabular-nums">{m.initialQuantity} <span className="text-xs text-slate-400">{m.unit}</span></span>
+      m.category === "Resin Tanks"
+        ? <span className="text-sm tabular-nums">{m.initialQuantity} <span className="text-xs text-slate-400">tank{m.initialQuantity !== 1 ? 's' : ''}</span></span>
+        : <span className="text-sm font-medium tabular-nums">{m.initialQuantity} <span className="text-xs text-slate-400">{m.unit}</span></span>
     )},
     { key: "currentQuantity", header: "Remaining", sortable: true, className: "min-w-[140px]", render: (m) => (
+      m.category === "Resin Tanks" ? (
+        <span className="text-sm tabular-nums">{m.currentQuantity} <span className="text-xs text-slate-400">in stock</span></span>
+      ) : (
       <StockBar
         used={m.initialQuantity - m.currentQuantity}
         remain={m.currentQuantity}
@@ -291,6 +298,27 @@ export default function MaterialsPage() {
         })}
       </div>
 
+      {/* Bulk action bar */}
+      {selectedIds.length > 0 && (
+        <div className="flex items-center gap-3 rounded-xl bg-blue-50 border border-blue-200 px-4 py-3">
+          <span className="text-sm font-semibold text-blue-700">{selectedIds.length} material{selectedIds.length > 1 ? 's' : ''} selected</span>
+          <div className="flex-1" />
+          <button type="button" onClick={() => setSelectedIds([])} className="text-xs text-slate-500 hover:text-slate-700 font-medium">Clear</button>
+          <button type="button" disabled={bulkDeleting}
+            onClick={async () => {
+              if (!confirm(`Delete ${selectedIds.length} selected materials?`)) return;
+              setBulkDeleting(true);
+              let deleted = 0;
+              for (const id of selectedIds) { try { await fetch(`/api/materials/${id}`, { method: 'DELETE' }); deleted++; } catch {} }
+              toast.success(`Deleted ${deleted} materials`);
+              setSelectedIds([]); setBulkDeleting(false); mutate();
+            }}
+            className="px-4 py-1.5 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 disabled:opacity-50">
+            {bulkDeleting ? 'Deleting...' : `Delete ${selectedIds.length}`}
+          </button>
+        </div>
+      )}
+
       <DataTable
         data={materials} columns={columns} keyField="id"
         searchValue={search} onSearchChange={setSearch}
@@ -299,6 +327,7 @@ export default function MaterialsPage() {
         emptyTitle={`No ${activeCat || "material"} records`}
         pageSize={25}
         density="compact"
+        selectable={{ selected: selectedIds, onChange: setSelectedIds }}
         columnPicker={{ columns: ALL_MAT_COLUMNS, selected: visibleMatCols, onChange: setVisibleMatCols }}
       />
 
