@@ -301,6 +301,11 @@ export default function DashboardPage() {
                               <span className="text-[10px] text-blue-500 font-medium truncate">{c.currentProgressStep}</span>
                             )}
                           </div>
+                          {(c.progressStats?.total > 0) && (
+                            <div className="mt-1.5 h-1 rounded-full bg-slate-100 overflow-hidden">
+                              <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-500" style={{ width: `${Math.round((c.progressStats.done / c.progressStats.total) * 100)}%` }} />
+                            </div>
+                          )}
                         </div>
                       </Link>
                     ))}
@@ -320,6 +325,11 @@ export default function DashboardPage() {
                             <Badge variant={getStatusBadgeVariant(c.currentStatus)} className="text-[10px]">{c.currentStatus}</Badge>
                             <span className="text-[10px] text-slate-400">{c.department}</span>
                           </div>
+                          {(c.progressStats?.total > 0) && (
+                            <div className="mt-1.5 h-1 rounded-full bg-slate-100 overflow-hidden">
+                              <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-500" style={{ width: `${Math.round((c.progressStats.done / c.progressStats.total) * 100)}%` }} />
+                            </div>
+                          )}
                         </div>
                       </Link>
                     ))}
@@ -410,6 +420,12 @@ export default function DashboardPage() {
                       <div className="mt-1.5 flex items-center gap-1">
                         <div className="w-1 h-1 rounded-full bg-blue-400" />
                         <span className="text-[10px] text-blue-600 font-medium truncate">{c.currentProgressStep}</span>
+                      </div>
+                    )}
+                    {/* Mini progress bar */}
+                    {(c as any).progressStats?.total > 0 && (
+                      <div className="mt-1.5 h-1 rounded-full bg-slate-100 overflow-hidden">
+                        <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-500" style={{ width: `${Math.round((((c as any).progressStats.done / (c as any).progressStats.total) * 100))}%` }} />
                       </div>
                     )}
                   </CardContent>

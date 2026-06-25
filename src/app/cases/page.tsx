@@ -107,7 +107,23 @@ export default function CasesPage() {
         </DropdownMenu>
       ),
     },
-    { key: "caseNumber", header: "Case #", sortable: true, render: (c) => <Link href={`/cases/${c.id}`} className="text-primary hover:text-primary/80 font-medium text-sm hover:underline">{c.caseNumber}</Link> },
+    { key: "caseNumber", header: "Case #", sortable: true, className: "min-w-[140px]", render: (c: any) => (
+      <div>
+        <Link href={`/cases/${c.id}`} className="text-primary hover:text-primary/80 font-medium text-sm hover:underline">{c.caseNumber}</Link>
+        {/* Mini progress bar */}
+        {c.progressStats && c.progressStats.total > 0 && (
+          <div className="flex items-center gap-1.5 mt-1">
+            <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden max-w-[80px]">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all"
+                style={{ width: `${Math.round((c.progressStats.done / c.progressStats.total) * 100)}%` }}
+              />
+            </div>
+            <span className="text-[10px] text-slate-400 tabular-nums">{c.progressStats.done}/{c.progressStats.total}</span>
+          </div>
+        )}
+      </div>
+    )},
     { key: "applicationDate", header: "Date", sortable: true, render: (c) => <span className="text-sm whitespace-nowrap">{formatDate(c.applicationDate)}</span> },
     { key: "department", header: "Dept", sortable: true, render: (c) => <span className="text-xs" title={DEPARTMENT_LABELS[c.department]}>{c.department}</span> },
     { key: "category", header: "Category", sortable: true, render: (c) => <Badge variant="secondary" className="text-xs">{c.category}</Badge> },

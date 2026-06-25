@@ -40,16 +40,27 @@ export async function GET(request: NextRequest) {
     const [cases, total] = await Promise.all([
       prisma.case.findMany({
         where,
-        include: { _count: { select: { progressSteps: true, materialUsage: true } } },
+        include: {
+          _count: { select: { progressSteps: true, materialUsage: true } },
+          progressSteps: { select: { status: true }, orderBy: { stepOrder: "asc" } },
+        },
         orderBy: { updatedAt: "desc" },
         ...(pageSize > 0 ? { skip: (page - 1) * pageSize, take: pageSize } : {}),
       }),
       prisma.case.count({ where }),
     ]);
 
+    // Attach progress stats for progress bar display
+    const enriched = cases.map((c) => {
+      const steps = (c as any).progressSteps || [];
+      const done = steps.filter((s: any) => s.status === "Completed").length;
+      const total = steps.length || 8; // default to 8 steps
+      return { ...c, progressStats: { done, total }, progressSteps: undefined };
+    });
+
     return NextResponse.json({
       success: true,
-      data: cases,
+      data: enriched,
       pagination: pageSize > 0 ? {
         page,
         pageSize,
