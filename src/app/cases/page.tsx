@@ -109,10 +109,10 @@ export default function CasesPage() {
 
   const ALL_COLUMNS = [
     "Case #", "Date", "Dept", "Category", "Applicant", "Project",
-    "Status", "Priority", "Purpose", "Tech", "Updated",
+    "Status", "Progress", "Priority", "Purpose", "Tech", "Updated",
   ];
   const [visibleCols, setVisibleCols] = useState([
-    "Case #", "Date", "Dept", "Category", "Applicant", "Project", "Status",
+    "Case #", "Date", "Dept", "Category", "Applicant", "Project", "Status", "Progress",
   ]);
 
   const columns: Column<CaseItem>[] = [
@@ -152,18 +152,16 @@ export default function CasesPage() {
     { key: "category", header: "Category", sortable: true, render: (c) => <Badge variant="secondary" className="text-xs">{c.category}</Badge> },
     { key: "applicantName", header: "Applicant", sortable: true, className: "max-w-[100px] truncate" },
     { key: "projectTitle", header: "Project", className: "max-w-[140px] truncate", render: (c) => <span className="text-xs">{c.projectTitle}</span> },
-    // Merged Status: lifecycle badge + step badge when In progress
+    // Status: lifecycle badge
     { key: "currentStatus", header: "Status", sortable: true, render: (c: any) => {
-      if (c.currentStatus === "Cancelled") return <Badge variant="destructive" className="text-xs">Cancelled</Badge>;
-      if (c.currentStatus === "On hold") return <Badge className="bg-amber-100 text-amber-700 text-xs">On hold</Badge>;
-      if (c.currentStatus === "Completed") return <Badge variant="default" className="text-xs">Completed</Badge>;
-      if (c.currentStatus === "Draft") return <Badge variant="outline" className="text-xs">Draft</Badge>;
-      // In progress — show step name
-      if (c.currentProgressStep) {
-        const color = stepColors[c.currentProgressStep] || "bg-slate-100 text-slate-600";
-        return <Badge className={`text-[11px] font-medium ${color} border-0`}>{c.currentProgressStep}</Badge>;
-      }
-      return <Badge variant="secondary" className="text-xs">In progress</Badge>;
+      const variant = c.currentStatus === "Completed" ? "default" : c.currentStatus === "Cancelled" ? "destructive" : c.currentStatus === "On hold" ? "secondary" : c.currentStatus === "In progress" ? "default" : "outline";
+      return <Badge variant={variant} className="text-xs">{c.currentStatus || "Draft"}</Badge>;
+    }},
+    // Progress: step badge (only meaningful when In progress)
+    { key: "currentProgressStep", header: "Progress", render: (c: any) => {
+      if (!c.currentProgressStep) return <span className="text-xs text-slate-300">—</span>;
+      const color = stepColors[c.currentProgressStep] || "bg-slate-100 text-slate-600";
+      return <Badge className={`text-[11px] font-medium ${color} border-0`}>{c.currentProgressStep}</Badge>;
     }},
     { key: "priority", header: "Priority", sortable: true, render: (c) => <Badge variant={getStatusBadgeVariant(c.priority)} className="text-xs">{c.priority}</Badge> },
     { key: "purpose", header: "Purpose", className: "max-w-[130px] truncate", render: (c) => <span className="text-xs">{c.purpose}</span> },

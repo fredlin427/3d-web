@@ -66,6 +66,7 @@ export default function MaterialsPage() {
   const [visibleMatCols, setVisibleMatCols] = useState([
     "Material", "Brand / Type", "Capacity", "Remaining", "Expiry",
   ]);
+  const [expandedMatStat, setExpandedMatStat] = useState<string | null>(null);
 
   // SWR: current category for table display
   const swrKey = apiUrl("/api/materials", { category: activeCat, ...(search && { search }) });
@@ -215,7 +216,8 @@ export default function MaterialsPage() {
           { label: "Expiring Soon", value: stats.expiringSoon, icon: Clock, color: "#f97316", bg: "#fff7ed" },
           { label: "Total Remain", value: `${stats.totalRemain}`, icon: Package, color: "#8b5cf6", bg: "#f5f3ff", suffix: "" },
         ].map((s) => (
-          <Card key={s.label} className="border-0 border overflow-hidden">
+          <Card key={s.label} className="border-0 border overflow-hidden cursor-pointer hover:shadow-md transition-all"
+            onClick={() => setExpandedMatStat(expandedMatStat === s.label ? null : s.label)}>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg shrink-0" style={{ backgroundColor: s.bg }}>
@@ -238,6 +240,41 @@ export default function MaterialsPage() {
           <div className="flex-1"><p className="text-sm font-semibold text-slate-700">{importResult.updatedItems} of {importResult.totalRows} rows updated</p>{importResult.errors.length > 0 && <p className="text-xs text-amber-600">{importResult.errors.length} errors</p>}</div>
           <Button variant="ghost" size="sm" onClick={() => setImportResult(null)}>Dismiss</Button>
         </div>
+      )}
+
+      {/* Expanded stat panel */}
+      {expandedMatStat && (
+        <Card className="border-0 shadow-sm ring-1 ring-blue-100">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-semibold text-slate-700">{expandedMatStat}</CardTitle>
+            <button onClick={() => setExpandedMatStat(null)} className="text-xs text-slate-400 hover:text-slate-600">✕</button>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              const statusMap: Record<string, string> = { "Total": "", "In Stock": "In stock", "Opened": "Opened", "Low Stock": "Low stock", "Expired": "Expired" };
+              const status = statusMap[expandedMatStat];
+              const filtered = status ? (allMaterials || materials).filter((m: any) => m.status === status) : (allMaterials || materials);
+              if (expandedMatStat === "Expiring Soon") {
+                const expiring = (allMaterials || materials).filter((m: any) => m.expiryDate && new Date(m.expiryDate) <= new Date(Date.now() + 30*86400000) && m.status !== "Expired");
+                if (expiring.length === 0) return <p className="text-sm text-slate-400 py-4 text-center">No expiring items</p>;
+                return <div className="grid grid-cols-1 md:grid-cols-3 gap-2">{expiring.slice(0,12).map((m: any) => (
+                  <Link key={m.id} href={`/materials/${m.id}`} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 ring-1 ring-slate-100">
+                    <div className="flex-1 min-w-0"><p className="text-sm font-semibold text-slate-800 truncate">{m.materialName}</p><p className="text-xs text-slate-500">{m.currentQuantity}{m.unit} · expires {m.expiryDate?.split('T')[0]}</p></div>
+                  </Link>
+                ))}</div>;
+              }
+              if (expandedMatStat === "Total Remain") {
+                return <p className="text-sm text-slate-400 py-4 text-center">Total remaining: {stats.totalRemain}</p>;
+              }
+              if (filtered.length === 0) return <p className="text-sm text-slate-400 py-4 text-center">No materials</p>;
+              return <div className="grid grid-cols-1 md:grid-cols-3 gap-2">{filtered.slice(0,12).map((m: any) => (
+                <Link key={m.id} href={`/materials/${m.id}`} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 ring-1 ring-slate-100">
+                  <div className="flex-1 min-w-0"><p className="text-sm font-semibold text-slate-800 truncate">{m.materialName}</p><p className="text-xs text-slate-500">{m.currentQuantity}{m.unit} · {m.brand || m.category}</p></div>
+                </Link>
+              ))}</div>;
+            })()}
+          </CardContent>
+        </Card>
       )}
 
       {/* Category tabs with counts */}

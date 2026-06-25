@@ -77,6 +77,7 @@ export default function DashboardPage() {
   const [allCases, setAllCases] = useState<any[]>([]); // for expandable stat cards
   const [expandedStat, setExpandedStat] = useState<string | null>(null);
   const [alerts, setAlerts] = useState<any[]>([]);
+  const [allMaterials, setAllMaterials] = useState<any[]>([]); // for material stat panels
   const [dismissed, setDismissed] = useState(false);
   const [presMode, setPresMode] = useState(false);
   const [presChart, setPresChart] = useState<"treemap" | "bars" | "table">("treemap");
@@ -168,6 +169,7 @@ export default function DashboardPage() {
       .then((r) => r.json())
       .then((j) => {
         if (j.success) {
+          setAllMaterials(j.data);
           const critical = j.data.filter((m: any) =>
             m.status === "Expired" ||
             m.status === "Low stock" ||
@@ -378,7 +380,7 @@ export default function DashboardPage() {
                   lowStockItems: "Low stock", materialsOpened: "Opened", expiringMaterials: "expiring",
                 };
                 const status = statusMap[expandedStat];
-                const filtered = alerts.filter((m: any) => {
+                const filtered = allMaterials.filter((m: any) => {
                   if (status === "expiring") return m.expiryDate && new Date(m.expiryDate) <= new Date(Date.now() + 30*24*60*60*1000) && m.status !== "Expired";
                   return m.status === status;
                 });
