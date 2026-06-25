@@ -730,7 +730,15 @@ export default function ChartBuilderPage() {
                   <SelectTrigger className="w-full h-7 bg-white text-xs mt-0.5"><SelectValue placeholder="All years" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">All years</SelectItem>
-                    {["2223","2324","2425","2526","2627"].map((y) => <SelectItem key={y} value={y}>{y} (Apr-Mar)</SelectItem>)}
+                    {(() => {
+                      const now = new Date();
+                      const currentFY = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+                      const years: string[] = [];
+                      for (let y = 2022; y <= currentFY; y++) {
+                        years.push(`${String(y).slice(2)}${String(y+1).slice(2)}`);
+                      }
+                      return years.map((y) => <SelectItem key={y} value={y}>{y} (Apr-Mar)</SelectItem>);
+                    })()}
                   </SelectContent>
                 </Select>
               </div>

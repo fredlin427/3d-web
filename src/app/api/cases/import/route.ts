@@ -69,14 +69,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Empty file" }, { status: 400 });
     }
 
-    // Build column mapping from header row
+    // Build column mapping from header row (strip BOM + whitespace)
     const firstRow = rows[0];
     const mapping: Record<string, string> = {};
     for (const key of Object.keys(firstRow)) {
-      const cleanKey = key.replace(/[\r\n]+/g, " ").trim();
+      const cleanKey = key.replace(/^﻿/, "").replace(/[\r\n]+/g, " ").trim();
       if (COLUMN_MAP[cleanKey]) {
         mapping[key] = COLUMN_MAP[cleanKey];
       }
+    }
+
+    // If mapping is empty, try fuzzy match
+    if (Object.keys(mapping).length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: `No columns matched. Available headers: ${Object.keys(firstRow).map(k => k.replace(/^﻿/, "").trim()).join(", ")}`,
+      }, { status: 400 });
     }
 
     let imported = 0;
@@ -150,11 +158,15 @@ export async function POST(request: NextRequest) {
           data.caseNumber = `QEH3D-${String(count + 1).padStart(3, "0")}`;
         }
 
-        // Set defaults
+        // Set defaults for required fields
         data.quantity = data.quantity || 1;
         data.totalComponents = data.totalComponents || 1;
-        data.projectTitle = String(data.purpose || "Imported case");
+        data.projectTitle = String(data.purpose || data.specification || "Imported case");
         data.applicantName = data.applicantName || "Unknown";
+        data.department = data.department || "Other";
+        data.category = data.category || "Clinical Use";
+        data.purpose = data.purpose || "Imported record";
+        data.hospital = data.hospital || "QEH";
 
         await (prisma.case as any).create({ data });
         imported++;
