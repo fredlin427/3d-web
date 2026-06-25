@@ -94,6 +94,25 @@ export default function CasesPage() {
     } catch { toast.error("Failed to delete case"); }
   };
 
+  const stepColors: Record<string, string> = {
+    "Application Received": "bg-amber-100 text-amber-700",
+    "Approval": "bg-orange-100 text-orange-700",
+    "Segmentation / Design": "bg-purple-100 text-purple-700",
+    "Verify Segmentation / Design": "bg-blue-100 text-blue-700",
+    "Printing": "bg-cyan-100 text-cyan-700",
+    "Post-processing": "bg-teal-100 text-teal-700",
+    "Final Product": "bg-emerald-100 text-emerald-700",
+    "Completion": "bg-green-100 text-green-700",
+  };
+
+  const ALL_COLUMNS = [
+    "Case #", "Date", "Dept", "Category", "Applicant", "Project",
+    "Status", "Priority", "Purpose", "Tech", "Updated",
+  ];
+  const [visibleCols, setVisibleCols] = useState([
+    "Case #", "Date", "Dept", "Category", "Applicant", "Project", "Status",
+  ]);
+
   const columns: Column<CaseItem>[] = [
     {
       key: "actions", header: "", className: "w-10",
@@ -113,17 +132,13 @@ export default function CasesPage() {
         </DropdownMenu>
       ),
     },
-    { key: "caseNumber", header: "Case #", sortable: true, className: "min-w-[140px]", render: (c: any) => (
+    { key: "caseNumber", header: "Case #", sortable: true, className: "min-w-[130px]", render: (c: any) => (
       <div>
         <Link href={`/cases/${c.id}`} className="text-primary hover:text-primary/80 font-medium text-sm hover:underline">{c.caseNumber}</Link>
-        {/* Mini progress bar */}
-        {c.progressStats && c.progressStats.total > 0 && (
+        {(c.progressStats?.total > 0) && (
           <div className="flex items-center gap-1.5 mt-1">
-            <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden max-w-[80px]">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all"
-                style={{ width: `${Math.round((c.progressStats.done / c.progressStats.total) * 100)}%` }}
-              />
+            <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden max-w-[70px]">
+              <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all" style={{ width: `${Math.round((c.progressStats.done / c.progressStats.total) * 100)}%` }} />
             </div>
             <span className="text-[10px] text-slate-400 tabular-nums">{c.progressStats.done}/{c.progressStats.total}</span>
           </div>
@@ -133,27 +148,24 @@ export default function CasesPage() {
     { key: "applicationDate", header: "Date", sortable: true, render: (c) => <span className="text-sm whitespace-nowrap">{formatDate(c.applicationDate)}</span> },
     { key: "department", header: "Dept", sortable: true, render: (c) => <span className="text-xs" title={DEPARTMENT_LABELS[c.department]}>{c.department}</span> },
     { key: "category", header: "Category", sortable: true, render: (c) => <Badge variant="secondary" className="text-xs">{c.category}</Badge> },
-    { key: "purpose", header: "Purpose", className: "max-w-[130px] truncate", render: (c) => <span className="text-xs">{c.purpose}</span> },
     { key: "applicantName", header: "Applicant", sortable: true, className: "max-w-[100px] truncate" },
     { key: "projectTitle", header: "Project", className: "max-w-[140px] truncate", render: (c) => <span className="text-xs">{c.projectTitle}</span> },
-    { key: "currentProgressStep", header: "Progress", render: (c) => {
-      if (!c.currentProgressStep) return <span className="text-xs text-slate-300">—</span>;
-      const stepColors: Record<string, string> = {
-        "Application Received": "bg-amber-100 text-amber-700",
-        "Approval": "bg-orange-100 text-orange-700",
-        "Segmentation / Design": "bg-purple-100 text-purple-700",
-        "Verify Segmentation / Design": "bg-blue-100 text-blue-700",
-        "Printing": "bg-cyan-100 text-cyan-700",
-        "Post-processing": "bg-teal-100 text-teal-700",
-        "Final Product": "bg-emerald-100 text-emerald-700",
-        "Completion": "bg-green-100 text-green-700",
-      };
-      const color = stepColors[c.currentProgressStep] || "bg-slate-100 text-slate-600";
-      return <Badge className={`text-[11px] font-medium ${color} border-0`}>{c.currentProgressStep}</Badge>;
+    // Merged Status: lifecycle badge + step badge when In progress
+    { key: "currentStatus", header: "Status", sortable: true, render: (c: any) => {
+      if (c.currentStatus === "Cancelled") return <Badge variant="destructive" className="text-xs">Cancelled</Badge>;
+      if (c.currentStatus === "On hold") return <Badge className="bg-amber-100 text-amber-700 text-xs">On hold</Badge>;
+      if (c.currentStatus === "Completed") return <Badge variant="default" className="text-xs">Completed</Badge>;
+      if (c.currentStatus === "Draft") return <Badge variant="outline" className="text-xs">Draft</Badge>;
+      // In progress — show step name
+      if (c.currentProgressStep) {
+        const color = stepColors[c.currentProgressStep] || "bg-slate-100 text-slate-600";
+        return <Badge className={`text-[11px] font-medium ${color} border-0`}>{c.currentProgressStep}</Badge>;
+      }
+      return <Badge variant="secondary" className="text-xs">In progress</Badge>;
     }},
-    { key: "currentStatus", header: "Status", sortable: true, render: (c) => <Badge variant={getStatusBadgeVariant(c.currentStatus)}>{c.currentStatus}</Badge> },
-    { key: "technician", header: "Tech", render: (c) => <span className="text-xs">{c.technician || "—"}</span> },
     { key: "priority", header: "Priority", sortable: true, render: (c) => <Badge variant={getStatusBadgeVariant(c.priority)} className="text-xs">{c.priority}</Badge> },
+    { key: "purpose", header: "Purpose", className: "max-w-[130px] truncate", render: (c) => <span className="text-xs">{c.purpose}</span> },
+    { key: "technician", header: "Tech", render: (c) => <span className="text-xs">{c.technician || "—"}</span> },
     { key: "updatedAt", header: "Updated", render: (c) => <span className="text-xs whitespace-nowrap">{formatDate(c.updatedAt)}</span> },
   ];
 
@@ -213,6 +225,8 @@ export default function CasesPage() {
         isLoading={loading}
         emptyTitle="No cases found"
         emptyDescription="Create a new case record to get started."
+        density="compact"
+        columnPicker={{ columns: ALL_COLUMNS, selected: visibleCols, onChange: setVisibleCols }}
         toolbar={
           <div className="flex gap-2">
             <Select value={deptFilter} onValueChange={(v) => v && setDeptFilter(v)}>

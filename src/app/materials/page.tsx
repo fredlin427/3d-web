@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const CATEGORIES = [
+  { key: "", label: "All" },
   { key: "FDM Filaments", label: "FDM" },
   { key: "SLA Resins", label: "SLA Resin" },
   { key: "Resin Tanks", label: "Tank" },
@@ -61,6 +62,10 @@ export default function MaterialsPage() {
   const [deleteName, setDeleteName] = useState("");
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
+  const ALL_MAT_COLUMNS = ["Material", "Brand / Type", "Batch", "Capacity", "Remaining", "Location", "Expiry"];
+  const [visibleMatCols, setVisibleMatCols] = useState([
+    "Material", "Brand / Type", "Capacity", "Remaining", "Expiry",
+  ]);
 
   // SWR: current category for table display
   const swrKey = apiUrl("/api/materials", { category: activeCat, ...(search && { search }) });
@@ -157,7 +162,11 @@ export default function MaterialsPage() {
       </div>
     )},
     { key: "batchNumber", header: "Batch", render: (m) => <span className="text-xs font-mono text-slate-500">{m.batchNumber || "—"}</span> },
-    { key: "currentQuantity", header: "Stock Level", sortable: true, className: "min-w-[160px]", render: (m) => (
+    // Capacity = initial amount + unit
+    { key: "initialQuantity", header: "Capacity", sortable: true, render: (m) => (
+      <span className="text-sm font-medium tabular-nums">{m.initialQuantity} <span className="text-xs text-slate-400">{m.unit}</span></span>
+    )},
+    { key: "currentQuantity", header: "Remaining", sortable: true, className: "min-w-[140px]", render: (m) => (
       <StockBar
         used={m.initialQuantity - m.currentQuantity}
         remain={m.currentQuantity}
@@ -181,7 +190,7 @@ export default function MaterialsPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">Materials & Stock</h2>
-          <p className="text-sm text-slate-500 mt-1">{activeCat} · {stats.total} items</p>
+          <p className="text-sm text-slate-500 mt-1">{activeCat || "All Categories"} · {stats.total} items</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={handleExport} variant="outline" size="sm" className="gap-2"><Download className="h-4 w-4" />Export</Button>
@@ -190,6 +199,7 @@ export default function MaterialsPage() {
             {importing ? "Importing..." : "Import"}
             <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImport} disabled={importing} />
           </label>
+          <span className="flex-1" />{activeCat && <span className="text-xs text-slate-400">{activeCat}</span>}
           <Link href="/materials/new"><Button size="sm" className="gap-2 bg-primary hover:bg-primary/90"><Plus className="h-4 w-4" />New</Button></Link>
         </div>
       </div>
@@ -249,8 +259,10 @@ export default function MaterialsPage() {
         searchValue={search} onSearchChange={setSearch}
         searchPlaceholder="Search by name, batch, brand..."
         isLoading={loading}
-        emptyTitle={`No ${activeCat} materials`}
+        emptyTitle={`No ${activeCat || "material"} records`}
         pageSize={25}
+        density="compact"
+        columnPicker={{ columns: ALL_MAT_COLUMNS, selected: visibleMatCols, onChange: setVisibleMatCols }}
       />
 
       <ConfirmDialog open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}
