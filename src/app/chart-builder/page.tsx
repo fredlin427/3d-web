@@ -124,8 +124,10 @@ export default function ChartBuilderPage() {
   const [chartType, setChartType] = useState("bar");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [filterField, setFilterField] = useState("");
-  const [filterValue, setFilterValue] = useState("");
+  const [fy, setFy] = useState(""); // Financial Year e.g. "2627"
+  // Multi-select checkbox filters
+  const [activeFilters, setActiveFilters] = useState<Record<string, string[]>>({});
+  const [expandedFilter, setExpandedFilter] = useState<string | null>(null);
   const [showTable, setShowTable] = useState(true);
   const [groupTop, setGroupTop] = useState(12); // 0=all, N=top N + Other
   const [paletteKey, setPaletteKey] = useState(DEFAULT_PALETTE);
@@ -195,8 +197,7 @@ export default function ChartBuilderPage() {
     else if (source === "materials") { setXField("category"); setStackBy("status"); setShowTable(true); }
     else if (source === "transactions") { setXField("transactionType"); setStackBy("material.materialName"); setShowTable(true); }
     else { setXField(fields[0] || ""); setStackBy(""); }
-    setFilterField("");
-    setFilterValue("");
+    setActiveFilters({});
   }, [source]);
 
   // Auto-set stackBy when xField changes (parent-child grouping)
@@ -219,11 +220,20 @@ export default function ChartBuilderPage() {
       params.set("y", "count");
       params.set("limit", "30");
       if (groupTop > 0) params.set("groupTop", String(groupTop));
-      if (dateFrom) params.set("dateFrom", dateFrom);
-      if (dateTo) params.set("dateTo", dateTo);
-      if (filterField && filterValue) {
-        params.set("filterField", filterField);
-        params.set("filterValue", filterValue);
+      // Financial Year: "2627" → 1 Apr 2026 to 31 Mar 2027
+      if (fy) {
+        const startYear = 2000 + parseInt(fy.slice(0, 2));
+        params.set("dateFrom", `${startYear}-04-01`);
+        params.set("dateTo", `${startYear + 1}-03-31`);
+      } else {
+        if (dateFrom) params.set("dateFrom", dateFrom);
+        if (dateTo) params.set("dateTo", dateTo);
+      }
+      // Multi-select filters
+      for (const [field, values] of Object.entries(activeFilters)) {
+        if (values.length > 0) {
+          params.set(`filter_${field}`, values.join(","));
+        }
       }
       if (stackBy) params.set("stackBy", stackBy);
       const res = await fetch(`/api/chart-data?${params}`);
@@ -246,7 +256,7 @@ export default function ChartBuilderPage() {
     } finally {
       setLoading(false);
     }
-  }, [source, xField, stackBy, dateFrom, dateTo, filterField, filterValue]);
+  }, [source, xField, stackBy, dateFrom, dateTo, fy, activeFilters]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -710,28 +720,88 @@ export default function ChartBuilderPage() {
           {/* Filters */}
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-1.5 pt-4 px-4"><CardTitle className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Filters</CardTitle></CardHeader>
-            <CardContent className="space-y-2.5 px-3 pb-3">
-              <div><label className="text-[11px] font-medium text-slate-400">From</label>
-                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full h-8 text-xs border rounded-md px-2 py-1 bg-white mt-0.5" /></div>
-              <div><label className="text-[11px] font-medium text-slate-400">To</label>
-                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full h-8 text-xs border rounded-md px-2 py-1 bg-white mt-0.5" /></div>
+            <CardContent className="space-y-1.5 px-3 pb-3">
+              {/* Financial Year */}
               <div>
-                <Select value={filterField} onValueChange={(v) => { setFilterField(v || ""); setFilterValue(""); }}>
-                  <SelectTrigger className="w-full h-8 bg-white text-xs"><SelectValue placeholder="Filter field..." /></SelectTrigger>
+                <label className="text-[10px] font-semibold text-slate-400 uppercase">Financial Year</label>
+                <Select value={fy} onValueChange={(v) => { setFy(v || ""); setDateFrom(""); setDateTo(""); }}>
+                  <SelectTrigger className="w-full h-7 bg-white text-xs mt-0.5"><SelectValue placeholder="All years" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
-                    {fields.map((f) => <SelectItem key={f} value={f}>{FIELD_LABELS[f] || f}</SelectItem>)}
+                    <SelectItem value="">All years</SelectItem>
+                    {["2223","2324","2425","2526","2627"].map((y) => <SelectItem key={y} value={y}>{y} (Apr-Mar)</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-              {filterField && (
-                <Select value={filterValue} onValueChange={(v) => { if (v) setFilterValue(v); }}>
-                  <SelectTrigger className="w-full h-8 bg-white text-xs"><SelectValue placeholder="Value..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">All</SelectItem>
-                    {(filterOptions[filterField] || []).map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+
+              {/* Date range (only when no FY selected) */}
+              {!fy && (
+                <div className="flex gap-1">
+                  <div className="flex-1"><label className="text-[10px] font-semibold text-slate-400 uppercase">From</label>
+                    <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full h-7 text-[11px] border rounded-md px-1.5 py-0.5 bg-white mt-0.5" /></div>
+                  <div className="flex-1"><label className="text-[10px] font-semibold text-slate-400 uppercase">To</label>
+                    <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full h-7 text-[11px] border rounded-md px-1.5 py-0.5 bg-white mt-0.5" /></div>
+                </div>
+              )}
+
+              {/* Checkbox filters for key fields */}
+              {[
+                { key: "category", label: "Category" },
+                { key: "hospital", label: "Hospital" },
+                { key: "department", label: "Department" },
+                { key: "purpose", label: "Purpose" },
+                { key: "technician", label: "Technician" },
+              ].map(({ key, label }) => {
+                const options = filterOptions[key] || [];
+                if (options.length === 0) return null;
+                const selected = activeFilters[key] || [];
+                const isExpanded = expandedFilter === key;
+                return (
+                  <div key={key} className="border-t border-slate-100 pt-1.5 mt-1">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedFilter(isExpanded ? null : key)}
+                      className="w-full flex items-center justify-between text-[10px] font-semibold text-slate-500 uppercase tracking-wide hover:text-slate-700 py-0.5"
+                    >
+                      {label}
+                      <span className="text-slate-300">{isExpanded ? "▾" : "▸"}</span>
+                    </button>
+                    {isExpanded && (
+                      <div className="max-h-32 overflow-y-auto space-y-0.5 mt-1">
+                        {options.map((opt) => (
+                          <label key={opt} className="flex items-center gap-1.5 cursor-pointer hover:bg-slate-50 rounded px-0.5 py-0.5">
+                            <input
+                              type="checkbox"
+                              checked={selected.includes(opt)}
+                              onChange={() => {
+                                const next = selected.includes(opt)
+                                  ? selected.filter((v) => v !== opt)
+                                  : [...selected, opt];
+                                setActiveFilters((prev) => ({ ...prev, [key]: next }));
+                              }}
+                              className="rounded border-slate-300 text-primary focus:ring-primary h-3 w-3"
+                            />
+                            <span className="text-[11px] text-slate-600 truncate">{opt}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                    {/* Show selected count badge if collapsed with selections */}
+                    {!isExpanded && selected.length > 0 && (
+                      <span className="text-[10px] text-blue-500 font-medium ml-1">{selected.length} selected</span>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Clear all filters */}
+              {Object.values(activeFilters).some((v) => v.length > 0) && (
+                <button
+                  type="button"
+                  onClick={() => setActiveFilters({})}
+                  className="w-full text-[10px] text-red-400 hover:text-red-600 font-medium pt-1.5 border-t border-slate-100 mt-1.5"
+                >
+                  Clear all filters
+                </button>
               )}
             </CardContent>
           </Card>

@@ -77,8 +77,13 @@ export async function GET(request: NextRequest) {
     const yField = searchParams.get("yField") || "";
     const dateFrom = searchParams.get("dateFrom") || "";
     const dateTo = searchParams.get("dateTo") || "";
-    const filterField = searchParams.get("filterField") || "";
-    const filterValue = searchParams.get("filterValue") || "";
+    // Multi-value filters: filter_<field>=val1,val2,val3
+    const multiFilters: Record<string, string[]> = {};
+    for (const [key, value] of searchParams.entries()) {
+      if (key.startsWith("filter_") && value) {
+        multiFilters[key.replace("filter_", "")] = value.split(",").filter(Boolean);
+      }
+    }
     const stackBy = searchParams.get("stackBy") || "";
     const limit = parseInt(searchParams.get("limit") || "20", 10);
     const groupTop = parseInt(searchParams.get("groupTop") || "0", 10); // 0 = disabled, N = top N + Other
@@ -93,11 +98,20 @@ export async function GET(request: NextRequest) {
     if (dateFrom || dateTo) {
       const df: Record<string, Date> = {};
       if (dateFrom) df.gte = new Date(dateFrom);
-      if (dateTo) df.lte = new Date(dateTo);
+      if (dateTo) {
+        const d = new Date(dateTo);
+        d.setHours(23, 59, 59, 999); // end of day
+        df.lte = d;
+      }
       where[config.dateField] = df;
     }
-    if (filterField && filterValue) {
-      where[filterField] = filterValue;
+    // Multi-value filters
+    for (const [field, values] of Object.entries(multiFilters)) {
+      if (values.length === 1) {
+        where[field] = values[0];
+      } else if (values.length > 1) {
+        where[field] = { in: values };
+      }
     }
 
     // Resolve xField and stackBy
