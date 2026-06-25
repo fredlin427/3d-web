@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { DataTable, Column } from "@/components/shared/data-table";
-import { Plus, MoreHorizontal, Eye, Pencil, Copy, Trash2, Upload, Loader2, CheckCircle2 } from "lucide-react";
+import { Plus, MoreHorizontal, Eye, Pencil, Copy, Trash2, Upload, Loader2, CheckCircle2, FolderOpen, Clock } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { formatDate, getStatusBadgeVariant, cn } from "@/lib/utils";
 import { DEPARTMENTS, DEPARTMENT_LABELS, CATEGORIES } from "@/lib/constants";
@@ -51,6 +52,7 @@ export default function CasesPage() {
   const [importResult, setImportResult] = useState<any>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [expandedStat, setExpandedStat] = useState<string | null>(null);
 
   const fetchCases = useCallback(async () => {
     setLoading(true);
@@ -238,6 +240,76 @@ export default function CasesPage() {
             {bulkDeleting ? 'Deleting...' : `Delete ${selectedIds.length}`}
           </button>
         </div>
+      )}
+
+      {/* Stat cards */}
+      {(() => {
+        const stats = {
+          total: cases.length,
+          inProgress: cases.filter((c: any) => c.currentStatus === "In progress").length,
+          completed: cases.filter((c: any) => c.currentStatus === "Completed").length,
+          draft: cases.filter((c: any) => c.currentStatus === "Draft" || !c.currentStatus).length,
+          onHold: cases.filter((c: any) => c.currentStatus === "On hold").length,
+        };
+        const cards = [
+          { key: "Total", label: "Total", value: stats.total, icon: FolderOpen, color: "#4f46e5", bg: "#eef0ff" },
+          { key: "In progress", label: "In Progress", value: stats.inProgress, icon: Clock, color: "#f59e0b", bg: "#fffbeb" },
+          { key: "Completed", label: "Completed", value: stats.completed, icon: CheckCircle2, color: "#10b981", bg: "#ecfdf5" },
+          { key: "Draft", label: "Draft", value: stats.draft, icon: Clock, color: "#64748b", bg: "#f1f5f9" },
+        ];
+        return (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {cards.map((s) => (
+              <Card key={s.key} className="border-0 cursor-pointer hover:shadow-md transition-all overflow-hidden"
+                onClick={() => setExpandedStat(expandedStat === s.key ? null : s.key)}>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg shrink-0" style={{ backgroundColor: s.bg }}>
+                      <s.icon className="h-4 w-4" style={{ color: s.color }} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[21px] font-bold tracking-tight text-slate-900 tabular-nums leading-none">{s.value}</p>
+                      <p className="text-[11px] text-slate-400 font-medium mt-0.5 truncate">{s.label}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        );
+      })()}
+
+      {/* Expanded stat panel */}
+      {expandedStat && (
+        <Card className="border-0 shadow-sm ring-1 ring-blue-100">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-semibold text-slate-700">{expandedStat} Cases</span>
+              <button onClick={() => setExpandedStat(null)} className="text-xs text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+            {(() => {
+              const status = expandedStat === "Total" ? "" : expandedStat;
+              const filtered = status ? cases.filter((c: any) => c.currentStatus === status || (status === "Draft" && !c.currentStatus)) : cases;
+              if (filtered.length === 0) return <p className="text-sm text-slate-400 py-4 text-center">No cases</p>;
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+                  {filtered.slice(0, 24).map((c: any) => (
+                    <Link key={c.id} href={`/cases/${c.id}`} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 ring-1 ring-slate-100">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-800 truncate">{c.caseNumber}</p>
+                        <p className="text-xs text-slate-500 truncate">{c.projectTitle}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="secondary" className="text-[10px]">{c.category}</Badge>
+                          {c.currentProgressStep && <span className="text-[10px] text-blue-500">{c.currentProgressStep}</span>}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              );
+            })()}
+          </CardContent>
+        </Card>
       )}
 
       {/* Import result banner */}
