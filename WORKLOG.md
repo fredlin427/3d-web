@@ -1,5 +1,43 @@
 # QEH 3D Printing Office — Work Log
 
+## 2026-06-25 — Cases & Materials Overhaul (15 commits)
+
+### Meeting Requirements (June 22 email)
+- **Checkbox multi-select filters** on Chart Builder: Category, Hospital, Department, Purpose, Technician
+- **Financial Year sorting**: 2223-2627, auto 1 Apr–31 Mar range, dynamic year generation
+- **Pivot Table view**: cross-tabulation (rows × columns × counts), Pivot/List toggle
+- **Trial import**: POST /api/cases/import, maps old QEH3D-XXX Excel columns → current schema
+- **Progress steps on import**: auto-creates 8 default steps per case
+
+### Cases Page
+- **Bulk select & delete**: checkbox column + action bar + global SWR cache invalidation
+- **Clickable stat cards**: Total, In Progress, Completed, Draft → expand to filtered list
+- **Status + Progress unmerged** (reverted): lifecycle badge + step badge as separate columns
+- **Column picker**: show/hide columns, compact density, striped rows
+- **FY filter dropdown** alongside Dept/Category/Status
+- **Progress bars** on every case row
+
+### Materials Page
+- **"All" tab** to view all categories at once
+- **Capacity column**: {value} {unit} display
+- **Bulk select & delete**: same as cases
+- **Clickable stat cards**: expand to filtered material list
+- **Tank no-weight**: hides qty fields in detail, shows "X tanks" not weight
+- **IPA unit**: L (not litre)
+- **Material usage fix**: unusedQuantity now increments on usage (Used Amount was broken)
+- **Detail page fallback**: shows registry defaults when settings not yet created
+- **Delete FK fix**: cascade-deletes stockTransactions + materialUsage first
+
+### DataTable Upgrades
+- **Column picker** with All/None
+- **Compact density** mode
+- **Striped rows** (zebra striping)
+- **Bulk selectable** checkbox column
+
+### Dataset
+- 378 cases imported from old master list (QEH3D-001 through QEH3D-426)
+- 40 materials: 10 FDM (g) + 10 SLA (ml) + 10 Tank (unit) + 10 IPA (L)
+
 ## 2026-06-18 — Bug Fixes (2 commits: 47463c2, 7b2933f)
 
 ### Field Reorder Fix
