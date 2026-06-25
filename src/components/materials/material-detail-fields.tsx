@@ -43,6 +43,9 @@ export function MaterialDetailFields({ material }: { material: Record<string, an
               field = { ...MATERIAL_FIELD_REGISTRY[val] };
             }
             if (!field) continue;
+            // Tank: skip quantity-related fields (discrete units, not measured by weight/volume)
+            const tankSkipFields = ["initialQuantity", "currentQuantity", "unusedQuantity", "openedQuantity", "expiredQuantity", "reorderThreshold", "unit"];
+            if (cat === "Resin Tanks" && tankSkipFields.includes(field.key)) continue;
             let displayValue = material[field.key] ?? "";
             if (field.type === "date" && displayValue) displayValue = formatDate(displayValue);
             else if (field.type === "number" && displayValue !== "") displayValue = `${displayValue} ${material.unit || ""}`;
