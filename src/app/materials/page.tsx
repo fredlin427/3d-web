@@ -310,9 +310,12 @@ export default function MaterialsPage() {
               if (!confirm(`Delete ${selectedIds.length} selected materials?`)) return;
               setBulkDeleting(true);
               let deleted = 0;
+              const idsToDelete = new Set(selectedIds);
               for (const id of selectedIds) { try { await fetch(`/api/materials/${id}`, { method: 'DELETE' }); deleted++; } catch {} }
               toast.success(`Deleted ${deleted} materials`);
-              setSelectedIds([]); setBulkDeleting(false); mutate();
+              setSelectedIds([]); setBulkDeleting(false);
+              // Force re-fetch both SWR hooks
+              await mutate();
             }}
             className="px-4 py-1.5 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 disabled:opacity-50">
             {bulkDeleting ? 'Deleting...' : `Delete ${selectedIds.length}`}
