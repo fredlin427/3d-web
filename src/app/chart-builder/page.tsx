@@ -720,7 +720,7 @@ export default function ChartBuilderPage() {
           </Card>
 
           {/* Filters */}
-          <Card className="border-0 shadow-sm">
+          <Card className="border-0 shadow-sm overflow-visible">
             <CardHeader className="pb-1.5 pt-4 px-4"><CardTitle className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Filters</CardTitle></CardHeader>
             <CardContent className="space-y-1.5 px-3 pb-3">
               {/* Financial Year */}

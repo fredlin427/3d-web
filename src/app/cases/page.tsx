@@ -44,6 +44,7 @@ export default function CasesPage() {
   const [deptFilter, setDeptFilter] = useState("all");
   const [catFilter, setCatFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [fyFilter, setFyFilter] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteCaseNumber, setDeleteCaseNumber] = useState("");
   const [importing, setImporting] = useState(false);
@@ -57,13 +58,18 @@ export default function CasesPage() {
       if (deptFilter !== "all") params.set("department", deptFilter);
       if (catFilter !== "all") params.set("category", catFilter);
       if (statusFilter !== "all") params.set("status", statusFilter);
+      if (fyFilter) {
+        const startYear = 2000 + parseInt(fyFilter.slice(0, 2));
+        params.set("dateFrom", `${startYear}-04-01`);
+        params.set("dateTo", `${startYear + 1}-03-31`);
+      }
 
       const res = await fetch(`/api/cases?${params}`);
       const json = await res.json();
       if (json.success) setCases(json.data);
     } catch (e) { console.error(e); toast.error("Failed to load data"); }
     finally { setLoading(false); }
-  }, [search, deptFilter, catFilter, statusFilter]);
+  }, [search, deptFilter, catFilter, statusFilter, fyFilter]);
 
   useEffect(() => { fetchCases(); }, [fetchCases]);
 
@@ -228,6 +234,19 @@ export default function CasesPage() {
               <SelectContent>
                 <SelectItem value="all">All</SelectItem>
                 {["Draft","In progress","On hold","Completed","Cancelled"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={fyFilter} onValueChange={(v) => setFyFilter(v || "")}>
+              <SelectTrigger className="w-[120px] h-9 text-sm"><SelectValue placeholder="FY" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All years</SelectItem>
+                {(() => {
+                  const now = new Date();
+                  const currentFY = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+                  const years: string[] = [];
+                  for (let y = 2022; y <= currentFY; y++) years.push(`${String(y).slice(2)}${String(y+1).slice(2)}`);
+                  return years.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>);
+                })()}
               </SelectContent>
             </Select>
           </div>
