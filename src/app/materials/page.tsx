@@ -243,7 +243,7 @@ export default function MaterialsPage() {
       {/* Category tabs with counts */}
       <div className="flex gap-1 bg-slate-100 rounded-xl p-1 w-fit">
         {CATEGORIES.map((c) => {
-          const count = allMaterials.filter((m) => m.category === c.key).length || materials.filter((m) => m.category === c.key).length;
+          const count = c.key === "" ? allMaterials.length : allMaterials.filter((m) => m.category === c.key).length || materials.filter((m) => m.category === c.key).length;
           return (
             <button key={c.key} onClick={() => { setActiveCat(c.key); setImportResult(null); }}
               className={cn("px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2", activeCat === c.key ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700")}>
