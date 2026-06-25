@@ -36,9 +36,10 @@ export async function PUT(
         );
       }
 
+      const newUsed = (existing.material.unusedQuantity || 0) + quantityDiff;
       await prisma.material.update({
         where: { id: existing.materialId },
-        data: { currentQuantity: newMaterialQty },
+        data: { currentQuantity: newMaterialQty, unusedQuantity: newUsed },
       });
 
       // Create adjustment transaction
@@ -106,9 +107,10 @@ export async function DELETE(
 
     // Return quantity to material
     const newQuantity = existing.material.currentQuantity + existing.quantityUsed;
+    const newUsed = Math.max(0, (existing.material.unusedQuantity || 0) - existing.quantityUsed);
     await prisma.material.update({
       where: { id: existing.materialId },
-      data: { currentQuantity: newQuantity },
+      data: { currentQuantity: newQuantity, unusedQuantity: newUsed },
     });
 
     // Create adjustment transaction

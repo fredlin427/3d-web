@@ -35,10 +35,12 @@ export async function POST(request: NextRequest) {
       });
 
       const newQuantity = material.currentQuantity - body.quantityUsed;
+      const newUsed = (material.unusedQuantity || 0) + body.quantityUsed;
       await tx.material.update({
         where: { id: material.id },
         data: {
           currentQuantity: newQuantity,
+          unusedQuantity: newUsed,
           status: newQuantity <= material.reorderThreshold && material.reorderThreshold > 0
             ? "Low stock"
             : material.status,
