@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Download, Upload, Loader2, CheckCircle2, AlertTriangle, Clock, Package, Layers, TrendingDown, CalendarX } from "lucide-react";
 import { CaseUsagePopover } from "@/components/materials/case-usage-popover";
 import { cn, formatDate, getStockAlertStatus, getStockStatusColor } from "@/lib/utils";
+import { useSWRConfig } from "swr";
 import { useAPI, apiUrl } from "@/lib/swr-config";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -67,6 +68,7 @@ export default function MaterialsPage() {
     "Material", "Brand / Type", "Capacity", "Remaining", "Expiry",
   ]);
   const [expandedMatStat, setExpandedMatStat] = useState<string | null>(null);
+  const { mutate: globalMutate } = useSWRConfig();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
@@ -314,8 +316,8 @@ export default function MaterialsPage() {
               for (const id of selectedIds) { try { await fetch(`/api/materials/${id}`, { method: 'DELETE' }); deleted++; } catch {} }
               toast.success(`Deleted ${deleted} materials`);
               setSelectedIds([]); setBulkDeleting(false);
-              // Force re-fetch both SWR hooks
-              await mutate();
+              // Invalidate all material cache keys
+              globalMutate((key) => typeof key === 'string' && key.includes('/api/materials'));
             }}
             className="px-4 py-1.5 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 disabled:opacity-50">
             {bulkDeleting ? 'Deleting...' : `Delete ${selectedIds.length}`}
