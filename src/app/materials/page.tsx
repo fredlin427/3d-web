@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, Column } from "@/components/shared/data-table";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Plus, MoreHorizontal, Eye, Pencil, Trash2, Download, Upload, Loader2, CheckCircle2, AlertTriangle, Clock, Package, Layers, TrendingDown, CalendarX } from "lucide-react";
 import { CaseUsagePopover } from "@/components/materials/case-usage-popover";
