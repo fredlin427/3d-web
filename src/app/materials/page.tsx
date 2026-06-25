@@ -175,12 +175,13 @@ export default function MaterialsPage() {
       m.category === "Resin Tanks" ? (
         <span className="text-sm tabular-nums">{m.currentQuantity} <span className="text-xs text-slate-400">in stock</span></span>
       ) : (
-      <StockBar
-        used={m.initialQuantity - m.currentQuantity}
-        remain={m.currentQuantity}
-        total={m.initialQuantity}
-        unit={m.unit}
-      />
+        <StockBar
+          used={m.initialQuantity - m.currentQuantity}
+          remain={m.currentQuantity}
+          total={m.initialQuantity}
+          unit={m.unit}
+        />
+      )
     )},
     { key: "storageLocation", header: "Location", render: (m) => <span className="text-xs text-slate-500">{m.storageLocation || "—"}</span> },
     { key: "expiryDate", header: "Expiry", sortable: true, render: (m) => {
