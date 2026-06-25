@@ -18,6 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { HierarchicalTable } from "@/components/charts/hierarchical-table";
 import type { StackedRow } from "@/components/charts/hierarchical-table";
+import { PivotTable } from "@/components/charts/pivot-table";
 import { DrillDownPanel } from "@/components/charts/drill-down-panel";
 import { exportPNG } from "@/lib/export-utils";
 
@@ -129,6 +130,7 @@ export default function ChartBuilderPage() {
   const [activeFilters, setActiveFilters] = useState<Record<string, string[]>>({});
   const [expandedFilter, setExpandedFilter] = useState<string | null>(null);
   const [showTable, setShowTable] = useState(true);
+  const [tableMode, setTableMode] = useState<"hierarchical" | "pivot">("pivot");
   const [groupTop, setGroupTop] = useState(12); // 0=all, N=top N + Other
   const [paletteKey, setPaletteKey] = useState(DEFAULT_PALETTE);
   const CHART_COLORS = COLOR_PALETTES[paletteKey] || COLOR_PALETTES[DEFAULT_PALETTE];
@@ -832,20 +834,44 @@ export default function ChartBuilderPage() {
             </CardContent>
           </Card>
 
-          {/* ─── Hierarchical Breakdown Table (always expanded) ─── */}
+          {/* ─── Table View (Pivot or Hierarchical) ─── */}
           {showTable && hasStacked && (
             <Card className="border-0 shadow-sm">
-              <CardHeader className="pb-2 pt-4 px-5">
+              <CardHeader className="pb-2 pt-4 px-5 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                  <ListTree className="h-4 w-4 text-primary" />
-                  Breakdown: {FIELD_LABELS[xField] || xField} → {FIELD_LABELS[stackBy] || stackBy}
+                  {tableMode === "pivot" ? <Table2 className="h-4 w-4 text-primary" /> : <ListTree className="h-4 w-4 text-primary" />}
+                  {tableMode === "pivot"
+                    ? `Pivot: ${FIELD_LABELS[xField] || xField} × ${FIELD_LABELS[stackBy] || stackBy}`
+                    : `Breakdown: ${FIELD_LABELS[xField] || xField} → ${FIELD_LABELS[stackBy] || stackBy}`}
                 </CardTitle>
+                <div className="flex bg-slate-100 rounded-lg p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setTableMode("pivot")}
+                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${tableMode === "pivot" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                  >
+                    Pivot
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTableMode("hierarchical")}
+                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${tableMode === "hierarchical" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                  >
+                    List
+                  </button>
+                </div>
               </CardHeader>
               <CardContent className="px-2 pb-4">
-                <HierarchicalTable data={stackedData} total={total}
-                  primaryLabel={FIELD_LABELS[xField] || xField}
-                  secondaryLabel={FIELD_LABELS[stackBy] || stackBy}
-                  colors={CHART_COLORS} />
+                {tableMode === "pivot" ? (
+                  <PivotTable data={stackedData} total={total}
+                    rowLabel={FIELD_LABELS[xField] || xField}
+                    colLabel={FIELD_LABELS[stackBy] || stackBy} />
+                ) : (
+                  <HierarchicalTable data={stackedData} total={total}
+                    primaryLabel={FIELD_LABELS[xField] || xField}
+                    secondaryLabel={FIELD_LABELS[stackBy] || stackBy}
+                    colors={CHART_COLORS} />
+                )}
               </CardContent>
             </Card>
           )}
