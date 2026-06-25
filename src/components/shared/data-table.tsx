@@ -27,12 +27,14 @@ interface DataTableProps<T> {
   columnPicker?: ColumnPickerConfig;
   density?: "compact" | "comfortable";
   striped?: boolean;
+  selectable?: { selected: string[]; onChange: (ids: string[]) => void };
 }
 
 export function DataTable<T>({
   data, columns, keyField = "id", searchValue = "", onSearchChange, searchPlaceholder,
   isLoading, emptyTitle = "No records", emptyDescription, pageSize = 15, actions, toolbar,
   columnPicker, density = "comfortable", striped = true,
+  selectable,
 }: DataTableProps<T>) {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -123,6 +125,19 @@ export function DataTable<T>({
           <Table>
             <TableHeader>
               <TableRow className="border-b border-slate-100 bg-slate-50/50 hover:bg-slate-50/50">
+                {selectable && (
+                  <TableHead className="w-10">
+                    <input
+                      type="checkbox"
+                      checked={selectable.selected.length === data.length && data.length > 0}
+                      onChange={() => {
+                        if (selectable.selected.length === data.length) selectable.onChange([]);
+                        else selectable.onChange(data.map((d: any) => d[keyField]));
+                      }}
+                      className="rounded border-slate-300 h-3.5 w-3.5"
+                    />
+                  </TableHead>
+                )}
                 {visibleColumns.map((col) => (
                   <TableHead
                     key={col.key}
@@ -144,9 +159,9 @@ export function DataTable<T>({
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={visibleColumns.length} className="h-40"><LoadingState text="Loading..." /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={visibleColumns.length + (selectable ? 1 : 0)} className="h-40"><LoadingState text="Loading..." /></TableCell></TableRow>
               ) : paged.length === 0 ? (
-                <TableRow><TableCell colSpan={visibleColumns.length} className="h-40"><EmptyState title={emptyTitle} description={emptyDescription} /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={visibleColumns.length + (selectable ? 1 : 0)} className="h-40"><EmptyState title={emptyTitle} description={emptyDescription} /></TableCell></TableRow>
               ) : (
                 paged.map((item) => (
                   <TableRow
@@ -156,6 +171,23 @@ export function DataTable<T>({
                       striped && "even:bg-slate-50/30"
                     )}
                   >
+                    {selectable && (
+                      <TableCell className="w-10">
+                        <input
+                          type="checkbox"
+                          checked={selectable.selected.includes(String((item as any)[keyField]))}
+                          onChange={() => {
+                            const id = String((item as any)[keyField]);
+                            selectable.onChange(
+                              selectable.selected.includes(id)
+                                ? selectable.selected.filter((s) => s !== id)
+                                : [...selectable.selected, id]
+                            );
+                          }}
+                          className="rounded border-slate-300 h-3.5 w-3.5"
+                        />
+                      </TableCell>
+                    )}
                     {visibleColumns.map((col) => (
                       <TableCell key={col.key} className={cn(density === "compact" ? "py-1.5 text-xs" : "py-3 text-sm", col.className)}>
                         {col.render ? col.render(item) : String((item as Record<string, unknown>)[col.key] ?? "")}

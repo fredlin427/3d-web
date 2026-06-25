@@ -49,6 +49,8 @@ export default function CasesPage() {
   const [deleteCaseNumber, setDeleteCaseNumber] = useState("");
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const fetchCases = useCallback(async () => {
     setLoading(true);
@@ -206,6 +208,40 @@ export default function CasesPage() {
         </div>
       </div>
 
+      {/* Bulk action bar */}
+      {selectedIds.length > 0 && (
+        <div className="flex items-center gap-3 rounded-xl bg-blue-50 border border-blue-200 px-4 py-3">
+          <span className="text-sm font-semibold text-blue-700">{selectedIds.length} case{selectedIds.length > 1 ? 's' : ''} selected</span>
+          <div className="flex-1" />
+          <button
+            type="button"
+            onClick={() => setSelectedIds([])}
+            className="text-xs text-slate-500 hover:text-slate-700 font-medium"
+          >
+            Clear
+          </button>
+          <button
+            type="button"
+            disabled={bulkDeleting}
+            onClick={async () => {
+              if (!confirm(`Delete ${selectedIds.length} selected cases? This cannot be undone.`)) return;
+              setBulkDeleting(true);
+              let deleted = 0;
+              for (const id of selectedIds) {
+                try { await fetch(`/api/cases/${id}`, { method: 'DELETE' }); deleted++; } catch {}
+              }
+              toast.success(`Deleted ${deleted} cases`);
+              setSelectedIds([]);
+              setBulkDeleting(false);
+              fetchCases();
+            }}
+            className="px-4 py-1.5 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 disabled:opacity-50"
+          >
+            {bulkDeleting ? 'Deleting...' : `Delete ${selectedIds.length}`}
+          </button>
+        </div>
+      )}
+
       {/* Import result banner */}
       {importResult && (
         <div className={cn("rounded-xl p-4 flex items-center gap-4", importResult.errorCount > 0 ? "bg-amber-50 border border-amber-200" : "bg-emerald-50 border border-emerald-200")}>
@@ -226,6 +262,7 @@ export default function CasesPage() {
         emptyTitle="No cases found"
         emptyDescription="Create a new case record to get started."
         density="compact"
+        selectable={{ selected: selectedIds, onChange: setSelectedIds }}
         columnPicker={{ columns: ALL_COLUMNS, selected: visibleCols, onChange: setVisibleCols }}
         toolbar={
           <div className="flex gap-2">
