@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDate, getStatusBadgeVariant } from "@/lib/utils";
-import { MATERIAL_FIELD_REGISTRY, MATERIAL_CATEGORY_SETTINGS_TYPE, MATERIAL_CATEGORY_SECTION_ORDERS } from "@/lib/field-registry";
+import { MATERIAL_FIELD_REGISTRY, MATERIAL_CATEGORY_SETTINGS_TYPE, MATERIAL_CATEGORY_SECTION_ORDERS, MATERIAL_CATEGORY_FIELDS } from "@/lib/field-registry";
 import type { FieldDef } from "@/lib/field-registry";
 
 /** Renders material detail fields dynamically from settings (same as edit form) */
@@ -20,9 +20,15 @@ export function MaterialDetailFields({ material }: { material: Record<string, an
       fetch(`/api/settings?type=${settingsType}`)
         .then((r) => r.json())
         .then((j) => {
-          if (cancelled || !j.success || !j.data?.length) return;
-          // ... rest stays same
-          const active = j.data.filter((s: any) => s.isActive).sort((a: any, b: any) => a.sortOrder - b.sortOrder);
+          if (cancelled || !j.success) return;
+          // Fallback: if no settings exist yet, use registry defaults
+          let active;
+          if (!j.data?.length) {
+            const catFields = MATERIAL_CATEGORY_FIELDS[cat] || [];
+            active = catFields.map((key: string, i: number) => ({ id: `fallback-${key}`, type: settingsType, value: key, sortOrder: i, isActive: true }));
+          } else {
+            active = j.data.filter((s: any) => s.isActive).sort((a: any, b: any) => a.sortOrder - b.sortOrder);
+          }
           const fields: (FieldDef & { displayValue: string })[] = [];
           const seen = new Set<string>();
           for (const item of active) {

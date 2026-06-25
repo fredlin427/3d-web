@@ -16,8 +16,14 @@ export function CaseDetailFields({ caseData }: { caseData: Record<string, any> }
       fetch("/api/settings?type=case_form_field")
         .then((r) => r.json())
         .then((j) => {
-          if (cancelled || !j.success || !j.data?.length) return;
-          const active = j.data.filter((s: any) => s.isActive).sort((a: any, b: any) => a.sortOrder - b.sortOrder);
+          if (cancelled || !j.success) return;
+          // Fallback: if no settings exist yet, use registry defaults
+          let active;
+          if (!j.data?.length) {
+            active = Object.keys(CASE_FIELD_REGISTRY).map((key, i) => ({ id: `fallback-${key}`, type: "case_form_field", value: key, sortOrder: i, isActive: true }));
+          } else {
+            active = j.data.filter((s: any) => s.isActive).sort((a: any, b: any) => a.sortOrder - b.sortOrder);
+          }
           const fields: (FieldDef & { displayValue: string })[] = [];
           const seen = new Set<string>();
           for (const item of active) {
