@@ -180,7 +180,34 @@ export async function POST(request: NextRequest) {
         data.purpose = data.purpose || "Imported record";
         data.hospital = data.hospital || "QEH";
 
-        await (prisma.case as any).create({ data });
+        const created = await (prisma.case as any).create({ data });
+
+        // Create default progress steps for the imported case
+        const DEFAULT_STEPS = [
+          "Application Received","Approval","Segmentation / Design",
+          "Verify Segmentation / Design","Printing","Post-processing",
+          "Final Product","Completion",
+        ];
+        for (let si = 0; si < DEFAULT_STEPS.length; si++) {
+          await (prisma.caseProgressStep as any).create({
+            data: {
+              caseId: created.id,
+              stepName: DEFAULT_STEPS[si],
+              stepOrder: si,
+              status: data.completionDate ? "Completed" : (si === 0 ? "Completed" : "Not started"),
+              completedDate: data.completionDate && si === DEFAULT_STEPS.length - 1 ? data.completionDate : (si === 0 ? data.applicationDate : null),
+            },
+          });
+        }
+
+        // Set currentProgressStep based on first non-completed step, or last if all done
+        if (!data.completionDate) {
+          await (prisma.case as any).update({
+            where: { id: created.id },
+            data: { currentProgressStep: DEFAULT_STEPS[1] }, // After Application Received
+          });
+        }
+
         imported++;
       } catch (e: any) {
         errors.push(`Row error: ${e.message}`);
