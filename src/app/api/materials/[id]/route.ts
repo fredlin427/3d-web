@@ -141,7 +141,13 @@ export async function DELETE(
   try {
     const { id } = await params;
     const material = await prisma.material.findUnique({ where: { id } });
+    if (!material) {
+      return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
+    }
 
+    // Delete related records first (FK constraints)
+    await prisma.stockTransaction.deleteMany({ where: { materialId: id } });
+    await prisma.caseMaterialUsage.deleteMany({ where: { materialId: id } });
     await prisma.material.delete({ where: { id } });
 
     await createAuditLog({
