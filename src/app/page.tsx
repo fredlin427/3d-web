@@ -302,8 +302,11 @@ export default function DashboardPage() {
                             )}
                           </div>
                           {(c.progressStats?.total > 0) && (
-                            <div className="mt-1.5 h-1 rounded-full bg-slate-100 overflow-hidden">
-                              <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-500" style={{ width: `${Math.round((c.progressStats.done / c.progressStats.total) * 100)}%` }} />
+                            <div className="mt-1.5 flex items-center gap-1.5">
+                              <div className="flex-1 h-1 rounded-full bg-slate-100 overflow-hidden">
+                                <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-500" style={{ width: `${Math.round((c.progressStats.done / c.progressStats.total) * 100)}%` }} />
+                              </div>
+                              <span className="text-[10px] text-slate-400 tabular-nums font-medium">{c.progressStats.done}/{c.progressStats.total}</span>
                             </div>
                           )}
                         </div>
@@ -326,8 +329,11 @@ export default function DashboardPage() {
                             <span className="text-[10px] text-slate-400">{c.department}</span>
                           </div>
                           {(c.progressStats?.total > 0) && (
-                            <div className="mt-1.5 h-1 rounded-full bg-slate-100 overflow-hidden">
-                              <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-500" style={{ width: `${Math.round((c.progressStats.done / c.progressStats.total) * 100)}%` }} />
+                            <div className="mt-1.5 flex items-center gap-1.5">
+                              <div className="flex-1 h-1 rounded-full bg-slate-100 overflow-hidden">
+                                <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-500" style={{ width: `${Math.round((c.progressStats.done / c.progressStats.total) * 100)}%` }} />
+                              </div>
+                              <span className="text-[10px] text-slate-400 tabular-nums font-medium">{c.progressStats.done}/{c.progressStats.total}</span>
                             </div>
                           )}
                         </div>
@@ -352,6 +358,14 @@ export default function DashboardPage() {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-slate-800 truncate">{c.caseNumber} <span className="text-xs text-slate-400 font-normal">{formatDate(c.applicationDate)}</span></p>
                           <p className="text-xs text-slate-500 truncate">{c.projectTitle}</p>
+                          {(c.progressStats?.total > 0) && (
+                            <div className="mt-1.5 flex items-center gap-1.5">
+                              <div className="flex-1 h-1 rounded-full bg-slate-100 overflow-hidden">
+                                <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-500" style={{ width: `${Math.round((c.progressStats.done / c.progressStats.total) * 100)}%` }} />
+                              </div>
+                              <span className="text-[10px] text-slate-400 tabular-nums font-medium">{c.progressStats.done}/{c.progressStats.total}</span>
+                            </div>
+                          )}
                         </div>
                       </Link>
                     ))}
@@ -422,10 +436,13 @@ export default function DashboardPage() {
                         <span className="text-[10px] text-blue-600 font-medium truncate">{c.currentProgressStep}</span>
                       </div>
                     )}
-                    {/* Mini progress bar */}
+                    {/* Mini progress bar with count */}
                     {(c as any).progressStats?.total > 0 && (
-                      <div className="mt-1.5 h-1 rounded-full bg-slate-100 overflow-hidden">
-                        <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-500" style={{ width: `${Math.round((((c as any).progressStats.done / (c as any).progressStats.total) * 100))}%` }} />
+                      <div className="mt-1.5 flex items-center gap-1.5">
+                        <div className="flex-1 h-1 rounded-full bg-slate-100 overflow-hidden">
+                          <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-500" style={{ width: `${Math.round((((c as any).progressStats.done / (c as any).progressStats.total) * 100))}%` }} />
+                        </div>
+                        <span className="text-[10px] text-slate-400 tabular-nums font-medium">{(c as any).progressStats.done}/{(c as any).progressStats.total}</span>
                       </div>
                     )}
                   </CardContent>
