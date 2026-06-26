@@ -486,15 +486,15 @@ export default function DashboardPage() {
           const totalDept = deptFlat.reduce((s: number, d: any) => s + d.value, 0);
 
           return (<>
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="!flex items-center justify-between pb-2">
+          <Card className="border-0 shadow-sm overflow-visible">
+            <CardHeader className="!flex items-center justify-between pb-1">
               <CardTitle className="text-[15px] font-semibold">By Department</CardTitle>
               <div className="flex items-center gap-1">
                 <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export PNG" onClick={() => exportPNG("chart-by-dept", "cases-by-department")}><Camera className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
                 <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export XLSX" onClick={() => exportDataFile(deptFlat, "cases-by-department")}><Download className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
               </div>
             </CardHeader>
-            <CardContent id="chart-by-dept" className="!px-1 !pt-0 !pb-2">
+            <CardContent id="chart-by-dept" className="!p-0">
               <InteractiveDonut
                 data={deptFlat}
                 colors={CHART_COLORS}

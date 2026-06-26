@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Sector, Tooltip } from "recharts";
+import { ResponsivePie } from "@nivo/pie";
 import { cn } from "@/lib/utils";
 
-// ── Types ──
 export interface DonutSlice {
   name: string;
   value: number;
@@ -19,126 +18,104 @@ interface Props {
   className?: string;
 }
 
-// ── Exploded active slice ──
-function ActiveSector(props: any) {
-  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
-  const mid = (startAngle + endAngle) / 2;
-  const rad = (Math.PI / 180);
-  const dx = Math.cos(-mid * rad) * 16;
-  const dy = Math.sin(-mid * rad) * 16;
-  return (
-    <g transform={`translate(${dx},${dy})`}>
-      <Sector cx={cx} cy={cy} innerRadius={innerRadius} outerRadius={outerRadius + 4} startAngle={startAngle} endAngle={endAngle} fill={fill} stroke="#fff" strokeWidth={2} style={{ filter: "drop-shadow(0 6px 16px rgba(0,0,0,0.2))" }} />
-    </g>
-  );
-}
-
-// ── Legend ──
-function Legend({ data, colors, activeIndex, onSelect }: { data: DonutSlice[]; colors: string[]; activeIndex: number | null; onSelect?: (slice: DonutSlice, index: number) => void }) {
-  return (
-    <div className="flex flex-wrap gap-1.5 justify-center px-2 pt-2">
-      {data.map((d, i) => (
-        <button
-          key={d.name}
-          onClick={() => onSelect?.(d, i)}
-          className={cn(
-            "flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-200",
-            "border hover:shadow-sm active:scale-95",
-            activeIndex === i
-              ? "bg-slate-100 border-slate-300 shadow-sm"
-              : "border-transparent hover:bg-slate-50 hover:border-slate-200"
-          )}
-        >
-          <span
-            className="w-3 h-3 rounded-sm shrink-0 ring-1 ring-black/10 transition-all duration-300"
-            style={{
-              backgroundColor: colors[i % colors.length],
-              opacity: activeIndex === null || activeIndex === i ? 1 : 0.25,
-            }}
-          />
-          <span className="text-slate-700">{d.name}</span>
-          <span className="text-slate-400 font-semibold tabular-nums">{d.value}</span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
-// ── Tooltip ──
-function CustomTooltip({ active, payload }: any) {
-  if (!active || !payload?.length) return null;
-  const d = payload[0];
-  return (
-    <div className="bg-white/95 backdrop-blur-md rounded-xl px-3 py-2 shadow-xl ring-1 ring-black/5 text-sm">
-      <p className="font-semibold text-slate-800">{d.name}</p>
-      <p className="text-slate-500 text-xs">{d.value} cases</p>
-    </div>
-  );
-}
-
-// ── Main Component ──
 export function InteractiveDonut({ data, colors, total, onSelect, className }: Props) {
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
-  const handleClick = useCallback((_: any, index: number) => {
-    const next = activeIndex === index ? null : index;
-    setActiveIndex(next);
-    if (next !== null) onSelect?.(data[next], next);
-    else onSelect?.(data[index], index); // for the first click case
-  }, [activeIndex, data, onSelect]);
+  const nivoData = data.map(d => ({ id: d.name, label: d.name, value: d.value }));
+
+  const handleClick = useCallback((slice: { id: string | number }, _event: React.MouseEvent) => {
+    const id = String(slice.id);
+    const nextId = activeId === id ? null : id;
+    setActiveId(nextId);
+    if (nextId) {
+      const idx = data.findIndex(d => d.name === nextId);
+      onSelect?.(data[idx], idx);
+    }
+  }, [activeId, data, onSelect]);
+
+  const colorMap = Object.fromEntries(data.map((d, i) => [d.name, colors[i % colors.length]]));
 
   return (
-    <div className={cn("space-y-1", className)}>
-      {/* Donut */}
-      <div className="w-full" style={{ maxWidth: 500, margin: "0 auto" }}>
-        <ResponsiveContainer width="100%" height={360}>
-          <PieChart>
-            {/* Center text */}
-            <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" style={{ pointerEvents: "none" }}>
-              <tspan x="50%" dy="-6" style={{ fontSize: 32, fontWeight: 800, fill: "#0f172a" }}>
-                {activeIndex !== null ? data[activeIndex].value : total}
-              </tspan>
-              <tspan x="50%" dy="22" style={{ fontSize: 11, fontWeight: 500, fill: "#94a3b8" }}>
-                {activeIndex !== null ? data[activeIndex].name : "Total"}
-              </tspan>
-            </text>
-            <Pie
-              data={data} dataKey="value" nameKey="name" cx="50%" cy="50%"
-              outerRadius={155} innerRadius={85} paddingAngle={4}
-              isAnimationActive animationDuration={500} animationEasing="ease-out"
-              onClick={handleClick as any}
-              onMouseEnter={((_: any, i: number) => { if (activeIndex === null) setActiveIndex(i); }) as any}
-              onMouseLeave={(() => { if (activeIndex === null) setActiveIndex(null); }) as any}
-              style={{ cursor: "pointer", outline: "none" } as any}
-              label={({ name, value, percent }: any) => {
-                if ((percent || 0) < 0.03) return "";
-                return `${name} ${value}`;
-              }}
-              labelLine={{ stroke: "#cbd5e1", strokeWidth: 0.5 }}
-            >
-              {data.map((_, i) => (
-                <Cell
-                  key={i}
-                  fill={colors[i % colors.length]}
-                  stroke="#fff"
-                  strokeWidth={2}
-                  style={{
-                    opacity: activeIndex === null ? 1 : activeIndex === i ? 1 : 0.18,
-                    transition: "opacity 0.35s ease",
-                  } as any}
-                />
-              ))}
-            </Pie>
-            <Tooltip content={<CustomTooltip />} />
-          </PieChart>
-        </ResponsiveContainer>
+    <div className={cn("space-y-2", className)} style={{ height: 480 }}>
+      <ResponsivePie
+        data={nivoData}
+        value="value"
+        id="id"
+        innerRadius={0.55}
+        padAngle={4}
+        cornerRadius={2}
+        activeOuterRadiusOffset={activeId ? 10 : 0}
+        activeInnerRadiusOffset={activeId ? 4 : 0}
+        // Colors: active slice full, inactive dimmed
+        colors={({ id }) => {
+          const base = colorMap[String(id)] || "#94a3b8";
+          if (!activeId) return base;
+          return String(id) === activeId ? base : `${base}2E`; // hex + 18% opacity
+        }}
+        onClick={handleClick}
+        enableArcLabels
+        enableArcLinkLabels
+        arcLabel={d => `${d.id} ${d.value}`}
+        arcLabelsSkipAngle={8}
+        arcLinkLabelsSkipAngle={8}
+        arcLinkLabelsThickness={1}
+        arcLinkLabelsColor={{ from: "color" }}
+        arcLinkLabelsDiagonalLength={12}
+        arcLinkLabelsStraightLength={24}
+        arcLabelsTextColor="#334155"
+        // Animation
+        animate
+        motionConfig="gentle"
+        // Tooltip
+        tooltip={({ datum }) => {
+          const pct = total > 0 ? ((datum.value / total) * 100).toFixed(1) : "0";
+          return (
+            <div className="bg-white/95 backdrop-blur-md rounded-xl px-3 py-2 shadow-xl ring-1 ring-black/5 text-sm">
+              <p className="font-semibold text-slate-800">{datum.label}</p>
+              <p className="text-slate-500 text-xs">{datum.value} cases · {pct}%</p>
+            </div>
+          );
+        }}
+        // Legends
+        legends={[
+          {
+            anchor: "bottom",
+            direction: "row",
+            justify: false,
+            translateY: 56,
+            itemsSpacing: 8,
+            itemWidth: 100,
+            itemHeight: 16,
+            itemTextColor: "#475569",
+            symbolSize: 12,
+            symbolShape: "square",
+            onClick: (d) => {
+              const idx = data.findIndex(item => item.name === d.id);
+              setActiveId(String(d.id));
+              onSelect?.(data[idx], idx);
+            },
+            effects: [{
+              on: "hover",
+              style: { itemTextColor: "#0f172a", symbolSize: 14 },
+            }],
+          },
+        ]}
+        theme={{
+          labels: { text: { fontSize: 13, fontWeight: 600 } },
+          legends: { text: { fontSize: 12, fontWeight: 500 } },
+        }}
+      />
+      {/* Center overlay */}
+      <div className="relative -mt-[320px] pointer-events-none flex items-center justify-center" style={{ height: 320 }}>
+        <div className="text-center">
+          <p className="text-4xl font-extrabold text-slate-900 tabular-nums tracking-tight">
+            {activeId !== null ? data.find(d => d.name === activeId)?.value ?? total : total}
+          </p>
+          <p className="text-xs font-medium text-slate-400 mt-1">
+            {activeId !== null ? data.find(d => d.name === activeId)?.name : "Total Cases"}
+          </p>
+        </div>
       </div>
-
-      {/* Legend */}
-      <Legend data={data} colors={colors} activeIndex={activeIndex} onSelect={(d, i) => {
-        setActiveIndex(i);
-        onSelect?.(d, i);
-      }} />
     </div>
   );
 }
