@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { X } from "lucide-react";
-import { ResponsivePie } from "@nivo/pie";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
 
 interface SubItem { label: string; value: number }
@@ -62,15 +62,19 @@ export function FocusCard({ open, label, value, total, chartType = "donut", colo
         {/* Chart viz */}
         <div className="px-6 pt-6 pb-2" style={{ height: 220 }}>
           {isPie ? (
-            <ResponsivePie
-              data={pieData} value="value" id="id"
-              innerRadius={chartType === "donut" ? 0.55 : 0}
-              padAngle={3} cornerRadius={2}
-              colors={[color, "#e2e8f0"]}
-              enableArcLabels={false} enableArcLinkLabels={false}
-              animate motionConfig="gentle"
-              isInteractive={false}
-            />
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={pieData} dataKey="value" nameKey="id" cx="50%" cy="50%"
+                  innerRadius={chartType === "donut" ? "55%" : 0}
+                  outerRadius="90%" paddingAngle={3}
+                  animationDuration={500} animationEasing="ease-out" isAnimationActive
+                >
+                  <Cell fill={color} stroke="#fff" strokeWidth={2} />
+                  <Cell fill="#e2e8f0" stroke="none" />
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
           ) : (
             /* Bar: simple visual bar */
             <div className="flex items-end justify-center h-full pb-4">

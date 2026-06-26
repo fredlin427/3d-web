@@ -9,7 +9,6 @@ import { Camera, RefreshCw, Loader2, Table2, ListTree } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { COLOR_PALETTES, DEFAULT_PALETTE, SOURCES, CHART_TYPES, FIELD_LABELS, SOURCE_FIELDS, getDefaultStackBy } from "@/lib/chart-config";
 import { DonutChart, type DonutSlice } from "@/components/charts/donut-chart";
-import { CompositeDonut } from "@/components/charts/composite-donut";
 import { BarChartView } from "@/components/charts/bar-chart";
 import { HierarchicalTable, type StackedRow } from "@/components/charts/hierarchical-table";
 import { PivotTable } from "@/components/charts/pivot-table";
@@ -161,11 +160,8 @@ export default function ChartBuilderPage() {
             <CardContent className="!p-2" id="chart-builder-preview" ref={containerRef}>
               <ChartFullscreen title={title}>
                 {loading ? <div className="flex items-center justify-center" style={{ height: 500 }}><Loader2 className="h-8 w-8 text-primary animate-spin" /></div>
-                : isPie && hasStacked ? (
-                  <CompositeDonut groups={donutData} colors={colors} total={total} height={520}
-                    onSelect={(slice, idx) => { setFocusIdx(idx); setFocusItem({ label: slice.name, value: slice.value, children: slice.children?.map(c => ({ label: c.label, value: c.value })) || [] }); setFocusOpen(true); }} />
-                ) : isPie ? (
-                  <DonutChart data={donutData} colors={colors} total={total} height={500}
+                : isPie ? (
+                  <DonutChart data={donutData} colors={colors} total={total} height={500} composite={hasStacked}
                     onSelect={(slice, idx) => { setFocusIdx(idx); setFocusItem({ label: slice.name, value: slice.value, children: slice.children?.map(c => ({ label: c.label, value: c.value })) || [] }); setFocusOpen(true); }} />
                 ) : (
                   <BarChartView type={chartType as "bar"|"barH"|"line"|"area"|"stacked"} data={barData} dataKeys={hasStacked ? barKeys : ["value"]} colors={colors}
