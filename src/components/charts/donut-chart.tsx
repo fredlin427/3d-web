@@ -12,31 +12,32 @@ export interface DonutSlice {
 interface Props {
   data: DonutSlice[];
   colors: string[];
-  total: number;
+  total?: number;
   height?: number;
-  /** If true, render two-level donut (inner groups + outer sub-items) */
   composite?: boolean;
   onSelect?: (slice: DonutSlice, index: number) => void;
 }
 
-function shadeColor(hex: string, step: number, total: number): string {
+function shadeColor(hex: string, step: number, totalKids: number): string {
   const num = parseInt(hex.replace("#", ""), 16);
   let r = (num >> 16) & 0xFF, g = (num >> 8) & 0xFF, b = num & 0xFF;
-  const mix = Math.min(0.35, step / (total + 2));
+  const mix = Math.min(0.35, step / (totalKids + 2));
   r = Math.round(r + (255 - r) * mix);
   g = Math.round(g + (255 - g) * mix);
   b = Math.round(b + (255 - b) * mix);
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
 }
 
-const tooltipStyle = {
+const TOOLTIP = {
   borderRadius: 14, border: "none",
   background: "rgba(255,255,255,0.95)", backdropFilter: "blur(16px)",
   boxShadow: "0 8px 32px rgba(0,0,0,0.08)", fontSize: 13, padding: "10px 14px",
 };
 
-export function DonutChart({ data, colors, total, height = 480, composite = false, onSelect }: Props) {
+export function DonutChart({ data, colors, total: propTotal, height = 480, composite = false, onSelect }: Props) {
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
+
+  const computedTotal = propTotal ?? data.reduce((s, d) => s + d.value, 0);
 
   const handleClick = useCallback((_: any, index: number) => {
     const next = activeIdx === index ? null : index;
@@ -46,7 +47,6 @@ export function DonutChart({ data, colors, total, height = 480, composite = fals
 
   const flatData = data.map(d => ({ name: d.name, value: d.value }));
 
-  // Build outer ring data for composite mode
   const outerData: { name: string; value: number; parentIdx: number }[] = [];
   if (composite) {
     data.forEach((g, gi) => {
@@ -57,34 +57,33 @@ export function DonutChart({ data, colors, total, height = 480, composite = fals
   }
 
   return (
-    <div style={{ height }}>
+    <div style={{ height, position: "relative" }}>
       <ResponsiveContainer width="100%" height="100%">
-        <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
-          {/* Outer ring (composite mode) */}
+        <PieChart margin={{ top: 24, right: 24, bottom: 24, left: 24 }}>
+          {/* Outer ring (composite) */}
           {composite && outerData.length > 0 && (
             <Pie
               key={`outer-${activeIdx}`}
               data={outerData} dataKey="value" nameKey="name" cx="50%" cy="50%"
-              innerRadius="62%" outerRadius="85%" paddingAngle={1}
+              innerRadius="64%" outerRadius="85%" paddingAngle={1}
               animationDuration={400} animationEasing="ease-out" isAnimationActive
             >
               {outerData.map((d, i) => {
                 const base = colors[d.parentIdx % colors.length];
                 const kids = data[d.parentIdx]?.children?.length || 1;
                 const idx = data[d.parentIdx]?.children?.findIndex(c => c.label === d.name) ?? 0;
-                const fill = shadeColor(base, idx, kids);
-                return <Cell key={i} fill={fill} stroke="#fff" strokeWidth={0.5}
+                return <Cell key={i} fill={shadeColor(base, idx, kids)} stroke="#fff" strokeWidth={0.5}
                   opacity={activeIdx !== null && d.parentIdx !== activeIdx ? 0.15 : 1} />;
               })}
             </Pie>
           )}
 
-          {/* Inner ring / main ring */}
+          {/* Inner ring */}
           <Pie
-            key={`inner-${composite}-${activeIdx}`}
+            key={`main-${composite}-${activeIdx}`}
             data={flatData} dataKey="value" nameKey="name" cx="50%" cy="50%"
-            innerRadius={composite ? "35%" : "50%"}
-            outerRadius={composite ? "62%" : "85%"}
+            innerRadius={composite ? "37%" : "52%"}
+            outerRadius={composite ? "64%" : "85%"}
             paddingAngle={4}
             animationDuration={400} animationEasing="ease-out" isAnimationActive
             label={({ name, value, percent }: any) => {
@@ -101,13 +100,23 @@ export function DonutChart({ data, colors, total, height = 480, composite = fals
             ))}
           </Pie>
 
+          {/* Center text — inside SVG, won't overlap */}
+          <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" style={{ pointerEvents: "none" }}>
+            <tspan x="50%" dy="-8" style={{ fontSize: 28, fontWeight: 800, fill: "#0f172a" }}>
+              {activeIdx !== null ? data[activeIdx].value : computedTotal}
+            </tspan>
+            <tspan x="50%" dy="22" style={{ fontSize: 11, fontWeight: 500, fill: "#94a3b8" }}>
+              {activeIdx !== null ? data[activeIdx].name : "Total"}
+            </tspan>
+          </text>
+
           <Tooltip
             content={({ active, payload }: any) => {
               if (!active || !payload?.length) return null;
               const d = payload[0];
-              const pct = total > 0 ? ((d.value / total) * 100).toFixed(1) : "0";
+              const pct = computedTotal > 0 ? ((d.value / computedTotal) * 100).toFixed(1) : "0";
               return (
-                <div style={tooltipStyle}>
+                <div style={TOOLTIP}>
                   <strong style={{ color: "#1e293b" }}>{d.name}</strong>
                   <br />
                   <span style={{ color: "#64748b" }}>{d.value} cases · {pct}%</span>
@@ -118,21 +127,8 @@ export function DonutChart({ data, colors, total, height = 480, composite = fals
         </PieChart>
       </ResponsiveContainer>
 
-      {/* Center text overlay */}
-      <div className="relative pointer-events-none flex items-center justify-center"
-        style={{ marginTop: `-${height * 0.55}px`, height: height * 0.55 }}>
-        <div className="text-center">
-          <p className="text-4xl font-extrabold text-slate-900 tabular-nums">
-            {activeIdx !== null ? data[activeIdx].value : total}
-          </p>
-          <p className="text-xs font-medium text-slate-400 mt-1">
-            {activeIdx !== null ? data[activeIdx].name : "Total"}
-          </p>
-        </div>
-      </div>
-
       {/* Legend */}
-      <div className="flex flex-wrap justify-center gap-2 pt-2">
+      <div className="flex flex-wrap justify-center gap-2 px-2">
         {data.map((d, i) => {
           const c = colors[i % colors.length];
           const dimmed = activeIdx !== null && activeIdx !== i;
