@@ -71,6 +71,7 @@ model CaseProgressStep {
   updatedAt     DateTime  @updatedAt @map("updated_at")
   case          Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
 
+  @@index([caseId])
   @@map("case_progress_steps")
 }
 
@@ -109,6 +110,8 @@ model Material {
   materialUsage    CaseMaterialUsage[]
   stockTransactions StockTransaction[]
 
+  @@index([batchNumber])
+  @@index([category])
   @@map("materials")
 }
 
@@ -127,6 +130,8 @@ model CaseMaterialUsage {
   case          Case              @relation(fields: [caseId], references: [id], onDelete: Cascade)
   material      Material          @relation(fields: [materialId], references: [id])
 
+  @@index([caseId])
+  @@index([materialId])
   @@map("case_material_usage")
 }
 
@@ -144,6 +149,8 @@ model StockTransaction {
   material        Material          @relation(fields: [materialId], references: [id])
   relatedCase     Case?             @relation(fields: [relatedCaseId], references: [id], onDelete: SetNull)
 
+  @@index([materialId])
+  @@index([relatedCaseId])
   @@map("stock_transactions")
 }
 
@@ -156,6 +163,8 @@ model AuditLog {
   staffName  String   @map("staff_name")
   createdAt  DateTime @default(now()) @map("created_at")
 
+  @@index([entityType, entityId])
+  @@index([createdAt])
   @@map("audit_logs")
 }
 

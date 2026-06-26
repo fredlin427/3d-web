@@ -313,7 +313,7 @@ export default function MaterialsPage() {
               setBulkDeleting(true);
               let deleted = 0;
               const idsToDelete = new Set(selectedIds);
-              for (const id of selectedIds) { try { await fetch(`/api/materials/${id}`, { method: 'DELETE' }); deleted++; } catch {} }
+              for (const id of selectedIds) { try { await fetch(`/api/materials/${id}`, { method: 'DELETE' }); deleted++; } catch (e) { console.error(e); } }
               toast.success(`Deleted ${deleted} materials`);
               setSelectedIds([]); setBulkDeleting(false);
               // Invalidate all material cache keys

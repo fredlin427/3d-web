@@ -67,6 +67,7 @@ export default function CasesPage() {
         params.set("dateFrom", `${startYear}-04-01`);
         params.set("dateTo", `${startYear + 1}-03-31`);
       }
+      params.set("pageSize", "0"); // fetch all for client-side filtering
 
       const res = await fetch(`/api/cases?${params}`);
       const json = await res.json();
@@ -228,7 +229,7 @@ export default function CasesPage() {
               setBulkDeleting(true);
               let deleted = 0;
               for (const id of selectedIds) {
-                try { await fetch(`/api/cases/${id}`, { method: 'DELETE' }); deleted++; } catch {}
+                try { await fetch(`/api/cases/${id}`, { method: 'DELETE' }); deleted++; } catch (e) { console.error(e); }
               }
               toast.success(`Deleted ${deleted} cases`);
               setSelectedIds([]);

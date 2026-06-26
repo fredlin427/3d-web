@@ -40,6 +40,7 @@ export async function PUT(
 
     return NextResponse.json({ success: true, data: step });
   } catch (error) {
+    console.error(error);
     return NextResponse.json(
       { success: false, error: "Failed to update progress step" },
       { status: 500 }
@@ -69,6 +70,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, data: null });
   } catch (error) {
+    console.error(error);
     return NextResponse.json(
       { success: false, error: "Failed to delete progress step" },
       { status: 500 }

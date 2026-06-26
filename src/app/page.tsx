@@ -15,9 +15,11 @@ import Link from "next/link";
 import { DEPARTMENT_LABELS } from "@/lib/constants";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LabelList } from "recharts";
 import { DEPARTMENTS, CATEGORIES } from "@/lib/constants";
+import { ChartFullscreen } from "@/components/charts/chart-fullscreen";
+import { FocusCard } from "@/components/charts/focus-card";
+import { InteractiveDonut } from "@/components/charts/interactive-donut";
+import { CHART_COLORS_9 as CHART_COLORS } from "@/lib/chart-colors";
 import * as XLSX from "xlsx";
-
-const CHART_COLORS = ["#4f46e5","#06b6d4","#10b981","#f59e0b","#ef4444","#8b5cf6","#ec4899","#f97316","#84cc16"];
 
 // Dynamic table config (same as chart-builder field registry)
 const TABLE_SOURCE_FIELDS: Record<string, string[]> = {
@@ -43,6 +45,7 @@ interface DashboardData {
   caseByDepartment: { department: string; count: number }[];
   caseBycategory: { category: string; count: number }[];
   caseByPurpose: { category: string; purpose: string; count: number }[];
+  caseByDepartmentWithPurposes?: { label: string; value: number; children: { label: string; value: number }[] }[];
   materialUsageTrend: { month: string; usageCount: number }[];
   materialUsageByCategory: { category: string; totalUsed: number }[];
 }
@@ -80,6 +83,10 @@ export default function DashboardPage() {
   const [allMaterials, setAllMaterials] = useState<any[]>([]); // for material stat panels
   const [dismissed, setDismissed] = useState(false);
   const [presMode, setPresMode] = useState(false);
+  // Focus state for donut
+  const [deptFocusOpen, setDeptFocusOpen] = useState(false);
+  const [deptFocusItem, setDeptFocusItem] = useState<any>(null);
+  const [deptFocusIdx, setDeptFocusIdx] = useState<number | null>(null);
   const [presChart, setPresChart] = useState<"treemap" | "bars" | "table">("treemap");
 
   // Dynamic table config
@@ -465,17 +472,56 @@ export default function DashboardPage() {
               <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export XLSX" onClick={() => exportDataFile(data?.caseVolumeByMonth || [], "case-volume")}><Download className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
             </div>
           </CardHeader>
-          <CardContent id="chart-case-volume"><ResponsiveContainer width="100%" height={260}><BarChart data={data?.caseVolumeByMonth || []} barSize={28}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f2f6" /><XAxis dataKey="month" tick={{ fontSize: 12, fill: "#8b8fa8" }} axisLine={false} tickLine={false} /><YAxis allowDecimals={false} tick={{ fontSize: 12, fill: "#8b8fa8" }} axisLine={false} tickLine={false} /><Tooltip cursor={{ fill: "#f8f9fc" }} /><Bar dataKey="count" fill="#4f46e5" radius={[6,6,0,0]} /></BarChart></ResponsiveContainer></CardContent></Card>
+          <ChartFullscreen title="Case Volume" subtitle="Monthly case count">
+            <CardContent id="chart-case-volume" className="!px-2"><ResponsiveContainer width="100%" height={300}><BarChart data={data?.caseVolumeByMonth || []} barSize={36}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f8fafc" /><XAxis dataKey="month" tick={{ fontSize: 12, fill: "#475569" }} axisLine={false} tickLine={false} /><YAxis allowDecimals={false} tick={{ fontSize: 12, fill: "#475569" }} axisLine={false} tickLine={false} /><Tooltip cursor={{ fill: "#f8f9fc" }} contentStyle={{ borderRadius: 12, border: "none", background: "rgba(255,255,255,0.95)", backdropFilter: "blur(12px)", boxShadow: "0 8px 32px rgba(0,0,0,0.08)", fontSize: 13, padding: "10px 14px" }} /><Bar dataKey="count" fill="#4f46e5" radius={[8,8,0,0]} animationDuration={400} animationEasing="ease-in-out" /></BarChart></ResponsiveContainer></CardContent>
+          </ChartFullscreen></Card>
 
-        <Card className="border-0 shadow-sm">
-          <CardHeader className="!flex items-center justify-between">
-            <CardTitle className="text-[15px] font-semibold">By Department</CardTitle>
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export PNG" onClick={() => exportPNG("chart-by-dept", "cases-by-department")}><Camera className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export XLSX" onClick={() => exportDataFile(data?.caseByDepartment || [], "cases-by-department")}><Download className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
-            </div>
-          </CardHeader>
-          <CardContent id="chart-by-dept"><ResponsiveContainer width="100%" height={280}><PieChart><Pie data={data?.caseByDepartment || []} dataKey="count" nameKey="department" cx="50%" cy="50%" outerRadius={100} innerRadius={55} paddingAngle={3} label={({ name, value }) => `${name}: ${value}`} labelLine={{ stroke: "#cbd5e1", strokeWidth: 1 }}>{(data?.caseByDepartment || []).map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="none" />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
+        {(() => {
+          const deptStacked = data?.caseByDepartmentWithPurposes || [];
+          const deptFlat = (data?.caseByDepartment || []).map((d: any) => ({
+            name: d.department,
+            value: d.count,
+            children: deptStacked.find((s: any) => s.label === d.department)?.children || [],
+          }));
+          const totalDept = deptFlat.reduce((s: number, d: any) => s + d.value, 0);
+
+          return (<>
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="!flex items-center justify-between pb-2">
+              <CardTitle className="text-[15px] font-semibold">By Department</CardTitle>
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export PNG" onClick={() => exportPNG("chart-by-dept", "cases-by-department")}><Camera className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export XLSX" onClick={() => exportDataFile(deptFlat, "cases-by-department")}><Download className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
+              </div>
+            </CardHeader>
+            <CardContent id="chart-by-dept" className="!px-1 !pt-0 !pb-2">
+              <InteractiveDonut
+                data={deptFlat}
+                colors={CHART_COLORS}
+                total={totalDept}
+                onSelect={(slice, idx) => {
+                  setDeptFocusIdx(idx);
+                  setDeptFocusItem(slice);
+                  setDeptFocusOpen(true);
+                }}
+              />
+            </CardContent>
+          </Card>
+
+          <FocusCard
+            key={deptFocusOpen ? deptFocusItem?.name || "f" : "c"}
+            open={deptFocusOpen}
+            label={deptFocusItem?.name || ""}
+            value={deptFocusItem?.value || 0}
+            total={totalDept}
+            chartType="donut"
+            color={deptFocusIdx !== null ? CHART_COLORS[deptFocusIdx % CHART_COLORS.length] : "#4f46e5"}
+            children={deptFocusItem?.children}
+            colors={CHART_COLORS}
+            onClose={() => { setDeptFocusOpen(false); setDeptFocusItem(null); setDeptFocusIdx(null); }}
+          />
+          </>);
+        })()}
 
         <Card className="border-0 shadow-sm">
           <CardHeader className="!flex items-center justify-between">
@@ -485,7 +531,9 @@ export default function DashboardPage() {
               <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export XLSX" onClick={() => exportDataFile(data?.materialUsageTrend || [], "material-usage-trend")}><Download className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
             </div>
           </CardHeader>
-          <CardContent id="chart-usage-trend"><ResponsiveContainer width="100%" height={280}><BarChart data={data?.materialUsageTrend || []} barSize={32}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f2f6" /><XAxis dataKey="month" tick={{ fontSize: 12, fill: "#8b8fa8" }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 12, fill: "#8b8fa8" }} axisLine={false} tickLine={false} /><Tooltip cursor={{ fill: "#f8f9fc" }} /><Bar dataKey="usageCount" fill="#f59e0b" radius={[6,6,0,0]} /></BarChart></ResponsiveContainer></CardContent></Card>
+          <ChartFullscreen title="Material Usage Trend" subtitle="Monthly usage count">
+            <CardContent id="chart-usage-trend" className="!px-2"><ResponsiveContainer width="100%" height={300}><BarChart data={data?.materialUsageTrend || []} barSize={36}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f8fafc" /><XAxis dataKey="month" tick={{ fontSize: 12, fill: "#475569" }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 12, fill: "#475569" }} axisLine={false} tickLine={false} /><Tooltip cursor={{ fill: "#f8f9fc" }} contentStyle={{ borderRadius: 12, border: "none", background: "rgba(255,255,255,0.95)", backdropFilter: "blur(12px)", boxShadow: "0 8px 32px rgba(0,0,0,0.08)", fontSize: 13, padding: "10px 14px" }} /><Bar dataKey="usageCount" fill="#f59e0b" radius={[8,8,0,0]} animationDuration={400} animationEasing="ease-in-out" /></BarChart></ResponsiveContainer></CardContent>
+          </ChartFullscreen></Card>
 
         <Card className="border-0 shadow-sm">
           <CardHeader className="!flex items-center justify-between">
@@ -495,7 +543,9 @@ export default function DashboardPage() {
               <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export XLSX" onClick={() => exportDataFile(data?.materialUsageByCategory || [], "usage-by-material")}><Download className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
             </div>
           </CardHeader>
-          <CardContent id="chart-usage-by-mat"><ResponsiveContainer width="100%" height={280}><BarChart data={data?.materialUsageByCategory || []} layout="vertical" barSize={24}><CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f2f6" /><XAxis type="number" tick={{ fontSize: 12, fill: "#8b8fa8" }} axisLine={false} tickLine={false} /><YAxis type="category" dataKey="category" width={120} tick={{ fontSize: 12, fill: "#8b8fa8" }} axisLine={false} tickLine={false} /><Tooltip /><Bar dataKey="totalUsed" fill="#8b5cf6" radius={[0,6,6,0]} /></BarChart></ResponsiveContainer></CardContent></Card>
+          <ChartFullscreen title="Usage by Material" subtitle="Per-category breakdown">
+            <CardContent id="chart-usage-by-mat" className="!px-2"><ResponsiveContainer width="100%" height={300}><BarChart data={data?.materialUsageByCategory || []} layout="vertical" barSize={28}><CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f2f6" /><XAxis type="number" tick={{ fontSize: 12, fill: "#475569" }} axisLine={false} tickLine={false} /><YAxis type="category" dataKey="category" width={130} tick={{ fontSize: 12, fill: "#475569" }} axisLine={false} tickLine={false} /><Tooltip contentStyle={{ borderRadius: 12, border: "none", background: "rgba(255,255,255,0.95)", backdropFilter: "blur(12px)", boxShadow: "0 8px 32px rgba(0,0,0,0.08)", fontSize: 13, padding: "10px 14px" }} /><Bar dataKey="totalUsed" fill="#8b5cf6" radius={[0,8,8,0]} animationDuration={400} animationEasing="ease-in-out" /></BarChart></ResponsiveContainer></CardContent>
+          </ChartFullscreen></Card>
       </div>
       </> )}
 

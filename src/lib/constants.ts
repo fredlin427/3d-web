@@ -79,8 +79,6 @@ export const SERVICE_OPTIONS = [
 
 export const STERILIZATION_OPTIONS = ["Yes", "No"] as const;
 
-// PRIORITIES and CASE_STATUSES removed (unused)
-
 export const TECHNICIANS = ["Madeleine", "Tiffany", "Other"] as const;
 
 export const PRINTING_PARTIES = ["3DPO", "AMMA", "Printrite", "Other"] as const;

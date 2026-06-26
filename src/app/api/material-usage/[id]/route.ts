@@ -79,6 +79,7 @@ export async function PUT(
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
+    console.error(error);
     return NextResponse.json(
       { success: false, error: "Failed to update material usage" },
       { status: 500 }
@@ -139,6 +140,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, data: null });
   } catch (error) {
+    console.error(error);
     return NextResponse.json(
       { success: false, error: "Failed to delete material usage" },
       { status: 500 }

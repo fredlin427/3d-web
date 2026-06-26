@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard, FolderOpen, Package, BarChart3, Settings, Box, FileText, PieChart,
+  LayoutDashboard, FolderOpen, Package, BarChart3, Settings, Box, FileText, PieChart, Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -16,6 +16,7 @@ const navigation = [
   { name: "Materials", href: "/materials", icon: Package, color: "text-emerald-400" },
   { name: "Reports", href: "/reports", icon: BarChart3, color: "text-cyan-400" },
   { name: "Chart Builder", href: "/chart-builder", icon: PieChart, color: "text-violet-400" },
+  { name: "Activity Log", href: "/activity-log", icon: Activity, color: "text-rose-400" },
   { name: "Settings", href: "/settings", icon: Settings, color: "text-slate-400" },
   { name: "Apply Form", href: "/apply-manage", icon: FileText, color: "text-rose-400" },
 ];
@@ -50,6 +51,7 @@ export function Sidebar() {
         )}
         <Button
           variant="ghost" size="icon"
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           className={cn(
             "h-7 w-7 shrink-0 text-white/30 hover:text-white/70 hover:bg-white/5 rounded-lg",
             collapsed && "ml-auto"

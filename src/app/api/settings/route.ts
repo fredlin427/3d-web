@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { settingFormSchema } from "@/lib/validators";
 import { validateBody } from "@/lib/api-utils";
+import { createAuditLog } from "@/lib/audit";
 
 export async function GET(request: NextRequest) {
   try {
@@ -36,6 +37,14 @@ export async function POST(request: NextRequest) {
         sortOrder: body.sortOrder,
         isActive: body.isActive,
       },
+    });
+
+    await createAuditLog({
+      entityType: "Setting",
+      entityId: setting.id,
+      action: "setting_created",
+      staffName: (body as any).staffName || "System",
+      details: `Setting "${body.type}" = "${body.value}" created`,
     });
 
     return NextResponse.json({ success: true, data: setting }, { status: 201 });

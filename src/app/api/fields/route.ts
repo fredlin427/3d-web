@@ -25,6 +25,7 @@ const JOIN_LABELS: Record<string, string> = {
 };
 
 export async function GET(request: NextRequest) {
+  try {
   const { searchParams } = new URL(request.url);
   const source = searchParams.get("source") || "cases";
 
@@ -74,4 +75,8 @@ export async function GET(request: NextRequest) {
   fields.sort((a, b) => a.group.localeCompare(b.group) || a.label.localeCompare(b.label));
 
   return NextResponse.json({ success: true, data: { source, fields } });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ success: false, error: "Failed to fetch fields" }, { status: 500 });
+  }
 }

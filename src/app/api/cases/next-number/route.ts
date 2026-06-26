@@ -30,6 +30,7 @@ export async function GET() {
 
     return NextResponse.json({ success: true, data: { caseNumber: nextCaseNumber } });
   } catch (error) {
+    console.error(error);
     return NextResponse.json({ success: false, error: "Failed to generate case number" }, { status: 500 });
   }
 }

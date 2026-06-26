@@ -110,7 +110,7 @@ export function PreviewTable({ columns, rows, loading }: PreviewTableProps) {
                 {columns.map((col) => (
                   <th
                     key={col}
-                    className="text-left px-3 py-2.5 text-[11px] font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none whitespace-nowrap"
+                    className="group text-left px-3 py-2.5 text-[11px] font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 select-none whitespace-nowrap"
                     onClick={() => handleSort(col)}
                   >
                     <div className="flex items-center gap-1">

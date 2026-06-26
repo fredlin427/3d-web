@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { createAuditLog } from "@/lib/audit";
 import * as XLSX from "xlsx";
 
 export async function POST(request: NextRequest) {
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
     const result = await processRows(rows);
     return NextResponse.json({ success: true, data: result });
   } catch (error) {
+    console.error(error);
     return NextResponse.json({ success: false, error: "Import failed" }, { status: 500 });
   }
 }
@@ -118,6 +120,15 @@ async function processRows(rows: Array<{ materialId?: string; batchNumber?: stri
       })
     )
   );
+
+  // Audit log for the entire stock take
+  await createAuditLog({
+    entityType: "Material",
+    entityId: "stock-take",
+    action: "stock_take_imported",
+    staffName: validRows[0]?.row.staffName || "System",
+    details: `Stock take imported: ${validRows.length} items updated, ${errors.length} errors`,
+  });
 
   return { totalRows: rows.length, updatedItems: validRows.length, errors, importedAt: new Date().toISOString() };
 }

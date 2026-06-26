@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { buildStacked } from "@/lib/chart-utils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -119,6 +120,22 @@ export async function GET(request: NextRequest) {
       count: g._count.id,
     }));
 
+    // Case by department with purpose sub-items (for donut drill-down)
+    const deptPurposeGroups = await prisma.case.groupBy({
+      by: ["department", "purpose"],
+      where: caseWhere,
+      _count: { id: true },
+      orderBy: [{ department: "asc" }, { _count: { id: "desc" } }],
+    });
+    const caseByDepartmentWithPurposes = buildStacked(
+      deptPurposeGroups.map((g) => ({
+        primary: g.department,
+        secondary: g.purpose,
+        count: g._count.id,
+      })),
+      0, 0
+    );
+
     // Material usage trend
     const materialUsage = await prisma.caseMaterialUsage.findMany({
       select: { usageDate: true, quantityUsed: true },
@@ -177,6 +194,7 @@ export async function GET(request: NextRequest) {
         },
         caseVolumeByMonth,
         caseByDepartment,
+        caseByDepartmentWithPurposes,
         caseBycategory: caseByUseType,
         caseByPurpose,
         materialUsageTrend,

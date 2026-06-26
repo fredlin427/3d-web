@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const dateFrom = searchParams.get("dateFrom") || "";
     const dateTo = searchParams.get("dateTo") || "";
     const page = parseInt(searchParams.get("page") || "1", 10);
-    const pageSize = parseInt(searchParams.get("pageSize") || "0", 10); // 0 = all
+    const pageSize = parseInt(searchParams.get("pageSize") || "50", 10);
 
     const where: Record<string, unknown> = {};
 

@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { createAuditLog } from "@/lib/audit";
+import { validateBody } from "@/lib/api-utils";
+import { caseFormSchema } from "@/lib/validators";
 import { DEFAULT_PROGRESS_STEPS } from "@/lib/constants";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const parsed = await validateBody(request, caseFormSchema.partial());
+    if (!parsed.success) return parsed.response;
+    const body = parsed.data as Record<string, any>;
 
     // Generate sequential case number
     const now = new Date();
@@ -30,7 +35,7 @@ export async function POST(request: NextRequest) {
       data: {
         caseNumber,
         applicationDate: new Date(),
-        expectedCompletionDate: body.expectedCompletionDate ? new Date(body.expectedCompletionDate) : null,
+        expectedCompletionDate: body.expectedCompletionDate ? new Date(body.expectedCompletionDate as string) : null,
         department: body.department || "Other",
         hospital: body.hospital || "QEH",
         applicantName: body.applicantName,
@@ -54,7 +59,7 @@ export async function POST(request: NextRequest) {
         telephone: body.telephone || null,
         email: body.email || null,
         signature: body.signature || null,
-        signatureDate: body.signatureDate ? new Date(body.signatureDate) : null,
+        signatureDate: body.signatureDate ? new Date(body.signatureDate as string) : null,
         modelMaterial: body.modelMaterial || null,
         colourRequirement: body.colourRequirement || null,
         copyrightRisk: body.copyrightRisk === true,
@@ -80,6 +85,14 @@ export async function POST(request: NextRequest) {
     await prisma.case.update({
       where: { id: newCase.id },
       data: { currentProgressStep: stepsToCreate[0]?.value || DEFAULT_PROGRESS_STEPS[0] },
+    });
+
+    await createAuditLog({
+      entityType: "Case",
+      entityId: newCase.id,
+      action: "case_created",
+      staffName: body.applicantName || "Applicant",
+      details: `Apply form submission: ${caseNumber} | ${body.department} | ${body.category}`,
     });
 
     return NextResponse.json({

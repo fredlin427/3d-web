@@ -196,7 +196,7 @@ export default function ApplyPage() {
       const json = await res.json();
       if (json.success) { setSubmitted(json.data.caseNumber); toast.success("Submitted!"); }
       else toast.error(json.error || "Failed");
-    } catch { toast.error("Failed"); }
+    } catch (e) { console.error(e); toast.error("Failed"); }
     finally { setSubmitting(false); }
   };
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { createAuditLog } from "@/lib/audit";
 
 // Known DB fields (must exist in Prisma Case model)
 const KNOWN_FIELDS = new Set([
@@ -213,6 +214,14 @@ export async function POST(request: NextRequest) {
         errors.push(`Row error: ${e.message}`);
       }
     }
+
+    await createAuditLog({
+      entityType: "Case",
+      entityId: "import",
+      action: "cases_imported",
+      staffName: "System",
+      details: `Imported ${imported} cases from Excel (${rows.length} rows, ${skipped} skipped, ${errors.length} errors)`,
+    });
 
     return NextResponse.json({
       success: true,

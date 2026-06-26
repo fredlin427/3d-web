@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { buildStacked, groupTopN } from "@/lib/chart-utils";
 
 // Supported chart sources and their groupable fields
 const SOURCE_CONFIG: Record<string, { model: string; dateField: string; textFields: string[]; numFields: string[]; joinFields?: string[] }> = {
@@ -38,35 +39,6 @@ function resolveField(field: string, config: typeof SOURCE_CONFIG[string]): stri
   return match || field;
 }
 
-// Helper: auto-group small items into "Other" when too many
-function groupTopN<T extends { label: string; value: number }>(items: T[], topN: number): T[] {
-  if (items.length <= topN) return items;
-  const sorted = [...items].sort((a, b) => b.value - a.value);
-  const top = sorted.slice(0, topN);
-  const otherValue = sorted.slice(topN).reduce((s, r) => s + r.value, 0);
-  if (otherValue > 0) top.push({ label: `Other (${sorted.length - topN} items)`, value: otherValue } as T);
-  return top;
-}
-
-// Helper: build stacked result from groupBy records [{primary, secondary, count}]
-function buildStacked(
-  records: { primary: string; secondary: string; count: number }[]
-): { label: string; value: number; children: { label: string; value: number }[] }[] {
-  const map = new Map<string, Map<string, number>>();
-  for (const r of records) {
-    if (!map.has(r.primary)) map.set(r.primary, new Map());
-    const inner = map.get(r.primary)!;
-    inner.set(r.secondary, (inner.get(r.secondary) || 0) + r.count);
-  }
-  const stacked: { label: string; value: number; children: { label: string; value: number }[] }[] = [];
-  for (const [primary, innerMap] of map) {
-    const total = Array.from(innerMap.values()).reduce((s, v) => s + v, 0);
-    const children = Array.from(innerMap.entries()).map(([l, v]) => ({ label: l, value: v }));
-    stacked.push({ label: primary, value: total, children });
-  }
-  stacked.sort((a, b) => b.value - a.value);
-  return stacked;
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -85,8 +57,9 @@ export async function GET(request: NextRequest) {
       }
     }
     const stackBy = searchParams.get("stackBy") || "";
-    const limit = parseInt(searchParams.get("limit") || "20", 10);
+    const limit = parseInt(searchParams.get("limit") || "50", 10);
     const groupTop = parseInt(searchParams.get("groupTop") || "0", 10); // 0 = disabled, N = top N + Other
+    const childTop = parseInt(searchParams.get("childTop") || "8", 10); // max sub-items per group, 0 = all
 
     const config = SOURCE_CONFIG[source];
     if (!config) {
@@ -152,7 +125,9 @@ export async function GET(request: NextRequest) {
               primary: relation === "case" ? (r.case?.[relField] || "(empty)") : (r.material?.[relField] || "(empty)"),
               secondary: stackRelation === "case" ? (r.case?.[stackField] || "(empty)") : (r.material?.[stackField] || "(empty)"),
               count: 1,
-            }))
+            })),
+            groupTop,
+            childTop,
           );
           return NextResponse.json({ success: true, data: { source, xField, stackBy, yMode, stacked, total: stacked.reduce((s, r) => s + r.value, 0) } });
         }
@@ -179,7 +154,9 @@ export async function GET(request: NextRequest) {
               primary: r.material?.[relField] || "(empty)",
               secondary: stackRelation === "material" ? (r.material?.[stackField] || "(empty)") : (r[stackRelation]?.[stackField] || "(empty)"),
               count: 1,
-            }))
+            })),
+            groupTop,
+            childTop,
           );
           return NextResponse.json({ success: true, data: { source, xField, stackBy, yMode, stacked, total: stacked.reduce((s, r) => s + r.value, 0) } });
         }
@@ -208,7 +185,9 @@ export async function GET(request: NextRequest) {
             primary: g[resolvedX] || "(empty)",
             secondary: g[resolvedStack] || "(empty)",
             count: g._count.id,
-          }))
+          })),
+          groupTop,
+          childTop,
         );
         return NextResponse.json({ success: true, data: { source, xField, stackBy, yMode, stacked, total: stacked.reduce((s, r) => s + r.value, 0) } });
       }
@@ -236,7 +215,9 @@ export async function GET(request: NextRequest) {
             primary: g[resolvedX] || "(empty)",
             secondary: g[resolvedStack] || "(empty)",
             count: g._count.id,
-          }))
+          })),
+          groupTop,
+          childTop,
         );
         return NextResponse.json({ success: true, data: { source, xField, stackBy, yMode, stacked, total: stacked.reduce((s, r) => s + r.value, 0) } });
       }
