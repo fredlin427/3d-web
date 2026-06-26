@@ -17,7 +17,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { DEPARTMENTS, CATEGORIES } from "@/lib/constants";
 import { ChartFullscreen } from "@/components/charts/chart-fullscreen";
 import { FocusCard } from "@/components/charts/focus-card";
-import { InteractiveDonut } from "@/components/charts/interactive-donut";
+import { DonutChart } from "@/components/charts/donut-chart";
 import { CHART_COLORS_9 as CHART_COLORS } from "@/lib/chart-colors";
 import * as XLSX from "xlsx";
 
@@ -495,7 +495,7 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent id="chart-by-dept" className="!p-0">
-              <InteractiveDonut
+              <DonutChart
                 data={deptFlat}
                 colors={CHART_COLORS}
                 total={totalDept}
