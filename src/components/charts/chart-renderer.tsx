@@ -2,7 +2,7 @@
 
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, AreaChart, Area, LabelList,
+  PieChart, Pie, Cell, LineChart, Line, AreaChart, Area, LabelList,
 } from "recharts";
 import { ResponsivePie } from "@nivo/pie";
 import { BarChart3 } from "lucide-react";
@@ -72,18 +72,65 @@ export function ChartRenderer({
   const tickStyle = { fontSize: 13, fill: "#475569", fontWeight: 500 };
   const yTickStyle = { fontSize: 12, fill: "#64748b" };
 
-  // ── Pie / Donut (Nivo) ──
+  // ── Pie / Donut ──
   if (chartType === "pie" || chartType === "donut") {
+    if (hasStack) {
+      const outerData: any[] = [];
+      stackedData.forEach((group, gi) => {
+        group.children.forEach((child, ci) => {
+          outerData.push({ name: child.label, value: child.value, parent: group.label, parentIdx: gi, childIdx: ci });
+        });
+      });
+      const twoR = Math.min(pieRadius * 0.75, 140);
+      const hole = twoR * 0.2;
+      const innerOuter = twoR * 0.58;
+      const outerInner = twoR * 0.64;
+      const outerOuter = twoR;
+
+      return (
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie data={flatData} dataKey="value" nameKey="label" cx="50%" cy="48%"
+              innerRadius={hole} outerRadius={innerOuter} stroke="#fff" strokeWidth={2} paddingAngle={5}
+              animationDuration={400} animationEasing="ease-in-out" isAnimationActive
+              label={({ index }) => { const d = flatData[index ?? -1]; return d ? d.label : ""; }}
+              labelLine={false}
+              onClick={onSliceClick ? (d: any) => {
+                const g = stackedData.find(s => s.label === d.label);
+                if (g) onSliceClick(g, flatData.findIndex(f => f.label === d.label));
+              } : undefined}
+              style={{ cursor: onSliceClick ? "pointer" : "default", outline: "none" } as any}
+            >
+              {flatData.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} />)}
+            </Pie>
+            <Pie data={outerData} dataKey="value" nameKey="name" cx="50%" cy="48%"
+              innerRadius={outerInner} outerRadius={outerOuter} stroke="#fff" strokeWidth={0.5} paddingAngle={3}
+              animationDuration={400} animationEasing="ease-in-out" isAnimationActive
+              label={({ name, value, percent }: any) => percent < 0.05 ? "" : `${name} ${value}`}
+              labelLine={{ stroke: "#cbd5e1", strokeWidth: 0.5 }}
+              onClick={onSliceClick ? (d: any) => {
+                const g = stackedData.find(s => s.label === d.parent);
+                if (g) onSliceClick(g, d.parentIdx);
+              } : undefined}
+              style={{ cursor: onSliceClick ? "pointer" : "default" }}
+            >
+              {outerData.map((d: any, i: number) => {
+                const base = colors[d.parentIdx % colors.length];
+                return <Cell key={i} fill={shadeColor(base, d.childIdx, stackedData[d.parentIdx]?.children.length || 1)} />;
+              })}
+            </Pie>
+            <Tooltip contentStyle={tooltipStyle} />
+          </PieChart>
+        </ResponsiveContainer>
+      );
+    }
+    // Single-level: use Nivo for reliable rendering
     const nivoData = flatData.map(d => ({ id: d.label, label: d.label, value: d.value }));
     return (
       <div style={{ width: "100%", height: "100%" }}>
         <ResponsivePie
-          data={nivoData}
-          value="value"
-          id="id"
-          innerRadius={chartType === "donut" ? 0.55 : 0}
-          padAngle={4}
-          cornerRadius={1}
+          data={nivoData} value="value" id="id"
+          innerRadius={chartType === "donut" ? 0.55 : 0} padAngle={4} cornerRadius={1}
           activeOuterRadiusOffset={activeSliceIndex != null ? 8 : 0}
           colors={({ id }) => {
             const idx = flatData.findIndex(d => d.label === String(id));
@@ -96,25 +143,16 @@ export function ChartRenderer({
             const g = stackedData.find(s => s.label === String(d.id));
             if (g && g.children.length > 0) onSliceClick(g, idx);
           } : undefined}
-          enableArcLabels
-          enableArcLinkLabels
-          arcLabel={d => `${d.id} ${d.value}`}
-          arcLabelsSkipAngle={6}
-          arcLinkLabelsSkipAngle={8}
-          arcLabelsTextColor="#334155"
-          arcLinkLabelsColor={{ from: "color" }}
-          animate
-          motionConfig="gentle"
+          enableArcLabels enableArcLinkLabels
+          arcLabel={d => `${d.id} ${d.value}`} arcLabelsSkipAngle={6}
+          arcLinkLabelsSkipAngle={8} arcLabelsTextColor="#334155"
+          animate motionConfig="gentle"
           tooltip={({ datum }) => (
             <div style={{ background: "rgba(255,255,255,0.95)", backdropFilter: "blur(16px)", borderRadius: 14, padding: "10px 14px", boxShadow: "0 8px 32px rgba(0,0,0,0.08)" }}>
               <strong style={{ color: "#1e293b", fontSize: 13 }}>{datum.label}</strong>
-              <br />
-              <span style={{ color: "#64748b", fontSize: 12 }}>{datum.value} items</span>
+              <br /><span style={{ color: "#64748b", fontSize: 12 }}>{datum.value} items</span>
             </div>
           )}
-          theme={{
-            labels: { text: { fontSize: 12, fontWeight: 600 } },
-          }}
         />
       </div>
     );
