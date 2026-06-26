@@ -1,5 +1,43 @@
 # QEH 3D Printing Office — Work Log
 
+## 2026-06-26 — Audit, Security & Chart Rewrite (18 commits)
+
+### Critical Production Fixes
+- **start.bat data wipe fixed**: Old script ran `prisma db seed` every boot (deletes all data). Now backs up before DB ops, only seeds when DB is empty.
+- **Database indexes**: `@@index` on all FK columns — CaseProgressStep, CaseMaterialUsage, StockTransaction, AuditLog, Material
+- **API silent errors**: Added `console.error` to 15 catch blocks, wrapped `fields/route.ts` in try/catch
+- **Apply validation**: Public `/api/apply` now uses Zod `caseFormSchema.partial()`
+- **Upload security**: Magic byte image validation + filename sanitization
+- **Cases pagination**: Fixed default `pageSize: 0→50`, cases page explicitly requests all records
+
+### Activity Log System
+- New `/activity-log` page — full audit trail with filters, search, pagination
+- `/api/audit-logs` endpoint
+- Audit logs added to: Settings CRUD, Case import, Stock take import, Upload
+
+### Chart Architecture — Complete Rewrite
+- **DonutChart**: Pure Recharts, single component for both single-ring (`composite=false`) and two-ring (`composite=true`) donuts. Uses percentage radii (`"85%"`, `"62%"`, `"37%"`) for auto-fill.
+- **BarChartView**: Recharts bar/line/area/stacked
+- **Chart Builder**: Clean 250-line orchestrator
+- **FocusCard**: Recharts PieChart for detail viz
+- **ChartFullscreen**: Zoom/pan with RAF-throttled transforms
+
+### Removed
+- `html2canvas` — replaced with native SVG→PNG export
+- `@nivo/core`, `@nivo/pie` — full Recharts, no dual-library issues
+- Dead files: `exploded-sector`, `drill-down-overlay`, `drill-down-panel`, `use-drill-down`, `chart-renderer`, `interactive-donut`, `composite-donut`, `csv.ts`
+
+### Key Technical Lessons
+- Recharts v3 removed `activeIndex`/`activeShape` — use `key` prop on `<Pie>` to force remount for dimming
+- Use SVG `<text>` for center labels, never CSS overlay with negative margin
+- Percentage radii fill containers automatically; fixed px gets clipped
+- Recharts dual `<Pie>` in one `<PieChart>` = perfect two-level donut alignment
+
+### Data
+- 388 cases + 40 materials (10 FDM, 10 SLA, 10 Tank, 10 IPA)
+- Auto-backup: `backup.ps1` + daily scheduled task at 18:00
+- 6 backup files
+
 ## 2026-06-25 — Cases & Materials Overhaul (15 commits)
 
 ### Meeting Requirements (June 22 email)
