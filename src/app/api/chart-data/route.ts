@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
     const stackBy = searchParams.get("stackBy") || "";
     const limit = parseInt(searchParams.get("limit") || "50", 10);
     const groupTop = parseInt(searchParams.get("groupTop") || "0", 10); // 0 = disabled, N = top N + Other
-    const childTop = parseInt(searchParams.get("childTop") || "8", 10); // max sub-items per group, 0 = all
+    const childTop = parseInt(searchParams.get("childTop") || "0", 10); // max sub-items per group, 0 = all
 
     const config = SOURCE_CONFIG[source];
     if (!config) {

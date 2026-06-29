@@ -61,8 +61,8 @@ export default function ChartBuilderPage() {
     try {
       const p = new URLSearchParams();
       p.set("source", source); p.set("x", xField); p.set("y", "count"); p.set("limit", "50");
-      if (groupTop > 0) p.set("groupTop", String(groupTop));
-      if (childTop > 0) p.set("childTop", String(childTop));
+      p.set("groupTop", String(groupTop));
+      p.set("childTop", String(childTop));
       if (fy) { const sy = 2000 + parseInt(fy.slice(0, 2)); p.set("dateFrom", `${sy}-04-01`); p.set("dateTo", `${sy + 1}-03-31`); }
       else { if (dateFrom) p.set("dateFrom", dateFrom); if (dateTo) p.set("dateTo", dateTo); }
       for (const [f, v] of Object.entries(activeFilters)) { if (v.length > 0) p.set(`filter_${f}`, v.join(",")); }
