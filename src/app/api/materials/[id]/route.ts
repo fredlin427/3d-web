@@ -88,6 +88,17 @@ export async function PUT(
       if (generated) data["materialId"] = generated;
     }
 
+    // Tank: always quantity 1
+    const cat = (data["category"] as string) || existing?.category || "";
+    if (cat === "Resin Tanks") {
+      data["initialQuantity"] = 1;
+      data["currentQuantity"] = 1;
+      data["unusedQuantity"] = 0;
+      data["openedQuantity"] = 0;
+      data["expiredQuantity"] = 0;
+      data["unit"] = "unit";
+    }
+
     // Remain = Weight − Used (match Excel formula, keep existing opened/expired)
     const w = (data["initialQuantity"] !== undefined ? Number(data["initialQuantity"]) : (existing?.initialQuantity ?? 0)) as number;
     const u = (data["unusedQuantity"] !== undefined ? Number(data["unusedQuantity"]) : (existing?.unusedQuantity ?? 0)) as number;
