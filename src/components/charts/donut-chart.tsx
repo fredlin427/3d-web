@@ -76,14 +76,6 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
   const outerInner = Math.round(twoR * 0.64);
   const outerOuter = twoR;
 
-  // Label overlap detection: skip if too close to existing label
-  const labelGrid = new Set<number>();
-  const labelOverlaps = (y: number): boolean => {
-    const k = Math.round(y / 24);
-    if (labelGrid.has(k)) return true;
-    labelGrid.add(k);
-    return false;
-  };
 
   return (
     <>
@@ -106,7 +98,6 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
               const startY = cy + outerRadius * sin;
               const baseLx = cx + (outerRadius + 10) * cos;
               const baseLy = cy + (outerRadius + 10) * sin;
-              if (labelOverlaps(baseLy)) return "";
               const endX = baseLx;
               const endY = baseLy;
               return (
@@ -114,7 +105,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
                   <polyline points={`${startX},${startY} ${startX + (endX-startX)*0.5},${startY + (endY-startY)*0.5} ${endX},${endY}`}
                     stroke={color} strokeWidth={1} fill="none" opacity={0.7} />
                   <text x={endX} y={endY} textAnchor={cos >= 0 ? "start" : "end"} dominantBaseline="central"
-                    style={{ fontSize: 13, fontWeight: 600, fill: color }}>
+                    style={{ fontSize: 11, fontWeight: 500, fill: color }}>
                     {text}
                   </text>
                 </g>

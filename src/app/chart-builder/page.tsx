@@ -31,7 +31,7 @@ export default function ChartBuilderPage() {
   const [groupTop, setGroupTop] = useState(0); // show all
   const [childTop, setChildTop] = useState(8);
   const [pieSize, setPieSize] = useState(150);
-  const [labelMin, setLabelMin] = useState(2); // hide <2% to prevent overlap
+  const [labelMin, setLabelMin] = useState(0); // show all
   const [showLabels, setShowLabels] = useState(true);
   const [paletteKey, setPaletteKey] = useState(DEFAULT_PALETTE);
   const colors = COLOR_PALETTES[paletteKey] || COLOR_PALETTES[DEFAULT_PALETTE];
