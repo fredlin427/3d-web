@@ -213,7 +213,10 @@ export default function ChartBuilderPage() {
                     onOuterClick={hasStacked ? (parentIdx: number) => { const g = donutData[parentIdx]; if (g) { setFocusIdx(parentIdx); setFocusItem({ label: g.name, value: g.value, children: (g.children || []).map(c => ({ label: c.label, value: c.value })) }); setFocusOpen(true); } } : undefined} />
                 ) : (
                   <BarChartView type={chartType as "bar"|"barH"|"line"|"area"|"stacked"} data={barData} dataKeys={hasStacked ? barKeys : ["value"]} colors={colors}
-                    onClick={hasStacked ? (d: any) => { const g = stackedData.find(s => s.label === d.label); if (g) { setFocusIdx(stackedData.indexOf(g)); setFocusItem(g); setFocusOpen(true); } } : undefined} />
+                    onClick={(d: any) => {
+                      if (hasStacked) { const g = stackedData.find(s => s.label === d.label); if (g) { setFocusIdx(stackedData.indexOf(g)); setFocusItem(g); setFocusOpen(true); } }
+                      else { const idx = chartData.findIndex(c => c.label === d.label); if (idx >= 0) { setFocusIdx(idx); setFocusItem({ label: chartData[idx].label, value: chartData[idx].value, children: [] }); setFocusOpen(true); } }
+                    }} />
                 )}
               </ChartFullscreen>
             </CardContent>
