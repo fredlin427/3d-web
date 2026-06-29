@@ -87,11 +87,8 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
           innerRadius={composite ? 65 : innerR}
           outerRadius={composite ? innerR : outerR}
           paddingAngle={4}
-          animationDuration={400} animationEasing="ease-out" isAnimationActive
-          label={({ name, value, percent }: any) => {
-            if ((percent || 0) < 0.04) return "";
-            return `${name} ${value}`;
-          }}
+          isAnimationActive animationDuration={400} animationEasing="ease-out"
+          label={({ name, value }: any) => `${name} ${value}`}
           labelLine={{ stroke: "#cbd5e1", strokeWidth: 0.5 }}
           onClick={handleClick}
           style={{ cursor: "pointer", outline: "none" } as any}
