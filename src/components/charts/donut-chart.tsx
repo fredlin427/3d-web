@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 export interface DonutSlice {
@@ -47,6 +47,13 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const displayIdx = activeIdx ?? hoverIdx;
   const computedTotal = propTotal ?? data.reduce((s, d) => s + d.value, 0);
+  const labelYs = useRef<Set<number>>(new Set());
+
+  // Check if a label at this y position would collide with existing labels
+  const labelCollides = (y: number): boolean => {
+    for (const ey of labelYs.current) { if (Math.abs(y - ey) < 18) return true; }
+    return false;
+  };
 
   const handleClick = useCallback((_: any, index: number) => {
     const next = activeIdx === index ? null : index;
@@ -74,6 +81,9 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
   const outerInner = Math.round(twoR * 0.64);
   const outerOuter = twoR;
 
+  // Reset collision tracker each render
+  labelYs.current = new Set();
+
   return (
     <>
     <ResponsiveContainer width="100%" height={height}>
@@ -85,8 +95,12 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
             data={outerData} dataKey="value" nameKey="name" cx="50%" cy="48%"
             innerRadius={outerInner} outerRadius={outerOuter} stroke="#fff" strokeWidth={1} paddingAngle={1}
             isAnimationActive={false}
-            label={({ name, value, percent }: any) => {
+            label={({ name, value, percent, cy, midAngle, outerRadius }: any) => {
               if (labelMin > 0 && (percent || 0) * 100 < labelMin) return "";
+              const RAD = Math.PI / 180;
+              const ly = cy + outerRadius * Math.sin(-midAngle * RAD);
+              if (labelCollides(ly)) return "";
+              labelYs.current.add(ly);
               return `${trunc(name || "", 10)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
             }}
             labelLine={{ stroke: "#64748b", strokeWidth: 1 }}
@@ -114,8 +128,12 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
           outerRadius={composite ? innerOuter : pieRadius}
           stroke="#fff" strokeWidth={composite ? 2 : 1} paddingAngle={composite ? 2 : 0}
           isAnimationActive={false}
-          label={({ name, value, percent }: any) => {
+          label={({ name, value, percent, cy, midAngle, outerRadius }: any) => {
             if (labelMin > 0 && (percent || 0) * 100 < labelMin) return "";
+            const RAD = Math.PI / 180;
+            const ly = cy + outerRadius * Math.sin(-midAngle * RAD);
+            if (labelCollides(ly)) return "";
+            labelYs.current.add(ly);
             return `${trunc(name, 14)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
           }}
           labelLine={{ stroke: "#64748b", strokeWidth: 1 }}
