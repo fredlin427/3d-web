@@ -28,9 +28,9 @@ export default function ChartBuilderPage() {
   const [expandedFilter, setExpandedFilter] = useState<string | null>(null);
   const [showTable, setShowTable] = useState(true);
   const [tableMode, setTableMode] = useState<"hierarchical" | "pivot">("pivot");
-  const [groupTop, setGroupTop] = useState(8); // top 8, rest → Others
+  const [groupTop, setGroupTop] = useState(0); // show all
   const [childTop, setChildTop] = useState(8);
-  const [pieSize, setPieSize] = useState(100);
+  const [pieSize, setPieSize] = useState(110);
   const [paletteKey, setPaletteKey] = useState(DEFAULT_PALETTE);
   const colors = COLOR_PALETTES[paletteKey] || COLOR_PALETTES[DEFAULT_PALETTE];
 
