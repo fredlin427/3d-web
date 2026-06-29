@@ -30,7 +30,7 @@ export default function ChartBuilderPage() {
   const [tableMode, setTableMode] = useState<"hierarchical" | "pivot">("pivot");
   const [groupTop, setGroupTop] = useState(0); // show all
   const [childTop, setChildTop] = useState(8);
-  const [pieSize, setPieSize] = useState(110);
+  const [pieSize, setPieSize] = useState(150);
   const [labelMin, setLabelMin] = useState(0);
   const [paletteKey, setPaletteKey] = useState(DEFAULT_PALETTE);
   const colors = COLOR_PALETTES[paletteKey] || COLOR_PALETTES[DEFAULT_PALETTE];

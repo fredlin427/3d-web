@@ -93,8 +93,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
         {/* Outer ring (composite) — rendered first so it's behind */}
         {composite && outerData.length > 0 && (
           <Pie
-            key={`outer-${activeIdx}`}
-            data={outerData} dataKey="value" nameKey="name" cx="50%" cy="48%"
+              data={outerData} dataKey="value" nameKey="name" cx="50%" cy="48%"
             innerRadius={outerInner} outerRadius={outerOuter} stroke="#fff" strokeWidth={1} paddingAngle={1}
             isAnimationActive={false}
             label={(props: any) => {
@@ -116,7 +115,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
                   <polyline points={`${startX},${startY} ${startX + (endX-startX)*0.5},${startY + (endY-startY)*0.5} ${endX},${endY}`}
                     stroke={color} strokeWidth={1} fill="none" opacity={0.7} />
                   <text x={endX} y={endY} textAnchor={cos >= 0 ? "start" : "end"} dominantBaseline="central"
-                    style={{ fontSize: 11, fontWeight: 600, fill: color }}>
+                    style={{ fontSize: 13, fontWeight: 600, fill: color }}>
                     {text}
                   </text>
                 </g>
