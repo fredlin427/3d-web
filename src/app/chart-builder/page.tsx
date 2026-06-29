@@ -96,7 +96,7 @@ export default function ChartBuilderPage() {
     }).catch(console.error);
   }, []);
 
-  const handleExport = async () => { setExporting(true); await exportPNG("chart-builder-preview", `chart-${source}-${xField}`, legendItems.length > 0 ? legendItems : undefined); setExporting(false); };
+  const handleExport = async () => { setExporting(true); await exportPNG("chart-builder-preview", `chart-${source}-${xField}`, !isPie && legendItems.length > 0 ? legendItems : undefined); setExporting(false); };
 
   const fields = SOURCE_FIELDS[source] || [];
   const title = `${FIELD_LABELS[xField] || xField} by ${SOURCES.find(s => s.key === source)?.label || source}`;
