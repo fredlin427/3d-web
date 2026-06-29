@@ -115,14 +115,24 @@ export default function ChartBuilderPage() {
     return flat.map((d, i) => ({ name: d.label, value: d.value, children: stackedData[i]?.children?.map(c => ({ label: c.label, value: c.value })) || [] }));
   }, [chartData, stackedData]);
 
-  // Legend items
+  // Legend items — colors match chart outer ring (shadeColor)
   const legendItems = useMemo(() => {
     if (!hasStacked) return [];
     const items: { label: string; color: string; bold?: boolean; onClick?: () => void }[] = [];
     stackedData.forEach((g, gi) => {
-      items.push({ label: `${g.label}  ${g.value}`, color: colors[gi % colors.length], bold: true, onClick: () => { setFocusIdx(gi); setFocusItem(g); setFocusOpen(true); } });
+      const base = colors[gi % colors.length];
+      items.push({ label: `${g.label}  ${g.value}`, color: base, bold: true, onClick: () => { setFocusIdx(gi); setFocusItem(g); setFocusOpen(true); } });
+      const kids = g.children.length || 1;
       g.children.forEach((c, ci) => {
-        items.push({ label: c.label, color: colors[ci % colors.length], onClick: () => { setFocusIdx(gi); setFocusItem(g); setFocusOpen(true); } });
+        // shadeColor to match outer ring Cell fill
+        const num = parseInt(base.replace("#", ""), 16);
+        let r = (num >> 16) & 0xFF, g2 = (num >> 8) & 0xFF, b = num & 0xFF;
+        const mix = Math.min(0.4, ci / (kids + 2));
+        r = Math.round(r + (255 - r) * mix);
+        g2 = Math.round(g2 + (255 - g2) * mix);
+        b = Math.round(b + (255 - b) * mix);
+        const shade = `#${((r << 16) | (g2 << 8) | b).toString(16).padStart(6, "0")}`;
+        items.push({ label: c.label, color: shade, onClick: () => { setFocusIdx(gi); setFocusItem(g); setFocusOpen(true); } });
       });
     });
     return items;

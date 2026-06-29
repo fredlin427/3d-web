@@ -107,13 +107,11 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
           outerRadius={composite ? innerOuter : pieRadius}
           stroke="#fff" strokeWidth={2} paddingAngle={composite ? 0 : 4}
           isAnimationActive={false}
-          label={composite
-            ? ({ index }: any) => { const d = flatData[index ?? -1]; return d ? d.label : ""; }
-            : ({ name, value, percent }: any) => {
-                if ((percent || 0) < 0.04) return "";
-                return `${trunc(name, 14)} ${value}`;
-              }
-          }
+          label={({ name, value, percent }: any) => {
+            if (composite) return name;
+            if ((percent || 0) < 0.04) return "";
+            return `${trunc(name, 14)} ${value}`;
+          }}
           labelLine={composite ? false : { stroke: "#cbd5e1", strokeWidth: 0.5 }}
           onClick={handleClick}
           style={{ cursor: "pointer", outline: "none" } as any}
