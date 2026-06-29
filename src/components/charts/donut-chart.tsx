@@ -98,23 +98,29 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
             innerRadius={outerInner} outerRadius={outerOuter} stroke="#fff" strokeWidth={1} paddingAngle={1}
             isAnimationActive={false}
             label={({ name, value, percent, cx, cy, midAngle, outerRadius }: any) => {
-              if (labelMin > 0 && (percent || 0) * 100 < labelMin) return "";
               const text = `${trunc(name || "", 10)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
               const RAD = Math.PI / 180;
               const sin = Math.sin(-midAngle * RAD);
               const cos = Math.cos(-midAngle * RAD);
-              const lx = cx + (outerRadius + 10) * cos;
-              const ly = cy + (outerRadius + 10) * sin;
-              const offset = getLabelOffset(ly) * 22;
-              const adjY = ly + offset * (sin > 0 ? 1 : -1);
+              const startX = cx + outerRadius * cos;
+              const startY = cy + outerRadius * sin;
+              const baseLx = cx + (outerRadius + 10) * cos;
+              const baseLy = cy + (outerRadius + 10) * sin;
+              const offset = getLabelOffset(baseLy) * 22;
+              const endX = baseLx + offset * 0.3;
+              const endY = baseLy + offset * (sin > 0 ? 1 : -1);
               return (
-                <text x={lx} y={adjY} textAnchor={cos >= 0 ? "start" : "end"}
-                  style={{ fontSize: 11, fill: "#475569" }}>
-                  {text}
-                </text>
+                <g>
+                  <polyline points={`${startX},${startY} ${startX + (endX-startX)*0.5},${startY + (endY-startY)*0.5} ${endX},${endY}`}
+                    stroke="#64748b" strokeWidth={1} fill="none" />
+                  <text x={endX} y={endY} textAnchor={cos >= 0 ? "start" : "end"} dominantBaseline="central"
+                    style={{ fontSize: 11, fill: "#475569" }}>
+                    {text}
+                  </text>
+                </g>
               );
             }}
-            labelLine={{ stroke: "#64748b", strokeWidth: 1 }}
+            labelLine={false}
             onClick={onOuterClick ? (d: any) => onOuterClick(d.parentIdx) : undefined}
             onMouseEnter={(_: any, index: number) => { const d = outerData[index]; if (d) setHoverIdx(d.parentIdx); }}
             onMouseLeave={() => { if (!activeIdx) setHoverIdx(null); }}
@@ -140,23 +146,29 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
           stroke="#fff" strokeWidth={composite ? 2 : 1} paddingAngle={composite ? 2 : 0}
           isAnimationActive={false}
           label={({ name, value, percent, cx, cy, midAngle, outerRadius }: any) => {
-            if (labelMin > 0 && (percent || 0) * 100 < labelMin) return "";
             const text = `${trunc(name, 14)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
             const RAD = Math.PI / 180;
             const sin = Math.sin(-midAngle * RAD);
             const cos = Math.cos(-midAngle * RAD);
-            const lx = cx + (outerRadius + 10) * cos;
-            const ly = cy + (outerRadius + 10) * sin;
-            const offset = getLabelOffset(ly) * 22;
-            const adjY = ly + offset * (sin > 0 ? 1 : -1);
+            const startX = cx + outerRadius * cos;
+            const startY = cy + outerRadius * sin;
+            const baseLx = cx + (outerRadius + 10) * cos;
+            const baseLy = cy + (outerRadius + 10) * sin;
+            const offset = getLabelOffset(baseLy) * 22;
+            const endX = baseLx + offset * 0.3;
+            const endY = baseLy + offset * (sin > 0 ? 1 : -1);
             return (
-              <text x={lx} y={adjY} textAnchor={cos >= 0 ? "start" : "end"}
-                style={{ fontSize: 11, fill: "#475569" }}>
-                {text}
-              </text>
+              <g>
+                <polyline points={`${startX},${startY} ${startX + (endX-startX)*0.5},${startY + (endY-startY)*0.5} ${endX},${endY}`}
+                  stroke="#64748b" strokeWidth={1} fill="none" />
+                <text x={endX} y={endY} textAnchor={cos >= 0 ? "start" : "end"} dominantBaseline="central"
+                  style={{ fontSize: 11, fill: "#475569" }}>
+                  {text}
+                </text>
+              </g>
             );
           }}
-          labelLine={{ stroke: "#64748b", strokeWidth: 1 }}
+          labelLine={false}
           onClick={handleClick}
           onMouseEnter={(_: any, i: number) => setHoverIdx(i)}
           onMouseLeave={() => { if (!activeIdx) setHoverIdx(null); }}
