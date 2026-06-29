@@ -113,25 +113,11 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
           outerRadius={composite ? innerOuter : pieRadius}
           stroke="#fff" strokeWidth={composite ? 2 : 1} paddingAngle={composite ? 2 : 0}
           isAnimationActive={false}
-          label={composite
-            ? ({ cx, cy, midAngle, innerRadius, outerRadius, name }: any) => {
-                const RADIAN = Math.PI / 180;
-                const midR = (innerRadius + outerRadius) / 2;
-                const x = cx + midR * Math.cos(-midAngle * RADIAN);
-                const y = cy + midR * Math.sin(-midAngle * RADIAN);
-                return (
-                  <text x={x} y={y} textAnchor="middle" dominantBaseline="central"
-                    style={{ fontSize: 12, fontWeight: 700, fill: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.4)" }}>
-                    {name}
-                  </text>
-                );
-              }
-            : ({ name, value, percent }: any) => {
-                if ((percent || 0) < 0.01) return "";
-                return `${trunc(name, 14)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
-              }
-          }
-          labelLine={composite ? false : { stroke: "#64748b", strokeWidth: 1 }}
+          label={({ name, value, percent }: any) => {
+            if ((percent || 0) < 0.01) return "";
+            return `${trunc(name, 14)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
+          }}
+          labelLine={{ stroke: "#64748b", strokeWidth: 1 }}
           onClick={handleClick}
           onMouseEnter={(_: any, i: number) => setHoverIdx(i)}
           onMouseLeave={() => { if (!activeIdx) setHoverIdx(null); }}
