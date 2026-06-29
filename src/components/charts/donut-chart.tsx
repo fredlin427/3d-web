@@ -116,7 +116,6 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
   const innerLabel = !showLabels ? false : (props: any) => {
     const { name, value, percent, cx, cy, midAngle, outerRadius, index } = props;
     const color = colors[index % colors.length];
-    if ((percent || 0) < 0.03 && composite) return "";
     const text = composite ? name : `${trunc(name, 14)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
     const RAD = Math.PI / 180;
     const sin = Math.sin(-midAngle * RAD);
