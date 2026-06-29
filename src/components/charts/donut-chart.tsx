@@ -89,14 +89,10 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
             onClick={onOuterClick ? (d: any) => onOuterClick(d.parentIdx) : undefined}
             style={onOuterClick ? { cursor: "pointer" } as any : undefined}
           >
-            {outerData.map((d, i) => {
-              const base = colors[d.parentIdx % colors.length];
-              const kids = data[d.parentIdx]?.children?.length || 1;
-              const idx = data[d.parentIdx]?.children?.findIndex(c => c.label === d.name) ?? 0;
-              const fill = shadeColor(base, idx, kids);
-              return <Cell key={i} fill={fill}
-                opacity={activeIdx !== null && d.parentIdx !== activeIdx ? 0.15 : 1} />;
-            })}
+            {outerData.map((d, i) => (
+              <Cell key={i} fill={colors[i % colors.length]}
+                opacity={activeIdx !== null && d.parentIdx !== activeIdx ? 0.15 : 1} />
+            ))}
           </Pie>
         )}
 

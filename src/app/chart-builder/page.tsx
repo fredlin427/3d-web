@@ -122,17 +122,9 @@ export default function ChartBuilderPage() {
     stackedData.forEach((g, gi) => {
       const base = colors[gi % colors.length];
       items.push({ label: `${g.label}  ${g.value}`, color: base, bold: true, onClick: () => { setFocusIdx(gi); setFocusItem(g); setFocusOpen(true); } });
-      const kids = g.children.length || 1;
       g.children.forEach((c, ci) => {
-        // Wider shadeColor to match outer ring Cell fill
-        const num = parseInt(base.replace("#", ""), 16);
-        let r = (num >> 16) & 0xFF, g2 = (num >> 8) & 0xFF, b = num & 0xFF;
-        const mix = Math.min(0.6, 0.15 + (ci / Math.max(1, kids - 1)) * 0.45);
-        r = Math.round(r + (255 - r) * mix);
-        g2 = Math.round(g2 + (255 - g2) * mix);
-        b = Math.round(b + (255 - b) * mix);
-        const shade = `#${((r << 16) | (g2 << 8) | b).toString(16).padStart(6, "0")}`;
-        items.push({ label: c.label, color: shade, onClick: () => { setFocusIdx(gi); setFocusItem(g); setFocusOpen(true); } });
+        const kidColor = colors[(gi + ci + 1) % colors.length];
+        items.push({ label: c.label, color: kidColor, onClick: () => { setFocusIdx(gi); setFocusItem(g); setFocusOpen(true); } });
       });
     });
     return items;
