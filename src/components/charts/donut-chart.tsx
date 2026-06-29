@@ -76,13 +76,13 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
   const outerInner = Math.round(twoR * 0.64);
   const outerOuter = twoR;
 
-  // Label collision detection — simple grid-based, resets each render
-  const labelGrid = new Map<number, number>();
-  const getLabelOffset = (y: number): number => {
-    const k = Math.round(y / 20);
-    const n = labelGrid.get(k) || 0;
-    labelGrid.set(k, n + 1);
-    return Math.min(n, 5);
+  // Label overlap detection: skip if too close to existing label
+  const labelGrid = new Set<number>();
+  const labelOverlaps = (y: number): boolean => {
+    const k = Math.round(y / 24);
+    if (labelGrid.has(k)) return true;
+    labelGrid.add(k);
+    return false;
   };
 
   return (
@@ -106,9 +106,9 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
               const startY = cy + outerRadius * sin;
               const baseLx = cx + (outerRadius + 10) * cos;
               const baseLy = cy + (outerRadius + 10) * sin;
-              const offset = getLabelOffset(baseLy) * 20;
-              const endX = baseLx + offset * 0.3;
-              const endY = baseLy + offset * (sin > 0 ? 1 : -1);
+              if (labelOverlaps(baseLy)) return "";
+              const endX = baseLx;
+              const endY = baseLy;
               return (
                 <g>
                   <polyline points={`${startX},${startY} ${startX + (endX-startX)*0.5},${startY + (endY-startY)*0.5} ${endX},${endY}`}
