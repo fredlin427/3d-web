@@ -42,7 +42,7 @@ const TOOLTIP = {
   boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13,
 };
 
-const MIN_GAP = 22;
+const MIN_GAP = 30;
 const MAX_SHIFT = 8;
 
 export function DonutChart({ data, colors, total: propTotal, height = 520, composite = false, size = 100, labelMin = 0, showLabels = true, legendItems, onSelect, onOuterClick }: Props) {
@@ -108,8 +108,8 @@ export function DonutChart({ data, colors, total: propTotal, height = 520, compo
     const cos = Math.cos(-midAngle * RAD);
     const sx = cx + outerRadius * cos;
     const sy = cy + outerRadius * sin;
-    const lx = cx + (outerRadius + 14) * cos;
-    const ly = cy + (outerRadius + 14) * sin;
+    const lx = cx + (outerRadius + 20) * cos;
+    const ly = cy + (outerRadius + 20) * sin;
     const off = getOffset(`outer-${index}`, ly) * MIN_GAP;
     const ex = lx + off * 0.3;
     const ey = ly + off * (sin > 0 ? 1 : -1);
@@ -132,8 +132,8 @@ export function DonutChart({ data, colors, total: propTotal, height = 520, compo
     const cos = Math.cos(-midAngle * RAD);
     const sx = cx + outerRadius * cos;
     const sy = cy + outerRadius * sin;
-    const lx = cx + (outerRadius + 14) * cos;
-    const ly = cy + (outerRadius + 14) * sin;
+    const lx = cx + (outerRadius + 20) * cos;
+    const ly = cy + (outerRadius + 20) * sin;
     const off = getOffset(`inner-${index}`, ly) * MIN_GAP;
     const ex = lx + off * 0.3;
     const ey = ly + off * (sin > 0 ? 1 : -1);
