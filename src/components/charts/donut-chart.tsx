@@ -55,15 +55,19 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
     });
   }
 
+  // Fixed pixel radii — reliable, labels work
+  const outerR = composite ? 160 : 180;
+  const innerR = composite ? 95 : 100;
+
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <PieChart margin={{ top: 24, right: 24, bottom: 24, left: 24 }}>
+      <PieChart>
         {/* Outer ring (composite mode) */}
         {composite && outerData.length > 0 && (
           <Pie
             key={`outer-${activeIdx}`}
             data={outerData} dataKey="value" nameKey="name" cx="50%" cy="50%"
-            innerRadius="64%" outerRadius="85%" paddingAngle={1}
+            innerRadius={innerR + 5} outerRadius={outerR} paddingAngle={1}
             animationDuration={400} animationEasing="ease-out" isAnimationActive
           >
             {outerData.map((d, i) => {
@@ -80,12 +84,12 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
         <Pie
           key={`main-${composite}-${activeIdx}`}
           data={flatData} dataKey="value" nameKey="name" cx="50%" cy="50%"
-          innerRadius={composite ? "37%" : "52%"}
-          outerRadius={composite ? "64%" : "85%"}
+          innerRadius={composite ? 65 : innerR}
+          outerRadius={composite ? innerR : outerR}
           paddingAngle={4}
           animationDuration={400} animationEasing="ease-out" isAnimationActive
           label={({ name, value, percent }: any) => {
-            if ((percent || 0) < 0.03) return "";
+            if ((percent || 0) < 0.04) return "";
             return `${name} ${value}`;
           }}
           labelLine={{ stroke: "#cbd5e1", strokeWidth: 0.5 }}

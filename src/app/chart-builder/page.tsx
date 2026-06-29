@@ -147,7 +147,39 @@ export default function ChartBuilderPage() {
           {/* Group By */}<Card className="border-0 shadow-sm"><CardHeader className="pb-1.5 pt-4 px-4"><CardTitle className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Group By</CardTitle></CardHeader><CardContent className="px-3 pb-3"><Select value={xField} onValueChange={v => { if (v) setXField(v); }}><SelectTrigger className="w-full h-9 bg-white text-sm"><SelectValue /></SelectTrigger><SelectContent>{fields.map(f => <SelectItem key={f} value={f}>{FIELD_LABELS[f] || f}</SelectItem>)}</SelectContent></Select></CardContent></Card>
           {/* Sub-group */}<Card className="border-0 shadow-sm"><CardHeader className="pb-1.5 pt-4 px-4"><CardTitle className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Sub-group</CardTitle></CardHeader><CardContent className="px-3 pb-3"><Select value={stackBy} onValueChange={v => { setStackBy(v || ""); if (v) setShowTable(true); }}><SelectTrigger className="w-full h-9 bg-white text-sm"><SelectValue placeholder="None" /></SelectTrigger><SelectContent><SelectItem value="">None (flat)</SelectItem>{fields.filter(f => f !== xField).map(f => <SelectItem key={f} value={f}>{FIELD_LABELS[f] || f}</SelectItem>)}</SelectContent></Select></CardContent></Card>
           {/* Display */}<Card className="border-0 shadow-sm"><CardHeader className="pb-1.5 pt-4 px-4"><CardTitle className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Display</CardTitle></CardHeader><CardContent className="space-y-1.5 px-3 pb-3"><div className="flex gap-1"><div className="flex-1"><label className="text-[10px] font-semibold text-slate-400 uppercase">Top Groups</label><Select value={String(groupTop)} onValueChange={v => setGroupTop(Number(v))}><SelectTrigger className="w-full h-8 bg-white text-xs mt-0.5"><SelectValue /></SelectTrigger><SelectContent>{[5, 8, 10, 12, 15, 20, 0].map(n => <SelectItem key={n} value={String(n)}>{n === 0 ? "All" : `Top ${n}`}</SelectItem>)}</SelectContent></Select></div><div className="flex-1"><label className="text-[10px] font-semibold text-slate-400 uppercase">Sub-items</label><Select value={String(childTop)} onValueChange={v => setChildTop(Number(v))}><SelectTrigger className="w-full h-8 bg-white text-xs mt-0.5"><SelectValue /></SelectTrigger><SelectContent>{[5, 6, 8, 10, 12, 0].map(n => <SelectItem key={n} value={String(n)}>{n === 0 ? "All" : `≤${n}`}</SelectItem>)}</SelectContent></Select></div></div></CardContent></Card>
-          {/* Filters — same as old code, kept for completeness */}
+          {/* Filters */}
+          <Card className="border-0 shadow-sm overflow-visible">
+            <CardHeader className="pb-1.5 pt-4 px-4"><CardTitle className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Filters</CardTitle></CardHeader>
+            <CardContent className="space-y-1.5 px-3 pb-3">
+              <div>
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-semibold text-slate-400 uppercase">Financial Year</label>
+                  {fy && <button type="button" onClick={() => setFy("")} className="text-[10px] text-blue-500 hover:text-blue-700 font-medium">Clear</button>}
+                </div>
+                <Select value={fy} onValueChange={v => { setFy(v || ""); setDateFrom(""); setDateTo(""); }}>
+                  <SelectTrigger className="w-full h-8 bg-white text-xs mt-0.5 cursor-pointer"><SelectValue placeholder="All years" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All years</SelectItem>
+                    {(() => { const now = new Date(); const cfy = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1; const ys: string[] = []; for (let y = 2022; y <= cfy; y++) ys.push(`${String(y).slice(2)}${String(y + 1).slice(2)}`); return ys.map(y => <SelectItem key={y} value={y}>{y} (Apr-Mar)</SelectItem>); })()}
+                  </SelectContent>
+                </Select>
+              </div>
+              {!fy && (<div><label className="text-[10px] font-semibold text-slate-400 uppercase">Custom Date Range</label><div className="space-y-1 mt-0.5"><input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); if (fy) setFy(""); }} disabled={!!fy} className="w-full h-8 text-xs border rounded-md px-2 py-1 bg-white disabled:opacity-40 disabled:cursor-not-allowed" /><input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); if (fy) setFy(""); }} disabled={!!fy} className="w-full h-8 text-xs border rounded-md px-2 py-1 bg-white disabled:opacity-40 disabled:cursor-not-allowed" /></div></div>)}
+              {["category","hospital","department","purpose","technician"].map(key => {
+                const opts = filterOptions[key] || [];
+                if (opts.length === 0) return null;
+                const sel = activeFilters[key] || [];
+                const isExp = expandedFilter === key;
+                const label = key.charAt(0).toUpperCase() + key.slice(1);
+                return (<div key={key} className="border-t border-slate-100 pt-1.5 mt-1">
+                  <button type="button" onClick={() => setExpandedFilter(isExp ? null : key)} className="w-full flex items-center justify-between text-[10px] font-semibold text-slate-500 uppercase tracking-wide hover:text-slate-700 py-0.5">{label}<span className="text-slate-300">{isExp ? "▾" : "▸"}</span></button>
+                  {isExp && (<div className="max-h-32 overflow-y-auto space-y-0.5 mt-1">{opts.map(opt => (<label key={opt} className="flex items-center gap-1.5 cursor-pointer hover:bg-slate-50 rounded px-0.5 py-0.5"><input type="checkbox" checked={sel.includes(opt)} onChange={() => { const next = sel.includes(opt) ? sel.filter(v => v !== opt) : [...sel, opt]; setActiveFilters(prev => ({ ...prev, [key]: next })); }} className="rounded border-slate-300 text-primary focus:ring-primary h-3 w-3" /><span className="text-[11px] text-slate-600 truncate">{opt}</span></label>))}</div>)}
+                  {!isExp && sel.length > 0 && (<span className="text-[10px] text-blue-500 font-medium ml-1">{sel.length} selected</span>)}
+                </div>);
+              })}
+              {Object.values(activeFilters).some(v => v.length > 0) && (<button type="button" onClick={() => setActiveFilters({})} className="w-full text-[10px] text-red-400 hover:text-red-600 font-medium pt-1.5 border-t border-slate-100 mt-1.5">Clear all filters</button>)}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Right: Chart + Table */}
