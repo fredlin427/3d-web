@@ -29,7 +29,7 @@ export default function ChartBuilderPage() {
   const [showTable, setShowTable] = useState(true);
   const [tableMode, setTableMode] = useState<"hierarchical" | "pivot">("pivot");
   const [groupTop, setGroupTop] = useState(0); // show all
-  const [childTop, setChildTop] = useState(8);
+  const [childTop, setChildTop] = useState(0); // show all
   const [pieSize, setPieSize] = useState(150);
   const [labelMin, setLabelMin] = useState(0); // show all
   const [showLabels, setShowLabels] = useState(true);
