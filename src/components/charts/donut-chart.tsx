@@ -111,7 +111,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
           data={flatData} dataKey="value" nameKey="name" cx="50%" cy="48%"
           innerRadius={composite ? hole : Math.round(pieRadius * 0.45)}
           outerRadius={composite ? innerOuter : pieRadius}
-          stroke="#fff" strokeWidth={composite ? 2 : 1} paddingAngle={composite ? 3 : 0}
+          stroke="#fff" strokeWidth={composite ? 2 : 1} paddingAngle={composite ? 2 : 0}
           isAnimationActive={false}
           label={composite
             ? ({ cx, cy, midAngle, innerRadius, outerRadius, name }: any) => {
