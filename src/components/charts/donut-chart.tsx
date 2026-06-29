@@ -24,7 +24,8 @@ interface Props {
 function shadeColor(hex: string, step: number, totalKids: number): string {
   const num = parseInt(hex.replace("#", ""), 16);
   let r = (num >> 16) & 0xFF, g = (num >> 8) & 0xFF, b = num & 0xFF;
-  const mix = Math.min(0.4, step / (totalKids + 2));
+  // Wider spread: 20% base offset + up to 50% more
+  const mix = Math.min(0.6, 0.15 + (step / Math.max(1, totalKids - 1)) * 0.45);
   r = Math.round(r + (255 - r) * mix);
   g = Math.round(g + (255 - g) * mix);
   b = Math.round(b + (255 - b) * mix);
@@ -131,11 +132,20 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
             content={() => (
               <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] px-4">
                 {legendItems.map((item, i) => (
-                  <span key={i} className={`flex items-center gap-1 ${item.bold ? "font-bold text-slate-700 w-full mt-1" : "text-slate-500 ml-5"}`}>
-                    <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0"
-                      style={{ backgroundColor: item.color, opacity: item.bold ? 1 : 0.7 }} />
-                    {item.label}
-                  </span>
+                  item.onClick ? (
+                    <button key={i} onClick={item.onClick}
+                      className={`flex items-center gap-1 hover:text-blue-600 transition-colors ${item.bold ? "font-bold text-slate-700 w-full mt-1" : "text-slate-500 ml-5"}`}>
+                      <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0"
+                        style={{ backgroundColor: item.color, opacity: item.bold ? 1 : 0.7 }} />
+                      {item.label}
+                    </button>
+                  ) : (
+                    <span key={i} className={`flex items-center gap-1 ${item.bold ? "font-bold text-slate-700 w-full mt-1" : "text-slate-500 ml-5"}`}>
+                      <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0"
+                        style={{ backgroundColor: item.color, opacity: item.bold ? 1 : 0.7 }} />
+                      {item.label}
+                    </span>
+                  )
                 ))}
               </div>
             )}
