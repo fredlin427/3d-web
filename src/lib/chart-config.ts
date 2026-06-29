@@ -2,17 +2,23 @@
 import { BarChart3, PieChartIcon, TrendingUp, AreaChartIcon, Database, Layers } from "lucide-react";
 
 export const COLOR_PALETTES: Record<string, string[]> = {
-  "Excel": [
-    "#4472C4","#ED7D31","#A5A5A5","#FFC000","#5B9BD5","#70AD47",
-    "#F15C5C","#9B59B6","#1ABC9C","#E67E22","#2E75B6","#C55A11",
-    "#7F7F7F","#A68A00","#3B6FB6","#D44C2B","#8C8C8C","#E5A800",
-    "#4A90D9","#F07020","#B0B0B0","#FFB300","#6BA5DA","#85C056",
-  ],
   "Vivid": [
     "#E6194B","#3CB44B","#FFE119","#4363D8","#F58231","#911EB4",
     "#46F0F0","#F032E6","#BCF60C","#FABEBE","#008080","#E6BEFF",
     "#9A6324","#FFFAC8","#800000","#AAFFC3","#808000","#FFD8B1",
     "#000075","#808080","#A9A9A9","#DCBEFF","#FF6F61","#92A8D1",
+  ],
+  "Bright": [
+    "#E6194B","#3CB44B","#FFE119","#0082C8","#F58231","#911EB4",
+    "#46F0F0","#F032E6","#D2F53C","#FABEBE","#008080","#E6BEFF",
+    "#AA6E28","#FFFAC8","#800000","#AAFFC3","#808000","#FFD8B1",
+    "#000075","#A9A9A9","#DCBEFF","#FF6F61","#88CCEE","#CC6677",
+  ],
+  "Excel": [
+    "#4472C4","#ED7D31","#A5A5A5","#FFC000","#5B9BD5","#70AD47",
+    "#F15C5C","#9B59B6","#1ABC9C","#E67E22","#2E75B6","#C55A11",
+    "#7F7F7F","#A68A00","#3B6FB6","#D44C2B","#8C8C8C","#E5A800",
+    "#4A90D9","#F07020","#B0B0B0","#FFB300","#6BA5DA","#85C056",
   ],
   "Dark": [
     "#1B2A4A","#8B1E1E","#2D5A27","#7A5C00","#1E3A6E","#3D6B35",
@@ -27,7 +33,7 @@ export const COLOR_PALETTES: Record<string, string[]> = {
     "#B8D4F4","#ECB088","#D0D0D0","#F8D0A0","#B8D8F8","#C0E0A0",
   ],
 };
-export const DEFAULT_PALETTE = "Excel";
+export const DEFAULT_PALETTE = "Vivid";
 
 export const SOURCES = [
   { key: "cases", label: "Cases", icon: Database },

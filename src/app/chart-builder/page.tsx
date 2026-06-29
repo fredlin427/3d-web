@@ -216,6 +216,18 @@ export default function ChartBuilderPage() {
           </Card>
 
 
+          {/* Bar chart legend */}
+          {!isPie && hasStacked && legendItems.length > 0 && (
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs px-2">
+              {legendItems.map((item, i) => (
+                <span key={i} className={`flex items-center gap-1.5 ${item.bold ? "font-bold text-slate-700 w-full mt-1" : "text-slate-500 ml-6"}`}>
+                  <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: item.color, opacity: item.bold ? 1 : 0.7 }} />
+                  {item.label}
+                </span>
+              ))}
+            </div>
+          )}
+
           {showTable && hasStacked && (
             <Card className="border-0 shadow-sm">
               <CardHeader className="pb-2 pt-4 px-5 flex flex-row items-center justify-between">
