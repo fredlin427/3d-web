@@ -220,7 +220,7 @@ export default function ChartBuilderPage() {
 
 
           {/* Bar chart legend */}
-          {!isPie && hasStacked && legendItems.length > 0 && (
+          {!isPie && legendItems.length > 0 && (
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs px-2">
               {legendItems.map((item, i) => (
                 item.onClick ? (
