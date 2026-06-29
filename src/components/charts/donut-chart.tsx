@@ -15,7 +15,8 @@ interface Props {
   total?: number;
   height?: number;
   composite?: boolean;
-  size?: number;        // 0-100 scale, default 100
+  size?: number;
+  labelMin?: number;     // min percent to show label, default 0
   legendItems?: { label: string; color: string; bold?: boolean; onClick?: () => void }[];
   onSelect?: (slice: DonutSlice, index: number) => void;
   onOuterClick?: (parentIdx: number) => void;
@@ -41,7 +42,7 @@ const TOOLTIP = {
   boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13,
 };
 
-export function DonutChart({ data, colors, total: propTotal, height = 480, composite = false, size = 100, legendItems, onSelect, onOuterClick }: Props) {
+export function DonutChart({ data, colors, total: propTotal, height = 480, composite = false, size = 100, labelMin = 0, legendItems, onSelect, onOuterClick }: Props) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const displayIdx = activeIdx ?? hoverIdx;
@@ -85,7 +86,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
             innerRadius={outerInner} outerRadius={outerOuter} stroke="#fff" strokeWidth={1} paddingAngle={1}
             isAnimationActive={false}
             label={({ name, value, percent }: any) => {
-              if ((percent || 0) < 0.02) return "";
+              if (labelMin > 0 && (percent || 0) * 100 < labelMin) return "";
               return `${trunc(name || "", 10)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
             }}
             labelLine={{ stroke: "#64748b", strokeWidth: 1 }}
@@ -114,7 +115,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
           stroke="#fff" strokeWidth={composite ? 2 : 1} paddingAngle={composite ? 2 : 0}
           isAnimationActive={false}
           label={({ name, value, percent }: any) => {
-            if ((percent || 0) < 0.02) return "";
+            if (labelMin > 0 && (percent || 0) * 100 < labelMin) return "";
             return `${trunc(name, 14)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
           }}
           labelLine={{ stroke: "#64748b", strokeWidth: 1 }}
