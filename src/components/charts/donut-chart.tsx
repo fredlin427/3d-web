@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 export interface DonutSlice {
   name: string;
@@ -72,6 +72,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
   const outerOuter = twoR;
 
   return (
+    <>
     <ResponsiveContainer width="100%" height={height}>
       <PieChart>
         {/* Outer ring (composite) — rendered first so it's behind */}
@@ -89,10 +90,13 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
             onClick={onOuterClick ? (d: any) => onOuterClick(d.parentIdx) : undefined}
             style={onOuterClick ? { cursor: "pointer" } as any : undefined}
           >
-            {outerData.map((d, i) => (
-              <Cell key={i} fill={colors[i % colors.length]}
-                opacity={activeIdx !== null && d.parentIdx !== activeIdx ? 0.15 : 1} />
-            ))}
+            {outerData.map((d, i) => {
+              const base = colors[d.parentIdx % colors.length];
+              const kids = data[d.parentIdx]?.children?.length || 1;
+              const idx = data[d.parentIdx]?.children?.findIndex(c => c.label === d.name) ?? 0;
+              return <Cell key={i} fill={shadeColor(base, idx, kids)}
+                opacity={activeIdx !== null && d.parentIdx !== activeIdx ? 0.15 : 1} />;
+            })}
           </Pie>
         )}
 
@@ -133,34 +137,30 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
         </Pie>
 
         <Tooltip contentStyle={TOOLTIP} />
-
-        {/* Legend (region) — matches June 25 style, inside PieChart */}
-        {legendItems && legendItems.length > 0 && (
-          <Legend
-            verticalAlign="bottom" align="center" wrapperStyle={{ paddingTop: 8 }}
-            content={() => (
-              <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] px-4">
-                {legendItems.map((item, i) => (
-                  item.onClick ? (
-                    <button key={i} onClick={item.onClick}
-                      className={`flex items-center gap-1 hover:text-blue-600 transition-colors ${item.bold ? "font-bold text-slate-700 w-full mt-1" : "text-slate-500 ml-5"}`}>
-                      <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0"
-                        style={{ backgroundColor: item.color, opacity: item.bold ? 1 : 0.7 }} />
-                      {item.label}
-                    </button>
-                  ) : (
-                    <span key={i} className={`flex items-center gap-1 ${item.bold ? "font-bold text-slate-700 w-full mt-1" : "text-slate-500 ml-5"}`}>
-                      <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0"
-                        style={{ backgroundColor: item.color, opacity: item.bold ? 1 : 0.7 }} />
-                      {item.label}
-                    </span>
-                  )
-                ))}
-              </div>
-            )}
-          />
-        )}
       </PieChart>
     </ResponsiveContainer>
+
+    {/* Legend — outside chart, uniform with bar charts */}
+    {legendItems && legendItems.length > 0 && (
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] px-4 pt-2">
+        {legendItems.map((item, i) => (
+          item.onClick ? (
+            <button key={i} onClick={item.onClick}
+              className={`flex items-center gap-1 hover:text-blue-600 transition-colors ${item.bold ? "font-bold text-slate-700 w-full mt-1" : "text-slate-500 ml-5"}`}>
+              <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0"
+                style={{ backgroundColor: item.color, opacity: item.bold ? 1 : 0.7 }} />
+              {item.label}
+            </button>
+          ) : (
+            <span key={i} className={`flex items-center gap-1 ${item.bold ? "font-bold text-slate-700 w-full mt-1" : "text-slate-500 ml-5"}`}>
+              <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0"
+                style={{ backgroundColor: item.color, opacity: item.bold ? 1 : 0.7 }} />
+              {item.label}
+            </span>
+          )
+        ))}
+      </div>
+    )}
+    </>
   );
 }

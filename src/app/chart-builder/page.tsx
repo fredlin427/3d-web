@@ -115,20 +115,31 @@ export default function ChartBuilderPage() {
     return flat.map((d, i) => ({ name: d.label, value: d.value, children: stackedData[i]?.children?.map(c => ({ label: c.label, value: c.value })) || [] }));
   }, [chartData, stackedData]);
 
-  // Legend items — colors match outer ring (sequential index)
+  // Legend items — for pie: group headers bold + sub-items shadeColor. For bar: series labels.
   const legendItems = useMemo(() => {
-    if (!hasStacked) return [];
     const items: { label: string; color: string; bold?: boolean; onClick?: () => void }[] = [];
-    let kidSeq = 0;
-    stackedData.forEach((g, gi) => {
-      items.push({ label: `${g.label}  ${g.value}`, color: colors[gi % colors.length], bold: true, onClick: () => { setFocusIdx(gi); setFocusItem(g); setFocusOpen(true); } });
-      g.children.forEach((c) => {
-        items.push({ label: c.label, color: colors[kidSeq % colors.length], onClick: () => { setFocusIdx(gi); setFocusItem(g); setFocusOpen(true); } });
-        kidSeq++;
+    if (hasStacked) {
+      stackedData.forEach((g, gi) => {
+        const base = colors[gi % colors.length];
+        items.push({ label: `${g.label}  ${g.value}`, color: base, bold: true, onClick: () => { setFocusIdx(gi); setFocusItem(g); setFocusOpen(true); } });
+        const kids = g.children.length || 1;
+        g.children.forEach((c, ci) => {
+          const num = parseInt(base.replace("#", ""), 16);
+          let r = (num >> 16) & 0xFF, g2 = (num >> 8) & 0xFF, b = num & 0xFF;
+          const mix = Math.min(0.6, 0.15 + (ci / Math.max(1, kids - 1)) * 0.45);
+          r = Math.round(r + (255 - r) * mix); g2 = Math.round(g2 + (255 - g2) * mix); b = Math.round(b + (255 - b) * mix);
+          const shade = `#${((r << 16) | (g2 << 8) | b).toString(16).padStart(6, "0")}`;
+          items.push({ label: c.label, color: shade, onClick: () => { setFocusIdx(gi); setFocusItem(g); setFocusOpen(true); } });
+        });
       });
-    });
+    } else if (chartData.length > 0) {
+      // Single pie: simple legend from chartData
+      chartData.forEach((d, i) => {
+        items.push({ label: `${d.label}  ${d.value}`, color: colors[i % colors.length], onClick: () => setFocusOpen(false) });
+      });
+    }
     return items;
-  }, [hasStacked, stackedData, colors]);
+  }, [hasStacked, stackedData, chartData, colors]);
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto">
@@ -196,7 +207,7 @@ export default function ChartBuilderPage() {
                 {loading ? <div className="flex items-center justify-center" style={{ height: 500 }}><Loader2 className="h-8 w-8 text-primary animate-spin" /></div>
                 : isPie ? (
                   <DonutChart data={donutData} colors={colors} total={total} height={520} composite={hasStacked} size={pieSize}
-                    legendItems={hasStacked ? legendItems : undefined}
+                    legendItems={legendItems.length > 0 ? legendItems : undefined}
                     onSelect={(slice, idx) => { setFocusIdx(idx); setFocusItem({ label: slice.name, value: slice.value, children: slice.children?.map(c => ({ label: c.label, value: c.value })) || [] }); setFocusOpen(true); }}
                     onOuterClick={hasStacked ? (parentIdx: number) => { const g = donutData[parentIdx]; if (g) { setFocusIdx(parentIdx); setFocusItem({ label: g.name, value: g.value, children: (g.children || []).map(c => ({ label: c.label, value: c.value })) }); setFocusOpen(true); } } : undefined} />
                 ) : (
