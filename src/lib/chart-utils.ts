@@ -2,7 +2,7 @@
 
 /** Auto-group small items into "Other" when too many */
 export function groupTopN<T extends { label: string; value: number }>(items: T[], topN: number): T[] {
-  if (items.length <= topN) return items;
+  if (topN <= 0 || items.length <= topN) return items;
   const sorted = [...items].sort((a, b) => b.value - a.value);
   const top = sorted.slice(0, topN);
   const otherValue = sorted.slice(topN).reduce((s, r) => s + r.value, 0);
