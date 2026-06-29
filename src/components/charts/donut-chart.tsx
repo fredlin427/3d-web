@@ -61,17 +61,17 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <PieChart margin={{ top: 20, right: 40, bottom: 20, left: 40 }}>
+      <PieChart>
         {/* Outer ring (composite mode) */}
         {composite && outerData.length > 0 && (
           <Pie
             key={`outer-${activeIdx}`}
             data={outerData} dataKey="value" nameKey="name" cx="50%" cy="50%"
             innerRadius={innerR + 5} outerRadius={outerR} paddingAngle={1}
-            animationDuration={400} animationEasing="ease-out" isAnimationActive
+            isAnimationActive={false}
             label={({ name, value, percent }: any) => {
-              if ((percent || 0) < 0.02) return "";
-              return `${name} ${value}`;
+              if ((percent || 0) < 0.05) return "";
+              return `${(name || "").length > 12 ? (name || "").slice(0, 12) + "…" : name} ${value}`;
             }}
             labelLine={{ stroke: "#cbd5e1", strokeWidth: 0.3 }}
           >
@@ -92,10 +92,10 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
           innerRadius={composite ? 65 : innerR}
           outerRadius={composite ? innerR : outerR}
           paddingAngle={4}
-          isAnimationActive animationDuration={400} animationEasing="ease-out"
+          isAnimationActive={false}
           label={({ name, value, percent }: any) => {
-            if ((percent || 0) < 0.03) return "";
-            return `${name} ${value}`;
+            if ((percent || 0) < 0.04) return "";
+            return `${(name || "").length > 14 ? (name || "").slice(0, 14) + "…" : name} ${value}`;
           }}
           labelLine={{ stroke: "#cbd5e1", strokeWidth: 0.5 }}
           onClick={handleClick}
