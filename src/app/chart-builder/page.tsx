@@ -203,7 +203,7 @@ export default function ChartBuilderPage() {
             <CardHeader className="flex flex-row items-center justify-between pb-1 pt-5 px-5">
               <div><CardTitle className="text-base font-bold text-slate-800">{title}</CardTitle><p className="text-xs text-slate-400 mt-0.5">{hasStacked ? `${stackedData.length} groups, ${barKeys.length} sub` : `${chartData.length} groups`} · {total} total</p></div>
               <div className="flex gap-1">
-                {isPie && <Button variant="ghost" size="sm" className={cn("h-8 gap-1.5 text-xs", showLabels && "text-primary")} onClick={() => setShowLabels(!showLabels)}>{showLabels ? "Labels On" : "Labels Off"}</Button>}
+                <Button variant="ghost" size="sm" className={cn("h-8 gap-1.5 text-xs", showLabels && "text-primary")} onClick={() => setShowLabels(!showLabels)}>{showLabels ? "Labels On" : "Labels Off"}</Button>
                 <Button variant="ghost" size="sm" className={cn("h-8 gap-1.5 text-xs", showTable && "text-primary")} onClick={() => setShowTable(!showTable)}><Table2 className="h-3.5 w-3.5" />{showTable ? "Hide Table" : "Show Table"}</Button>
               </div>
             </CardHeader>
@@ -216,7 +216,7 @@ export default function ChartBuilderPage() {
                     onSelect={(slice, idx) => { setFocusIdx(idx); setFocusItem({ label: slice.name, value: slice.value, children: slice.children?.map(c => ({ label: c.label, value: c.value })) || [] }); setFocusOpen(true); }}
                     onOuterClick={hasStacked ? (parentIdx: number) => { const g = donutData[parentIdx]; if (g) { setFocusIdx(parentIdx); setFocusItem({ label: g.name, value: g.value, children: (g.children || []).map(c => ({ label: c.label, value: c.value })) }); setFocusOpen(true); } } : undefined} />
                 ) : (
-                  <BarChartView type={chartType as "bar"|"barH"|"line"|"area"|"stacked"} data={barData} dataKeys={hasStacked ? barKeys : ["value"]} colors={colors}
+                  <BarChartView type={chartType as "bar"|"barH"|"line"|"area"|"stacked"} data={barData} dataKeys={hasStacked ? barKeys : ["value"]} colors={colors} showLabels={showLabels}
                     onClick={(d: any) => {
                       if (hasStacked) { const g = stackedData.find(s => s.label === d.label); if (g) { setFocusIdx(stackedData.indexOf(g)); setFocusItem(g); setFocusOpen(true); } }
                       else { const idx = chartData.findIndex(c => c.label === d.label); if (idx >= 0) { setFocusIdx(idx); setFocusItem({ label: chartData[idx].label, value: chartData[idx].value, children: [] }); setFocusOpen(true); } }

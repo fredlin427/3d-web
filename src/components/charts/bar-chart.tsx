@@ -13,6 +13,7 @@ interface Props {
   colors: string[];
   labelKey?: string;
   height?: number;
+  showLabels?: boolean;
   onClick?: (item: any) => void;
 }
 
@@ -22,7 +23,7 @@ const tooltipStyle = {
   boxShadow: "0 8px 32px rgba(0,0,0,0.08)", fontSize: 13, padding: "10px 14px",
 };
 
-export function BarChartView({ type, data, dataKeys, colors, labelKey = "label", height = 440, onClick }: Props) {
+export function BarChartView({ type, data, dataKeys, colors, labelKey = "label", height = 440, showLabels = true, onClick }: Props) {
   if (!data || data.length === 0) return (
     <div className="flex items-center justify-center" style={{ height }}>
       <div className="text-center"><BarChart3 className="h-12 w-12 text-slate-200 mx-auto mb-3" /><p className="text-sm text-slate-400">No data</p></div>
