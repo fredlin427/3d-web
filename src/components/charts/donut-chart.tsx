@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 export interface DonutSlice {
@@ -16,7 +16,9 @@ interface Props {
   height?: number;
   composite?: boolean;
   size?: number;
-  labelMin?: number;     // min percent to show label, default 0
+  labelMin?: number;
+  showLabels?: boolean;
+  onToggleLabels?: () => void;
   legendItems?: { label: string; color: string; bold?: boolean; onClick?: () => void }[];
   onSelect?: (slice: DonutSlice, index: number) => void;
   onOuterClick?: (parentIdx: number) => void;
@@ -45,17 +47,9 @@ const TOOLTIP = {
 export function DonutChart({ data, colors, total: propTotal, height = 480, composite = false, size = 100, labelMin = 0, legendItems, onSelect, onOuterClick }: Props) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
+  const [showLabels, setShowLabels] = useState(true);
   const displayIdx = activeIdx ?? hoverIdx;
   const computedTotal = propTotal ?? data.reduce((s, d) => s + d.value, 0);
-  const labelYs = useRef<Map<number, number>>(new Map()); // y → count at this y
-
-  // Get Y offset for this label position (0 = no offset, N = shift down by N*20px)
-  const getLabelOffset = (y: number): number => {
-    const rounded = Math.round(y / 20) * 20; // snap to 20px grid
-    const count = labelYs.current.get(rounded) || 0;
-    labelYs.current.set(rounded, count + 1);
-    return count; // 0 = first label at this Y, 1 = second (shift down), etc
-  };
 
   const handleClick = useCallback((_: any, index: number) => {
     const next = activeIdx === index ? null : index;
@@ -83,8 +77,14 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
   const outerInner = Math.round(twoR * 0.64);
   const outerOuter = twoR;
 
-  // Reset collision tracker each render
-  labelYs.current = new Map();
+  // Label collision: fresh Map per render (no refs, no stale state)
+  const labelMap = new Map<number, number>();
+  const getLabelOffset = (y: number, maxOffset = 6): number => {
+    const k = Math.round(y / 22) * 22;
+    const n = labelMap.get(k) || 0;
+    labelMap.set(k, n + 1);
+    return Math.min(n, maxOffset);
+  };
 
   return (
     <>
@@ -96,7 +96,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
               data={outerData} dataKey="value" nameKey="name" cx="50%" cy="48%"
             innerRadius={outerInner} outerRadius={outerOuter} stroke="#fff" strokeWidth={1} paddingAngle={1}
             isAnimationActive={false}
-            label={(props: any) => {
+            label={!showLabels ? false : (props: any) => {
               const { name, value, percent, cx, cy, midAngle, outerRadius, index } = props;
               const color = colors[index % colors.length];
               const text = `${trunc(name || "", 10)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
@@ -146,7 +146,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
           outerRadius={composite ? innerOuter : pieRadius}
           stroke="#fff" strokeWidth={composite ? 2 : 1} paddingAngle={composite ? 2 : 0}
           isAnimationActive={false}
-          label={(props: any) => {
+          label={!showLabels ? false : (props: any) => {
             const { name, value, percent, cx, cy, midAngle, outerRadius, index } = props;
             const color = colors[index % colors.length];
             const text = `${trunc(name, 14)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
