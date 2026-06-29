@@ -42,7 +42,9 @@ const TOOLTIP = {
 };
 
 export function DonutChart({ data, colors, total: propTotal, height = 480, composite = false, size = 100, legendItems, onSelect, onOuterClick }: Props) {
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
+  const displayIdx = activeIdx ?? hoverIdx;
   const computedTotal = propTotal ?? data.reduce((s, d) => s + d.value, 0);
 
   const handleClick = useCallback((_: any, index: number) => {
@@ -128,11 +130,13 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
           }
           labelLine={composite ? false : { stroke: "#64748b", strokeWidth: 1 }}
           onClick={handleClick}
+          onMouseEnter={(_: any, i: number) => setHoverIdx(i)}
+          onMouseLeave={() => { if (!activeIdx) setHoverIdx(null); }}
           style={{ cursor: "pointer", outline: "none" } as any}
         >
           {flatData.map((_, i) => (
             <Cell key={i} fill={colors[i % colors.length]}
-              opacity={activeIdx === null ? 1 : activeIdx === i ? 1 : 0.18} />
+              opacity={displayIdx === null ? 1 : displayIdx === i ? 1 : 0.18} />
           ))}
         </Pie>
 
