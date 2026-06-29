@@ -135,7 +135,7 @@ export default function ChartBuilderPage() {
     } else if (chartData.length > 0) {
       // Single pie: simple legend from chartData
       chartData.forEach((d, i) => {
-        items.push({ label: `${d.label}  ${d.value}`, color: colors[i % colors.length], onClick: () => setFocusOpen(false) });
+        items.push({ label: `${d.label}  ${d.value}`, color: colors[i % colors.length], onClick: () => { setFocusIdx(i); setFocusItem({ label: d.label, value: d.value, children: [] }); setFocusOpen(true); } });
       });
     }
     return items;
