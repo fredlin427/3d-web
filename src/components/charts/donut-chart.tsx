@@ -79,7 +79,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
           <Pie
             key={`outer-${activeIdx}`}
             data={outerData} dataKey="value" nameKey="name" cx="50%" cy="48%"
-            innerRadius={outerInner} outerRadius={outerOuter} stroke="#fff" strokeWidth={0.5}
+            innerRadius={outerInner} outerRadius={outerOuter} stroke="#fff" strokeWidth={1.5}
             isAnimationActive={false}
             label={({ name, value, percent }: any) => {
               if ((percent || 0) < 0.05) return "";
@@ -106,7 +106,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
           data={flatData} dataKey="value" nameKey="name" cx="50%" cy="48%"
           innerRadius={composite ? hole : Math.round(pieRadius * 0.45)}
           outerRadius={composite ? innerOuter : pieRadius}
-          stroke="#fff" strokeWidth={2} paddingAngle={composite ? 0 : 4}
+          stroke="#fff" strokeWidth={3} paddingAngle={composite ? 0 : 6}
           isAnimationActive={false}
           label={({ name, value, percent }: any) => {
             if (composite) return name;

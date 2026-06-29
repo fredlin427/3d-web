@@ -220,10 +220,18 @@ export default function ChartBuilderPage() {
           {!isPie && hasStacked && legendItems.length > 0 && (
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs px-2">
               {legendItems.map((item, i) => (
-                <span key={i} className={`flex items-center gap-1.5 ${item.bold ? "font-bold text-slate-700 w-full mt-1" : "text-slate-500 ml-6"}`}>
-                  <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: item.color, opacity: item.bold ? 1 : 0.7 }} />
-                  {item.label}
-                </span>
+                item.onClick ? (
+                  <button key={i} onClick={item.onClick}
+                    className={`flex items-center gap-1.5 hover:text-blue-600 transition-colors ${item.bold ? "font-bold text-slate-700 w-full mt-1" : "text-slate-500 ml-6"}`}>
+                    <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: item.color, opacity: item.bold ? 1 : 0.7 }} />
+                    {item.label}
+                  </button>
+                ) : (
+                  <span key={i} className={`flex items-center gap-1.5 ${item.bold ? "font-bold text-slate-700 w-full mt-1" : "text-slate-500 ml-6"}`}>
+                    <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: item.color, opacity: item.bold ? 1 : 0.7 }} />
+                    {item.label}
+                  </span>
+                )
               ))}
             </div>
           )}
