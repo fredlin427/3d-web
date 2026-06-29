@@ -44,10 +44,9 @@ const TOOLTIP = {
   boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13,
 };
 
-export function DonutChart({ data, colors, total: propTotal, height = 480, composite = false, size = 100, labelMin = 0, legendItems, onSelect, onOuterClick }: Props) {
+export function DonutChart({ data, colors, total: propTotal, height = 480, composite = false, size = 100, labelMin = 0, showLabels = true, legendItems, onSelect, onOuterClick }: Props) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
-  const [showLabels, setShowLabels] = useState(true);
   const displayIdx = activeIdx ?? hoverIdx;
   const computedTotal = propTotal ?? data.reduce((s, d) => s + d.value, 0);
 
@@ -77,13 +76,24 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
   const outerInner = Math.round(twoR * 0.64);
   const outerOuter = twoR;
 
-  // Label collision: fresh Map per render (no refs, no stale state)
-  const labelMap = new Map<number, number>();
-  const getLabelOffset = (y: number, maxOffset = 6): number => {
-    const k = Math.round(y / 22) * 22;
-    const n = labelMap.get(k) || 0;
-    labelMap.set(k, n + 1);
-    return Math.min(n, maxOffset);
+  // Precompute label offsets per slice (stable, no matter how many times Recharts calls label fn)
+  const labelOffsets = useMemo(() => {
+    const offsets = new Map<string, number>();
+    const yMap = new Map<number, number>();
+    // Process inner ring first, then outer ring — same order as rendering
+    flatData.forEach((d, i) => {
+      const frac = (i + 0.5) / flatData.length;
+      const y = Math.round(Math.sin(frac * Math.PI * 2) * 200);
+      const k = Math.round(y / 24) * 24;
+      const n = yMap.get(k) || 0;
+      yMap.set(k, n + 1);
+      offsets.set(`inner-${i}`, Math.min(n, 5));
+    });
+    return offsets;
+  }, [flatData]);
+
+  const getLabelOffset = (key: string, y: number): number => {
+    return labelOffsets.get(key) || 0;
   };
 
   return (
@@ -107,7 +117,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
               const startY = cy + outerRadius * sin;
               const baseLx = cx + (outerRadius + 10) * cos;
               const baseLy = cy + (outerRadius + 10) * sin;
-              const offset = getLabelOffset(baseLy) * 22;
+              const offset = getLabelOffset(`outer-${index}`, baseLy) * 22;
               const endX = baseLx + offset * 0.3;
               const endY = baseLy + offset * (sin > 0 ? 1 : -1);
               return (
@@ -157,7 +167,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
             const startY = cy + outerRadius * sin;
             const baseLx = cx + (outerRadius + 10) * cos;
             const baseLy = cy + (outerRadius + 10) * sin;
-            const offset = getLabelOffset(baseLy) * 22;
+            const offset = getLabelOffset(`inner-${index}`, baseLy) * 22;
             const endX = baseLx + offset * 0.3;
             const endY = baseLy + offset * (sin > 0 ? 1 : -1);
             return (
