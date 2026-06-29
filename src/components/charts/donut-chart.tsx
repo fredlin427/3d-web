@@ -73,13 +73,19 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
   const outerInner = Math.round(twoR * 0.64);
   const outerOuter = twoR;
 
-  // Label offset grid — fresh Map per render, shifts overlapping labels
+  // Label offset grid — computed once, stable across re-renders
   const labelGrid = new Map<number, number>();
-  const getOffset = (y: number): number => {
+  const labelOffsets = new Map<string, number>(); // key → offset, stable
+  let outerIdx = 0;
+  let innerIdx = 0;
+  const getOffset = (key: string, y: number): number => {
+    if (labelOffsets.has(key)) return labelOffsets.get(key)!;
     const k = Math.round(y / 24);
     const n = labelGrid.get(k) || 0;
     labelGrid.set(k, n + 1);
-    return Math.min(n, 5);
+    const off = Math.min(n, 5);
+    labelOffsets.set(key, off);
+    return off;
   };
 
   const outerLabel = !showLabels ? false : (props: any) => {
@@ -94,7 +100,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
     const sy = cy + outerRadius * sin;
     const lx = cx + (outerRadius + 14) * cos;
     const ly = cy + (outerRadius + 14) * sin;
-    const off = getOffset(ly) * 20;
+    const off = getOffset(`outer-${index}`, ly) * 20;
     const ex = lx + off * 0.3;
     const ey = ly + off * (sin > 0 ? 1 : -1);
     return (
@@ -110,7 +116,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
   const innerLabel = !showLabels ? false : (props: any) => {
     const { name, value, percent, cx, cy, midAngle, outerRadius, index } = props;
     const color = colors[index % colors.length];
-    if ((percent || 0) < 0.03 && composite) return ""; // tiny inner slice in composite: skip
+    if ((percent || 0) < 0.03 && composite) return "";
     const text = composite ? name : `${trunc(name, 14)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
     const RAD = Math.PI / 180;
     const sin = Math.sin(-midAngle * RAD);
@@ -119,7 +125,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
     const sy = cy + outerRadius * sin;
     const lx = cx + (outerRadius + 14) * cos;
     const ly = cy + (outerRadius + 14) * sin;
-    const off = getOffset(ly) * 20;
+    const off = getOffset(`inner-${index}`, ly) * 20;
     const ex = lx + off * 0.3;
     const ey = ly + off * (sin > 0 ? 1 : -1);
     return (
