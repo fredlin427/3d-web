@@ -42,8 +42,8 @@ const TOOLTIP = {
   boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13,
 };
 
-const MIN_GAP = 30;
-const MAX_SHIFT = 8;
+const MIN_GAP = 38;
+const MAX_SHIFT = 14;
 
 export function DonutChart({ data, colors, total: propTotal, height = 520, composite = false, size = 100, labelMin = 0, showLabels = true, legendItems, onSelect, onOuterClick }: Props) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
