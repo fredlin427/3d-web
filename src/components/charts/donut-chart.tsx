@@ -83,8 +83,8 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
             innerRadius={outerInner} outerRadius={outerOuter} stroke="#fff" strokeWidth={1} paddingAngle={1}
             isAnimationActive={false}
             label={({ name, value, percent }: any) => {
-              if ((percent || 0) < 0.05) return "";
-              return `${trunc(name || "", 10)} ${value}`;
+              if ((percent || 0) < 0.02) return "";
+              return `${trunc(name || "", 10)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
             }}
             labelLine={{ stroke: "#64748b", strokeWidth: 1 }}
             onClick={onOuterClick ? (d: any) => onOuterClick(d.parentIdx) : undefined}
@@ -122,8 +122,8 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
                 );
               }
             : ({ name, value, percent }: any) => {
-                if ((percent || 0) < 0.04) return "";
-                return `${trunc(name, 14)} ${value}`;
+                if ((percent || 0) < 0.02) return "";
+                return `${trunc(name, 14)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
               }
           }
           labelLine={composite ? false : { stroke: "#64748b", strokeWidth: 1 }}

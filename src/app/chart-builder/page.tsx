@@ -206,7 +206,7 @@ export default function ChartBuilderPage() {
               <ChartFullscreen title={title}>
                 {loading ? <div className="flex items-center justify-center" style={{ height: 500 }}><Loader2 className="h-8 w-8 text-primary animate-spin" /></div>
                 : isPie ? (
-                  <DonutChart data={donutData} colors={colors} total={total} height={520} composite={hasStacked} size={pieSize}
+                  <DonutChart data={donutData} colors={colors} total={total} height={600} composite={hasStacked} size={pieSize}
                     legendItems={legendItems.length > 0 ? legendItems : undefined}
                     onSelect={(slice, idx) => { setFocusIdx(idx); setFocusItem({ label: slice.name, value: slice.value, children: slice.children?.map(c => ({ label: c.label, value: c.value })) || [] }); setFocusOpen(true); }}
                     onOuterClick={hasStacked ? (parentIdx: number) => { const g = donutData[parentIdx]; if (g) { setFocusIdx(parentIdx); setFocusItem({ label: g.name, value: g.value, children: (g.children || []).map(c => ({ label: c.label, value: c.value })) }); setFocusOpen(true); } } : undefined} />
