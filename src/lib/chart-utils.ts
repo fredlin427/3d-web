@@ -6,7 +6,7 @@ export function groupTopN<T extends { label: string; value: number }>(items: T[]
   const sorted = [...items].sort((a, b) => b.value - a.value);
   const top = sorted.slice(0, topN);
   const otherValue = sorted.slice(topN).reduce((s, r) => s + r.value, 0);
-  if (otherValue > 0) top.push({ label: `Other (${sorted.length - topN} items)`, value: otherValue } as T);
+  if (otherValue > 0) top.push({ label: `Others (${sorted.length - topN} items)`, value: otherValue } as T);
   return top;
 }
 
@@ -32,7 +32,7 @@ export function buildStacked(
       ? (() => {
           const top = children.slice(0, childTop);
           const otherVal = children.slice(childTop).reduce((s, c) => s + c.value, 0);
-          if (otherVal > 0) top.push({ label: `Other (${children.length - childTop})`, value: otherVal });
+          if (otherVal > 0) top.push({ label: `Others (${children.length - childTop})`, value: otherVal });
           return top;
         })()
       : children;
@@ -49,7 +49,7 @@ export function buildStacked(
       const mergedChildren = Array.from(merged.entries())
         .map(([l, v]) => ({ label: l, value: v }))
         .sort((a, b) => b.value - a.value);
-      top.push({ label: `Other (${stacked.length - groupTop} groups)`, value: otherVal, children: mergedChildren });
+      top.push({ label: `Others (${stacked.length - groupTop} groups)`, value: otherVal, children: mergedChildren });
     }
     stacked = top;
   }
