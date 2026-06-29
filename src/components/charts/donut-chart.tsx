@@ -47,12 +47,14 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const displayIdx = activeIdx ?? hoverIdx;
   const computedTotal = propTotal ?? data.reduce((s, d) => s + d.value, 0);
-  const labelYs = useRef<Set<number>>(new Set());
+  const labelYs = useRef<Map<number, number>>(new Map()); // y → count at this y
 
-  // Check if a label at this y position would collide with existing labels
-  const labelCollides = (y: number): boolean => {
-    for (const ey of labelYs.current) { if (Math.abs(y - ey) < 18) return true; }
-    return false;
+  // Get Y offset for this label position (0 = no offset, N = shift down by N*20px)
+  const getLabelOffset = (y: number): number => {
+    const rounded = Math.round(y / 20) * 20; // snap to 20px grid
+    const count = labelYs.current.get(rounded) || 0;
+    labelYs.current.set(rounded, count + 1);
+    return count; // 0 = first label at this Y, 1 = second (shift down), etc
   };
 
   const handleClick = useCallback((_: any, index: number) => {
@@ -82,7 +84,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
   const outerOuter = twoR;
 
   // Reset collision tracker each render
-  labelYs.current = new Set();
+  labelYs.current = new Map();
 
   return (
     <>
@@ -95,13 +97,22 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
             data={outerData} dataKey="value" nameKey="name" cx="50%" cy="48%"
             innerRadius={outerInner} outerRadius={outerOuter} stroke="#fff" strokeWidth={1} paddingAngle={1}
             isAnimationActive={false}
-            label={({ name, value, percent, cy, midAngle, outerRadius }: any) => {
+            label={({ name, value, percent, cx, cy, midAngle, outerRadius }: any) => {
               if (labelMin > 0 && (percent || 0) * 100 < labelMin) return "";
+              const text = `${trunc(name || "", 10)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
               const RAD = Math.PI / 180;
-              const ly = cy + outerRadius * Math.sin(-midAngle * RAD);
-              if (labelCollides(ly)) return "";
-              labelYs.current.add(ly);
-              return `${trunc(name || "", 10)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
+              const sin = Math.sin(-midAngle * RAD);
+              const cos = Math.cos(-midAngle * RAD);
+              const lx = cx + (outerRadius + 10) * cos;
+              const ly = cy + (outerRadius + 10) * sin;
+              const offset = getLabelOffset(ly) * 22;
+              const adjY = ly + offset * (sin > 0 ? 1 : -1);
+              return (
+                <text x={lx} y={adjY} textAnchor={cos >= 0 ? "start" : "end"}
+                  style={{ fontSize: 11, fill: "#475569" }}>
+                  {text}
+                </text>
+              );
             }}
             labelLine={{ stroke: "#64748b", strokeWidth: 1 }}
             onClick={onOuterClick ? (d: any) => onOuterClick(d.parentIdx) : undefined}
@@ -128,13 +139,22 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
           outerRadius={composite ? innerOuter : pieRadius}
           stroke="#fff" strokeWidth={composite ? 2 : 1} paddingAngle={composite ? 2 : 0}
           isAnimationActive={false}
-          label={({ name, value, percent, cy, midAngle, outerRadius }: any) => {
+          label={({ name, value, percent, cx, cy, midAngle, outerRadius }: any) => {
             if (labelMin > 0 && (percent || 0) * 100 < labelMin) return "";
+            const text = `${trunc(name, 14)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
             const RAD = Math.PI / 180;
-            const ly = cy + outerRadius * Math.sin(-midAngle * RAD);
-            if (labelCollides(ly)) return "";
-            labelYs.current.add(ly);
-            return `${trunc(name, 14)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
+            const sin = Math.sin(-midAngle * RAD);
+            const cos = Math.cos(-midAngle * RAD);
+            const lx = cx + (outerRadius + 10) * cos;
+            const ly = cy + (outerRadius + 10) * sin;
+            const offset = getLabelOffset(ly) * 22;
+            const adjY = ly + offset * (sin > 0 ? 1 : -1);
+            return (
+              <text x={lx} y={adjY} textAnchor={cos >= 0 ? "start" : "end"}
+                style={{ fontSize: 11, fill: "#475569" }}>
+                {text}
+              </text>
+            );
           }}
           labelLine={{ stroke: "#64748b", strokeWidth: 1 }}
           onClick={handleClick}
