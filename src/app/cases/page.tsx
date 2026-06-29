@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -39,13 +39,14 @@ interface CaseItem {
 
 export default function CasesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [cases, setCases] = useState<CaseItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [deptFilter, setDeptFilter] = useState("all");
-  const [catFilter, setCatFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [fyFilter, setFyFilter] = useState("");
+  const [search, setSearch] = useState(searchParams.get("search") || "");
+  const [deptFilter, setDeptFilter] = useState(searchParams.get("department") || searchParams.get("dept") || "all");
+  const [catFilter, setCatFilter] = useState(searchParams.get("category") || searchParams.get("cat") || "all");
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "all");
+  const [fyFilter, setFyFilter] = useState(searchParams.get("fy") || "");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteCaseNumber, setDeleteCaseNumber] = useState("");
   const [importing, setImporting] = useState(false);

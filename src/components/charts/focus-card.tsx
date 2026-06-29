@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { X } from "lucide-react";
+import { X, ExternalLink } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 interface SubItem { label: string; value: number }
 
@@ -16,10 +17,11 @@ interface FocusCardProps {
   color?: string;
   children?: SubItem[];
   colors?: string[];
+  viewAllHref?: string;
   onClose: () => void;
 }
 
-export function FocusCard({ open, label, value, total, chartType = "donut", color = "#4f46e5", children, colors = [], onClose }: FocusCardProps) {
+export function FocusCard({ open, label, value, total, chartType = "donut", color = "#4f46e5", children, colors = [], viewAllHref, onClose }: FocusCardProps) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -122,6 +124,16 @@ export function FocusCard({ open, label, value, total, chartType = "donut", colo
           </div>
         )}
 
+        {viewAllHref && (
+          <div className="px-6 pb-4">
+            <Link href={viewAllHref}
+              className="flex items-center justify-center gap-1.5 w-full py-2 rounded-xl text-sm font-semibold transition-all hover:scale-[1.02] active:scale-95"
+              style={{ backgroundColor: `${color}15`, color }}>
+              <ExternalLink className="h-3.5 w-3.5" />
+              View all {value} cases
+            </Link>
+          </div>
+        )}
         <div className="h-1 w-full" style={{ backgroundColor: color }} />
       </div>
     </div>

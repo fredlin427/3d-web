@@ -518,6 +518,7 @@ export default function DashboardPage() {
             color={deptFocusIdx !== null ? CHART_COLORS[deptFocusIdx % CHART_COLORS.length] : "#4f46e5"}
             children={deptFocusItem?.children}
             colors={CHART_COLORS}
+            viewAllHref={deptFocusItem?.name ? `/cases?department=${encodeURIComponent(deptFocusItem.name)}` : undefined}
             onClose={() => { setDeptFocusOpen(false); setDeptFocusItem(null); setDeptFocusIdx(null); }}
           />
           </>);

@@ -298,6 +298,7 @@ export default function ChartBuilderPage() {
         chartType={chartType === "donut" || chartType === "pie" ? chartType : "bar"}
         color={focusIdx != null ? colors[focusIdx % colors.length] : colors[0]}
         children={focusItem?.children} colors={colors}
+        viewAllHref={focusItem?.label ? `/cases?${xField}=${encodeURIComponent(focusItem.label)}` : undefined}
         onClose={() => { setFocusOpen(false); setFocusItem(null); setFocusIdx(null); }} />
     </div>
   );
