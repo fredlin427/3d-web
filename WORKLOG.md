@@ -1,5 +1,31 @@
 # QEH 3D Printing Office — Work Log
 
+## 2026-06-29 — Chart Polish & Label System (35+ commits)
+
+### Chart Builder Finalized
+- **DonutChart**: Iterative label collision resolution (MIN_GAP 38px, MAX_SHIFT 14)
+- Custom colored polyline labels per slice
+- Hover dim on both inner and outer rings
+- Labels On/Off toggle for all 4 chart types
+- Pie Size slider (40-150%), Label Min % slider
+- Legend outside chart, clickable → FocusCard
+- FocusCard with "View all N cases" link → cases page auto-filter
+- groupTop/childTop default 0 (show all), API defaults fixed
+- PNG export: html2canvas with legendItems passed correctly
+
+### Bug Fixes
+- Tank: always qty=1, unit="unit" in API create+update
+- groupTopN: topN<=0 now correctly shows all (was merging everything)
+- childTop always sent to API (was defaulting to 8 when 0)
+- "Others" naming collision with real data fixed
+- Cases page supports URL params for pre-filtering
+
+### Architecture
+- DonutChart: pure Recharts, single component for single + composite
+- BarChartView: bar/line/area/stacked
+- FocusCard: Recharts PieChart detail viz
+- Chart Builder: clean 300-line orchestrator
+
 ## 2026-06-26 — Audit, Security & Chart Rewrite (18 commits)
 
 ### Critical Production Fixes
