@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 export interface DonutSlice {
@@ -42,7 +42,10 @@ const TOOLTIP = {
   boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13,
 };
 
-export function DonutChart({ data, colors, total: propTotal, height = 480, composite = false, size = 100, labelMin = 0, showLabels = true, legendItems, onSelect, onOuterClick }: Props) {
+const MIN_GAP = 22;
+const MAX_SHIFT = 8;
+
+export function DonutChart({ data, colors, total: propTotal, height = 520, composite = false, size = 100, labelMin = 0, showLabels = true, legendItems, onSelect, onOuterClick }: Props) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const displayIdx = activeIdx ?? hoverIdx;
@@ -73,23 +76,31 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
   const outerInner = Math.round(twoR * 0.64);
   const outerOuter = twoR;
 
-  // Label offset grid — computed once, stable across re-renders
-  const labelGrid = new Map<number, number>();
-  const labelOffsets = new Map<string, number>(); // key → offset, stable
-  let outerIdx = 0;
-  let innerIdx = 0;
+  // ── Label collision: iterative resolver ──
+  const occupied = useMemo(() => new Map<string, number>(), [flatData, outerData]);
   const getOffset = (key: string, y: number): number => {
-    if (labelOffsets.has(key)) return labelOffsets.get(key)!;
-    const k = Math.round(y / 24);
-    const n = labelGrid.get(k) || 0;
-    labelGrid.set(k, n + 1);
-    const off = Math.min(n, 5);
-    labelOffsets.set(key, off);
-    return off;
+    if (occupied.has(key)) return occupied.get(key)!;
+    // Find first free Y slot starting from y
+    const slot0 = Math.round(y / MIN_GAP) * MIN_GAP;
+    for (let s = 0; s <= MAX_SHIFT; s++) {
+      const testY = slot0 + s * MIN_GAP;
+      let collides = false;
+      occupied.forEach((oy) => {
+        if (Math.abs(testY - oy) < MIN_GAP) collides = true;
+      });
+      if (!collides) { occupied.set(key, s); return s; }
+    }
+    occupied.set(key, MAX_SHIFT);
+    return MAX_SHIFT;
   };
 
+  if (!showLabels) {
+    // Clear occupied for no-label case
+    occupied.clear();
+  }
+
   const outerLabel = !showLabels ? false : (props: any) => {
-    const { name, value, percent, cx, cy, midAngle, outerRadius, index } = props;
+    const { name, value, cx, cy, midAngle, outerRadius, index } = props;
     const color = colors[outerData[index]?.parentIdx % colors.length] || colors[0];
     const text = `${trunc(name || "", 10)} ${value}`;
     const RAD = Math.PI / 180;
@@ -99,7 +110,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
     const sy = cy + outerRadius * sin;
     const lx = cx + (outerRadius + 14) * cos;
     const ly = cy + (outerRadius + 14) * sin;
-    const off = getOffset(`outer-${index}`, ly) * 20;
+    const off = getOffset(`outer-${index}`, ly) * MIN_GAP;
     const ex = lx + off * 0.3;
     const ey = ly + off * (sin > 0 ? 1 : -1);
     return (
@@ -123,7 +134,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
     const sy = cy + outerRadius * sin;
     const lx = cx + (outerRadius + 14) * cos;
     const ly = cy + (outerRadius + 14) * sin;
-    const off = getOffset(`inner-${index}`, ly) * 20;
+    const off = getOffset(`inner-${index}`, ly) * MIN_GAP;
     const ex = lx + off * 0.3;
     const ey = ly + off * (sin > 0 ? 1 : -1);
     return (
@@ -138,15 +149,14 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
 
   return (
     <>
-    <ResponsiveContainer width="100%" height={height}>
+    <ResponsiveContainer width="100%" height={height + (composite ? 40 : 0)}>
       <PieChart>
         {composite && outerData.length > 0 && (
           <Pie
             data={outerData} dataKey="value" nameKey="name" cx="50%" cy="48%"
             innerRadius={outerInner} outerRadius={outerOuter} stroke="#fff" strokeWidth={1} paddingAngle={1}
             isAnimationActive={false}
-            label={outerLabel}
-            labelLine={false}
+            label={outerLabel} labelLine={false}
             onClick={onOuterClick ? (d: any) => onOuterClick(d.parentIdx) : undefined}
             onMouseEnter={(_: any, index: number) => { const d = outerData[index]; if (d) setHoverIdx(d.parentIdx); }}
             onMouseLeave={() => { if (!activeIdx) setHoverIdx(null); }}
@@ -157,8 +167,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
               const kids = data[d.parentIdx]?.children?.length || 1;
               const idx = data[d.parentIdx]?.children?.findIndex(c => c.label === d.name) ?? 0;
               const dimmed = displayIdx !== null && d.parentIdx !== displayIdx;
-              return <Cell key={i} fill={shadeColor(base, idx, kids)}
-                opacity={dimmed ? 0.15 : 1} />;
+              return <Cell key={i} fill={shadeColor(base, idx, kids)} opacity={dimmed ? 0.15 : 1} />;
             })}
           </Pie>
         )}
@@ -169,16 +178,14 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
           outerRadius={composite ? innerOuter : pieRadius}
           stroke="#fff" strokeWidth={composite ? 2 : 1} paddingAngle={composite ? 2 : 0}
           isAnimationActive={false}
-          label={innerLabel}
-          labelLine={false}
+          label={innerLabel} labelLine={false}
           onClick={handleClick}
           onMouseEnter={(_: any, i: number) => setHoverIdx(i)}
           onMouseLeave={() => { if (!activeIdx) setHoverIdx(null); }}
           style={{ cursor: "pointer", outline: "none" } as any}
         >
           {flatData.map((_, i) => (
-            <Cell key={i} fill={colors[i % colors.length]}
-              opacity={displayIdx === null ? 1 : displayIdx === i ? 1 : 0.18} />
+            <Cell key={i} fill={colors[i % colors.length]} opacity={displayIdx === null ? 1 : displayIdx === i ? 1 : 0.18} />
           ))}
         </Pie>
 
