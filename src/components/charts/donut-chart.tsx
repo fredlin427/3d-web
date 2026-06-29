@@ -73,12 +73,64 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
   const outerInner = Math.round(twoR * 0.64);
   const outerOuter = twoR;
 
-  const labelFn = showLabels
-    ? ({ name, value, percent }: any) => {
-        if (labelMin > 0 && (percent || 0) * 100 < labelMin) return "";
-        return `${trunc(name || "", 14)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
-      }
-    : false;
+  // Label offset grid — fresh Map per render, shifts overlapping labels
+  const labelGrid = new Map<number, number>();
+  const getOffset = (y: number): number => {
+    const k = Math.round(y / 24);
+    const n = labelGrid.get(k) || 0;
+    labelGrid.set(k, n + 1);
+    return Math.min(n, 5);
+  };
+
+  const outerLabel = !showLabels ? false : (props: any) => {
+    const { name, value, percent, cx, cy, midAngle, outerRadius, index } = props;
+    const color = colors[outerData[index]?.parentIdx % colors.length] || colors[0];
+    if ((percent || 0) < 0.03) return "";
+    const text = `${trunc(name || "", 10)} ${value}`;
+    const RAD = Math.PI / 180;
+    const sin = Math.sin(-midAngle * RAD);
+    const cos = Math.cos(-midAngle * RAD);
+    const sx = cx + outerRadius * cos;
+    const sy = cy + outerRadius * sin;
+    const lx = cx + (outerRadius + 14) * cos;
+    const ly = cy + (outerRadius + 14) * sin;
+    const off = getOffset(ly) * 20;
+    const ex = lx + off * 0.3;
+    const ey = ly + off * (sin > 0 ? 1 : -1);
+    return (
+      <g>
+        <polyline points={`${sx},${sy} ${sx+(ex-sx)*0.6},${sy+(ey-sy)*0.6} ${ex},${ey}`}
+          stroke={color} strokeWidth={1} fill="none" opacity={0.6} />
+        <text x={ex} y={ey} textAnchor={cos >= 0 ? "start" : "end"} dominantBaseline="central"
+          style={{ fontSize: 11, fontWeight: 600, fill: color }}>{text}</text>
+      </g>
+    );
+  };
+
+  const innerLabel = !showLabels ? false : (props: any) => {
+    const { name, value, percent, cx, cy, midAngle, outerRadius, index } = props;
+    const color = colors[index % colors.length];
+    if ((percent || 0) < 0.03 && composite) return ""; // tiny inner slice in composite: skip
+    const text = composite ? name : `${trunc(name, 14)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
+    const RAD = Math.PI / 180;
+    const sin = Math.sin(-midAngle * RAD);
+    const cos = Math.cos(-midAngle * RAD);
+    const sx = cx + outerRadius * cos;
+    const sy = cy + outerRadius * sin;
+    const lx = cx + (outerRadius + 14) * cos;
+    const ly = cy + (outerRadius + 14) * sin;
+    const off = getOffset(ly) * 20;
+    const ex = lx + off * 0.3;
+    const ey = ly + off * (sin > 0 ? 1 : -1);
+    return (
+      <g>
+        <polyline points={`${sx},${sy} ${sx+(ex-sx)*0.6},${sy+(ey-sy)*0.6} ${ex},${ey}`}
+          stroke={color} strokeWidth={1} fill="none" opacity={0.6} />
+        <text x={ex} y={ey} textAnchor={cos >= 0 ? "start" : "end"} dominantBaseline="central"
+          style={{ fontSize: 11, fontWeight: 600, fill: color }}>{text}</text>
+      </g>
+    );
+  };
 
   return (
     <>
@@ -89,8 +141,8 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
             data={outerData} dataKey="value" nameKey="name" cx="50%" cy="48%"
             innerRadius={outerInner} outerRadius={outerOuter} stroke="#fff" strokeWidth={1} paddingAngle={1}
             isAnimationActive={false}
-            label={labelFn}
-            labelLine={{ stroke: "#94a3b8", strokeWidth: 1 }}
+            label={outerLabel}
+            labelLine={false}
             onClick={onOuterClick ? (d: any) => onOuterClick(d.parentIdx) : undefined}
             onMouseEnter={(_: any, index: number) => { const d = outerData[index]; if (d) setHoverIdx(d.parentIdx); }}
             onMouseLeave={() => { if (!activeIdx) setHoverIdx(null); }}
@@ -113,8 +165,8 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
           outerRadius={composite ? innerOuter : pieRadius}
           stroke="#fff" strokeWidth={composite ? 2 : 1} paddingAngle={composite ? 2 : 0}
           isAnimationActive={false}
-          label={labelFn}
-          labelLine={{ stroke: "#94a3b8", strokeWidth: 1 }}
+          label={innerLabel}
+          labelLine={false}
           onClick={handleClick}
           onMouseEnter={(_: any, i: number) => setHoverIdx(i)}
           onMouseLeave={() => { if (!activeIdx) setHoverIdx(null); }}
