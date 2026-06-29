@@ -76,24 +76,13 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
   const outerInner = Math.round(twoR * 0.64);
   const outerOuter = twoR;
 
-  // Precompute label offsets per slice (stable, no matter how many times Recharts calls label fn)
-  const labelOffsets = useMemo(() => {
-    const offsets = new Map<string, number>();
-    const yMap = new Map<number, number>();
-    // Process inner ring first, then outer ring — same order as rendering
-    flatData.forEach((d, i) => {
-      const frac = (i + 0.5) / flatData.length;
-      const y = Math.round(Math.sin(frac * Math.PI * 2) * 200);
-      const k = Math.round(y / 24) * 24;
-      const n = yMap.get(k) || 0;
-      yMap.set(k, n + 1);
-      offsets.set(`inner-${i}`, Math.min(n, 5));
-    });
-    return offsets;
-  }, [flatData]);
-
-  const getLabelOffset = (key: string, y: number): number => {
-    return labelOffsets.get(key) || 0;
+  // Label collision detection — simple grid-based, resets each render
+  const labelGrid = new Map<number, number>();
+  const getLabelOffset = (y: number): number => {
+    const k = Math.round(y / 20);
+    const n = labelGrid.get(k) || 0;
+    labelGrid.set(k, n + 1);
+    return Math.min(n, 5);
   };
 
   return (
@@ -117,7 +106,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
               const startY = cy + outerRadius * sin;
               const baseLx = cx + (outerRadius + 10) * cos;
               const baseLy = cy + (outerRadius + 10) * sin;
-              const offset = getLabelOffset(`outer-${index}`, baseLy) * 22;
+              const offset = getLabelOffset(baseLy) * 20;
               const endX = baseLx + offset * 0.3;
               const endY = baseLy + offset * (sin > 0 ? 1 : -1);
               return (
