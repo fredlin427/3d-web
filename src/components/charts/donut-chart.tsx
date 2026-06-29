@@ -85,7 +85,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
             innerRadius={outerInner} outerRadius={outerOuter} stroke="#fff" strokeWidth={1} paddingAngle={1}
             isAnimationActive={false}
             label={({ name, value, percent }: any) => {
-              if ((percent || 0) < 0.02) return "";
+              if ((percent || 0) < 0.01) return "";
               return `${trunc(name || "", 10)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
             }}
             labelLine={{ stroke: "#64748b", strokeWidth: 1 }}
@@ -96,8 +96,9 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
               const base = colors[d.parentIdx % colors.length];
               const kids = data[d.parentIdx]?.children?.length || 1;
               const idx = data[d.parentIdx]?.children?.findIndex(c => c.label === d.name) ?? 0;
+              const dimmed = displayIdx !== null && d.parentIdx !== displayIdx;
               return <Cell key={i} fill={shadeColor(base, idx, kids)}
-                opacity={activeIdx !== null && d.parentIdx !== activeIdx ? 0.15 : 1} />;
+                opacity={dimmed ? 0.15 : 1} />;
             })}
           </Pie>
         )}
@@ -124,7 +125,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
                 );
               }
             : ({ name, value, percent }: any) => {
-                if ((percent || 0) < 0.02) return "";
+                if ((percent || 0) < 0.01) return "";
                 return `${trunc(name, 14)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
               }
           }
