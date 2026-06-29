@@ -115,16 +115,16 @@ export default function ChartBuilderPage() {
     return flat.map((d, i) => ({ name: d.label, value: d.value, children: stackedData[i]?.children?.map(c => ({ label: c.label, value: c.value })) || [] }));
   }, [chartData, stackedData]);
 
-  // Legend items — colors match chart outer ring (shadeColor)
+  // Legend items — colors match outer ring (sequential index)
   const legendItems = useMemo(() => {
     if (!hasStacked) return [];
     const items: { label: string; color: string; bold?: boolean; onClick?: () => void }[] = [];
+    let kidSeq = 0;
     stackedData.forEach((g, gi) => {
-      const base = colors[gi % colors.length];
-      items.push({ label: `${g.label}  ${g.value}`, color: base, bold: true, onClick: () => { setFocusIdx(gi); setFocusItem(g); setFocusOpen(true); } });
-      g.children.forEach((c, ci) => {
-        const kidColor = colors[(gi + ci + 1) % colors.length];
-        items.push({ label: c.label, color: kidColor, onClick: () => { setFocusIdx(gi); setFocusItem(g); setFocusOpen(true); } });
+      items.push({ label: `${g.label}  ${g.value}`, color: colors[gi % colors.length], bold: true, onClick: () => { setFocusIdx(gi); setFocusItem(g); setFocusOpen(true); } });
+      g.children.forEach((c) => {
+        items.push({ label: c.label, color: colors[kidSeq % colors.length], onClick: () => { setFocusIdx(gi); setFocusItem(g); setFocusOpen(true); } });
+        kidSeq++;
       });
     });
     return items;

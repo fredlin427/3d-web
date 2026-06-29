@@ -85,7 +85,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
               if ((percent || 0) < 0.05) return "";
               return `${trunc(name || "", 10)} ${value}`;
             }}
-            labelLine={{ stroke: "#cbd5e1", strokeWidth: 0.5 }}
+            labelLine={{ stroke: "#64748b", strokeWidth: 1 }}
             onClick={onOuterClick ? (d: any) => onOuterClick(d.parentIdx) : undefined}
             style={onOuterClick ? { cursor: "pointer" } as any : undefined}
           >
@@ -122,7 +122,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
                 return `${trunc(name, 14)} ${value}`;
               }
           }
-          labelLine={composite ? false : { stroke: "#cbd5e1", strokeWidth: 0.5 }}
+          labelLine={composite ? false : { stroke: "#64748b", strokeWidth: 1 }}
           onClick={handleClick}
           style={{ cursor: "pointer", outline: "none" } as any}
         >
