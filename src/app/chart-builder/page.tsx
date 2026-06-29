@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Camera, RefreshCw, Loader2, Table2, ListTree } from "lucide-react";
+import { Camera, RefreshCw, Loader2, Table2, ListTree, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { COLOR_PALETTES, DEFAULT_PALETTE, SOURCES, CHART_TYPES, FIELD_LABELS, SOURCE_FIELDS, getDefaultStackBy } from "@/lib/chart-config";
 import { DonutChart, type DonutSlice } from "@/components/charts/donut-chart";
@@ -232,9 +232,22 @@ export default function ChartBuilderPage() {
             <Card className="border-0 shadow-sm">
               <CardHeader className="pb-2 pt-4 px-5 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-bold text-slate-700 flex items-center gap-2">{tableMode === "pivot" ? <Table2 className="h-4 w-4 text-primary" /> : <ListTree className="h-4 w-4 text-primary" />}{tableMode === "pivot" ? `Pivot: ${FIELD_LABELS[xField] || xField} × ${FIELD_LABELS[stackBy] || stackBy}` : `Breakdown: ${FIELD_LABELS[xField] || xField} → ${FIELD_LABELS[stackBy] || stackBy}`}</CardTitle>
-                <div className="flex bg-slate-100 rounded-lg p-0.5">
-                  <button type="button" onClick={() => setTableMode("pivot")} className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${tableMode === "pivot" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>Pivot</button>
-                  <button type="button" onClick={() => setTableMode("hierarchical")} className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${tableMode === "hierarchical" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>List</button>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export XLSX" onClick={async () => {
+                    const XLSX = await import("xlsx");
+                    const rows = stackedData.flatMap(g => [
+                      { Group: g.label, Sub: "", Count: g.value },
+                      ...g.children.map(c => ({ Group: "", Sub: c.label, Count: c.value })),
+                    ]);
+                    const ws = XLSX.utils.json_to_sheet(rows);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "Data");
+                    XLSX.writeFile(wb, `chart-data.xlsx`);
+                  }}><Download className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button>
+                  <div className="flex bg-slate-100 rounded-lg p-0.5">
+                    <button type="button" onClick={() => setTableMode("pivot")} className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${tableMode === "pivot" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>Pivot</button>
+                    <button type="button" onClick={() => setTableMode("hierarchical")} className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${tableMode === "hierarchical" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>List</button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="px-2 pb-4">
@@ -245,7 +258,12 @@ export default function ChartBuilderPage() {
           )}
 
           {showTable && !hasStacked && chartData.length > 0 && (
-            <Card className="border-0 shadow-sm"><CardHeader className="pb-2 pt-4 px-5"><CardTitle className="text-sm font-bold text-slate-700 flex items-center gap-2"><Table2 className="h-4 w-4 text-primary" />Data Table</CardTitle></CardHeader>
+            <Card className="border-0 shadow-sm"><CardHeader className="pb-2 pt-4 px-5 flex flex-row items-center justify-between"><CardTitle className="text-sm font-bold text-slate-700 flex items-center gap-2"><Table2 className="h-4 w-4 text-primary" />Data Table</CardTitle>
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Export XLSX" onClick={async () => {
+              const XLSX = await import("xlsx");
+              const ws = XLSX.utils.json_to_sheet(chartData.map(d => ({ Label: d.label, Count: d.value })));
+              const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Data"); XLSX.writeFile(wb, "chart-data.xlsx");
+            }}><Download className="h-3.5 w-3.5 text-slate-400 hover:text-slate-600" /></Button></CardHeader>
               <CardContent className="px-2 pb-4"><HierarchicalTable data={chartData.map(d => ({ label: d.label, value: d.value, children: [] }))} total={total} primaryLabel={FIELD_LABELS[xField] || xField} secondaryLabel="" colors={colors} /></CardContent></Card>)}
         </div>
       </div>

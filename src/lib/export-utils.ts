@@ -22,9 +22,11 @@ export async function exportPNG(containerId: string, filename: string): Promise<
 
     // Set explicit dimensions
     const bbox = svg.getBoundingClientRect();
-    clone.setAttribute("width", String(bbox.width));
-    clone.setAttribute("height", String(bbox.height));
-    clone.setAttribute("viewBox", `0 0 ${bbox.width} ${bbox.height}`);
+    const w = bbox.width || svg.getAttribute("width") || "800";
+    const h = bbox.height || svg.getAttribute("height") || "600";
+    clone.setAttribute("width", String(w));
+    clone.setAttribute("height", String(h));
+    clone.setAttribute("viewBox", `0 0 ${w} ${h}`);
 
     // Get all CSS and inline it (browser handles this natively)
     const serializer = new XMLSerializer();
@@ -32,8 +34,8 @@ export async function exportPNG(containerId: string, filename: string): Promise<
 
     // Create canvas to convert SVG → PNG
     const canvas = document.createElement("canvas");
-    canvas.width = bbox.width * 2;
-    canvas.height = bbox.height * 2;
+    canvas.width = Number(w) * 2;
+    canvas.height = Number(h) * 2;
     const ctx = canvas.getContext("2d")!;
     ctx.scale(2, 2);
     ctx.fillStyle = "#ffffff";
