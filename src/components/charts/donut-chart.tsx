@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 export interface DonutSlice {
@@ -18,7 +18,6 @@ interface Props {
   size?: number;
   labelMin?: number;
   showLabels?: boolean;
-  onToggleLabels?: () => void;
   legendItems?: { label: string; color: string; bold?: boolean; onClick?: () => void }[];
   onSelect?: (slice: DonutSlice, index: number) => void;
   onOuterClick?: (parentIdx: number) => void;
@@ -27,8 +26,7 @@ interface Props {
 function shadeColor(hex: string, step: number, totalKids: number): string {
   const num = parseInt(hex.replace("#", ""), 16);
   let r = (num >> 16) & 0xFF, g = (num >> 8) & 0xFF, b = num & 0xFF;
-  // Wider spread: 20% base offset + up to 50% more
-  const mix = Math.min(0.6, 0.15 + (step / Math.max(1, totalKids - 1)) * 0.45);
+  const mix = Math.min(0.4, step / (totalKids + 2));
   r = Math.round(r + (255 - r) * mix);
   g = Math.round(g + (255 - g) * mix);
   b = Math.round(b + (255 - b) * mix);
@@ -67,7 +65,6 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
     });
   }
 
-  // Size scale: 100 = 180px base radius, scaled by size/100
   const scale = size / 100;
   const pieRadius = Math.round(180 * scale);
   const twoR = Math.round(Math.min(pieRadius * 0.75, 140 * scale));
@@ -76,42 +73,24 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
   const outerInner = Math.round(twoR * 0.64);
   const outerOuter = twoR;
 
+  const labelFn = showLabels
+    ? ({ name, value, percent }: any) => {
+        if (labelMin > 0 && (percent || 0) * 100 < labelMin) return "";
+        return `${trunc(name || "", 14)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
+      }
+    : false;
 
   return (
     <>
     <ResponsiveContainer width="100%" height={height}>
       <PieChart>
-        {/* Outer ring (composite) — rendered first so it's behind */}
         {composite && outerData.length > 0 && (
           <Pie
-              data={outerData} dataKey="value" nameKey="name" cx="50%" cy="48%"
+            data={outerData} dataKey="value" nameKey="name" cx="50%" cy="48%"
             innerRadius={outerInner} outerRadius={outerOuter} stroke="#fff" strokeWidth={1} paddingAngle={1}
             isAnimationActive={false}
-            label={!showLabels ? false : (props: any) => {
-              const { name, value, percent, cx, cy, midAngle, outerRadius, index } = props;
-              const color = colors[index % colors.length];
-              const text = `${trunc(name || "", 10)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
-              const RAD = Math.PI / 180;
-              const sin = Math.sin(-midAngle * RAD);
-              const cos = Math.cos(-midAngle * RAD);
-              const startX = cx + outerRadius * cos;
-              const startY = cy + outerRadius * sin;
-              const baseLx = cx + (outerRadius + 10) * cos;
-              const baseLy = cy + (outerRadius + 10) * sin;
-              const endX = baseLx;
-              const endY = baseLy;
-              return (
-                <g>
-                  <polyline points={`${startX},${startY} ${startX + (endX-startX)*0.5},${startY + (endY-startY)*0.5} ${endX},${endY}`}
-                    stroke={color} strokeWidth={1} fill="none" opacity={0.7} />
-                  <text x={endX} y={endY} textAnchor={cos >= 0 ? "start" : "end"} dominantBaseline="central"
-                    style={{ fontSize: 11, fontWeight: 500, fill: color }}>
-                    {text}
-                  </text>
-                </g>
-              );
-            }}
-            labelLine={false}
+            label={labelFn}
+            labelLine={{ stroke: "#94a3b8", strokeWidth: 1 }}
             onClick={onOuterClick ? (d: any) => onOuterClick(d.parentIdx) : undefined}
             onMouseEnter={(_: any, index: number) => { const d = outerData[index]; if (d) setHoverIdx(d.parentIdx); }}
             onMouseLeave={() => { if (!activeIdx) setHoverIdx(null); }}
@@ -128,39 +107,14 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
           </Pie>
         )}
 
-        {/* Inner ring — rendered on top */}
         <Pie
-          key={`inner-${activeIdx}`}
           data={flatData} dataKey="value" nameKey="name" cx="50%" cy="48%"
           innerRadius={composite ? hole : Math.round(pieRadius * 0.45)}
           outerRadius={composite ? innerOuter : pieRadius}
           stroke="#fff" strokeWidth={composite ? 2 : 1} paddingAngle={composite ? 2 : 0}
           isAnimationActive={false}
-          label={!showLabels ? false : (props: any) => {
-            const { name, value, percent, cx, cy, midAngle, outerRadius, index } = props;
-            const color = colors[index % colors.length];
-            const text = `${trunc(name, 14)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
-            const RAD = Math.PI / 180;
-            const sin = Math.sin(-midAngle * RAD);
-            const cos = Math.cos(-midAngle * RAD);
-            const startX = cx + outerRadius * cos;
-            const startY = cy + outerRadius * sin;
-            const baseLx = cx + (outerRadius + 10) * cos;
-            const baseLy = cy + (outerRadius + 10) * sin;
-            const endX = baseLx;
-            const endY = baseLy;
-            return (
-              <g>
-                <polyline points={`${startX},${startY} ${startX + (endX-startX)*0.5},${startY + (endY-startY)*0.5} ${endX},${endY}`}
-                  stroke={color} strokeWidth={1} fill="none" opacity={0.7} />
-                <text x={endX} y={endY} textAnchor={cos >= 0 ? "start" : "end"} dominantBaseline="central"
-                  style={{ fontSize: 11, fontWeight: 600, fill: color }}>
-                  {text}
-                </text>
-              </g>
-            );
-          }}
-          labelLine={false}
+          label={labelFn}
+          labelLine={{ stroke: "#94a3b8", strokeWidth: 1 }}
           onClick={handleClick}
           onMouseEnter={(_: any, i: number) => setHoverIdx(i)}
           onMouseLeave={() => { if (!activeIdx) setHoverIdx(null); }}
@@ -176,7 +130,6 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
       </PieChart>
     </ResponsiveContainer>
 
-    {/* Legend — outside chart, uniform with bar charts */}
     {legendItems && legendItems.length > 0 && (
       <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] px-4 pt-2">
         {legendItems.map((item, i) => (
