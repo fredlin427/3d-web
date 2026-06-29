@@ -90,7 +90,9 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
             }}
             labelLine={{ stroke: "#64748b", strokeWidth: 1 }}
             onClick={onOuterClick ? (d: any) => onOuterClick(d.parentIdx) : undefined}
-            style={onOuterClick ? { cursor: "pointer" } as any : undefined}
+            onMouseEnter={(_: any, index: number) => { const d = outerData[index]; if (d) setHoverIdx(d.parentIdx); }}
+            onMouseLeave={() => { if (!activeIdx) setHoverIdx(null); }}
+            style={{ cursor: "pointer", outline: "none" } as any}
           >
             {outerData.map((d, i) => {
               const base = colors[d.parentIdx % colors.length];
