@@ -104,11 +104,24 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
           outerRadius={composite ? innerOuter : pieRadius}
           stroke="#fff" strokeWidth={3} paddingAngle={composite ? 0 : 6}
           isAnimationActive={false}
-          label={({ name, value, percent }: any) => {
-            if (composite) return name;
-            if ((percent || 0) < 0.04) return "";
-            return `${trunc(name, 14)} ${value}`;
-          }}
+          label={composite
+            ? ({ cx, cy, midAngle, innerRadius, outerRadius, name }: any) => {
+                const RADIAN = Math.PI / 180;
+                const midR = (innerRadius + outerRadius) / 2;
+                const x = cx + midR * Math.cos(-midAngle * RADIAN);
+                const y = cy + midR * Math.sin(-midAngle * RADIAN);
+                return (
+                  <text x={x} y={y} textAnchor="middle" dominantBaseline="central"
+                    style={{ fontSize: 12, fontWeight: 700, fill: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.4)" }}>
+                    {name}
+                  </text>
+                );
+              }
+            : ({ name, value, percent }: any) => {
+                if ((percent || 0) < 0.04) return "";
+                return `${trunc(name, 14)} ${value}`;
+              }
+          }
           labelLine={composite ? false : { stroke: "#cbd5e1", strokeWidth: 0.5 }}
           onClick={handleClick}
           style={{ cursor: "pointer", outline: "none" } as any}
