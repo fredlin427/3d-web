@@ -97,7 +97,9 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
             data={outerData} dataKey="value" nameKey="name" cx="50%" cy="48%"
             innerRadius={outerInner} outerRadius={outerOuter} stroke="#fff" strokeWidth={1} paddingAngle={1}
             isAnimationActive={false}
-            label={({ name, value, percent, cx, cy, midAngle, outerRadius }: any) => {
+            label={(props: any) => {
+              const { name, value, percent, cx, cy, midAngle, outerRadius, index } = props;
+              const color = colors[index % colors.length];
               const text = `${trunc(name || "", 10)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
               const RAD = Math.PI / 180;
               const sin = Math.sin(-midAngle * RAD);
@@ -112,9 +114,9 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
               return (
                 <g>
                   <polyline points={`${startX},${startY} ${startX + (endX-startX)*0.5},${startY + (endY-startY)*0.5} ${endX},${endY}`}
-                    stroke="#64748b" strokeWidth={1} fill="none" />
+                    stroke={color} strokeWidth={1} fill="none" opacity={0.7} />
                   <text x={endX} y={endY} textAnchor={cos >= 0 ? "start" : "end"} dominantBaseline="central"
-                    style={{ fontSize: 11, fill: "#475569" }}>
+                    style={{ fontSize: 11, fontWeight: 600, fill: color }}>
                     {text}
                   </text>
                 </g>
@@ -145,7 +147,9 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
           outerRadius={composite ? innerOuter : pieRadius}
           stroke="#fff" strokeWidth={composite ? 2 : 1} paddingAngle={composite ? 2 : 0}
           isAnimationActive={false}
-          label={({ name, value, percent, cx, cy, midAngle, outerRadius }: any) => {
+          label={(props: any) => {
+            const { name, value, percent, cx, cy, midAngle, outerRadius, index } = props;
+            const color = colors[index % colors.length];
             const text = `${trunc(name, 14)} ${value} (${((percent || 0) * 100).toFixed(0)}%)`;
             const RAD = Math.PI / 180;
             const sin = Math.sin(-midAngle * RAD);
@@ -160,9 +164,9 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
             return (
               <g>
                 <polyline points={`${startX},${startY} ${startX + (endX-startX)*0.5},${startY + (endY-startY)*0.5} ${endX},${endY}`}
-                  stroke="#64748b" strokeWidth={1} fill="none" />
+                  stroke={color} strokeWidth={1} fill="none" opacity={0.7} />
                 <text x={endX} y={endY} textAnchor={cos >= 0 ? "start" : "end"} dominantBaseline="central"
-                  style={{ fontSize: 11, fill: "#475569" }}>
+                  style={{ fontSize: 11, fontWeight: 600, fill: color }}>
                   {text}
                 </text>
               </g>
