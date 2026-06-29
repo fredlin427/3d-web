@@ -147,9 +147,8 @@ export function DonutChart({ data, colors, total: propTotal, height = 480, compo
             const startY = cy + outerRadius * sin;
             const baseLx = cx + (outerRadius + 10) * cos;
             const baseLy = cy + (outerRadius + 10) * sin;
-            const offset = getLabelOffset(`inner-${index}`, baseLy) * 22;
-            const endX = baseLx + offset * 0.3;
-            const endY = baseLy + offset * (sin > 0 ? 1 : -1);
+            const endX = baseLx;
+            const endY = baseLy;
             return (
               <g>
                 <polyline points={`${startX},${startY} ${startX + (endX-startX)*0.5},${startY + (endY-startY)*0.5} ${endX},${endY}`}
