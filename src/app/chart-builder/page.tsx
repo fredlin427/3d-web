@@ -299,7 +299,11 @@ export default function ChartBuilderPage() {
         chartType={chartType === "donut" || chartType === "pie" ? chartType : "bar"}
         color={focusIdx != null ? colors[focusIdx % colors.length] : colors[0]}
         children={focusItem?.children} colors={colors}
-        viewAllHref={focusItem?.label ? `/cases?${xField}=${encodeURIComponent(focusItem.label)}` : undefined}
+        viewAllHref={focusItem?.label ? (
+          focusItem.children && focusItem.children.length > 0
+            ? `/cases?${xField}=${encodeURIComponent(focusItem.label)}`
+            : stackBy ? `/cases?${stackBy}=${encodeURIComponent(focusItem.label)}` : undefined
+        ) : undefined}
         breakdownHref={stackBy ? (item: { label: string }) => `/cases?${xField}=${encodeURIComponent(focusItem?.label || "")}&${stackBy}=${encodeURIComponent(item.label)}` : undefined}
         onClose={() => { setFocusOpen(false); setFocusItem(null); setFocusIdx(null); }} />
     </div>
