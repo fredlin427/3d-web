@@ -114,16 +114,17 @@ export default function MaterialsPage() {
   const stats = useMemo(() => {
     const now = Date.now();
     const thirtyDays = now + 30 * 24 * 60 * 60 * 1000;
+    const data = allMaterials.length > 0 ? allMaterials : materials;
     return {
-      total: materials.length,
-      lowStock: materials.filter((m) => m.status === "Low stock").length,
-      expired: materials.filter((m) => m.status === "Expired").length,
-      expiringSoon: materials.filter((m) => m.expiryDate && new Date(m.expiryDate).getTime() <= thirtyDays && m.status !== "Expired").length,
-      opened: materials.filter((m) => m.status === "Opened").length,
-      totalWeight: materials.reduce((s, m) => s + (m.initialQuantity || 0), 0),
-      totalRemain: materials.reduce((s, m) => s + (m.currentQuantity || 0), 0),
+      total: data.length,
+      lowStock: data.filter((m) => m.status === "Low stock").length,
+      expired: data.filter((m) => m.status === "Expired").length,
+      expiringSoon: data.filter((m) => m.expiryDate && new Date(m.expiryDate).getTime() <= thirtyDays && m.status !== "Expired").length,
+      opened: data.filter((m) => m.status === "Opened").length,
+      totalWeight: data.reduce((s, m) => s + (m.initialQuantity || 0), 0),
+      totalRemain: data.reduce((s, m) => s + (m.currentQuantity || 0), 0),
     };
-  }, [materials]);
+  }, [materials, allMaterials]);
 
   const columns: Column<MaterialItem>[] = [
     {
