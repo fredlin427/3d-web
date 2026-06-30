@@ -47,6 +47,8 @@ function CasesPageInner() {
   const [catFilter, setCatFilter] = useState(searchParams.get("category") || searchParams.get("cat") || "all");
   const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "all");
   const [fyFilter, setFyFilter] = useState(searchParams.get("fy") || "");
+  const [purposeFilter, setPurposeFilter] = useState(searchParams.get("purpose") || "");
+  const [techFilter, setTechFilter] = useState(searchParams.get("technician") || "");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteCaseNumber, setDeleteCaseNumber] = useState("");
   const [importing, setImporting] = useState(false);
@@ -55,13 +57,11 @@ function CasesPageInner() {
 
   // Extra filters from URL (purpose, technician, etc.)
   const extraFilters = useMemo(() => {
-    const known = new Set(["search","department","dept","category","cat","status","fy","page","pageSize"]);
     const extras: { key: string; value: string }[] = [];
-    searchParams.forEach((value, key) => {
-      if (!known.has(key) && value && !value.includes("Others")) extras.push({ key, value });
-    });
+    if (purposeFilter) extras.push({ key: "purpose", value: purposeFilter });
+    if (techFilter) extras.push({ key: "technician", value: techFilter });
     return extras;
-  }, [searchParams]);
+  }, [purposeFilter, techFilter]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [expandedStat, setExpandedStat] = useState<string | null>(null);
 
@@ -78,11 +78,8 @@ function CasesPageInner() {
         params.set("dateFrom", `${startYear}-04-01`);
         params.set("dateTo", `${startYear + 1}-03-31`);
       }
-      // Pass through any extra URL params (e.g., purpose, technician from chart drill-down)
-      const knownKeys = new Set(["search","department","category","status","fyFilter","dateFrom","dateTo","pageSize"]);
-      searchParams.forEach((value, key) => {
-        if (!knownKeys.has(key) && value) params.set(key, value);
-      });
+      if (purposeFilter) params.set("purpose", purposeFilter);
+      if (techFilter) params.set("technician", techFilter);
       params.set("pageSize", "0"); // fetch all for client-side filtering
 
       const res = await fetch(`/api/cases?${params}`);
@@ -90,7 +87,18 @@ function CasesPageInner() {
       if (json.success) setCases(json.data);
     } catch (e) { console.error(e); toast.error("Failed to load data"); }
     finally { setLoading(false); }
-  }, [search, deptFilter, catFilter, statusFilter, fyFilter]);
+  }, [search, deptFilter, catFilter, statusFilter, fyFilter, purposeFilter, techFilter]);
+
+  // Sync purpose/tech filters to URL params
+  useEffect(() => {
+    const p = new URLSearchParams(searchParams.toString());
+    if (purposeFilter) p.set("purpose", purposeFilter); else p.delete("purpose");
+    if (techFilter) p.set("technician", techFilter); else p.delete("technician");
+    const newUrl = `/cases?${p.toString()}`;
+    if (window.location.search !== `?${p.toString()}`) {
+      router.replace(newUrl);
+    }
+  }, [purposeFilter, techFilter]);
 
   useEffect(() => { fetchCases(); }, [fetchCases]);
 
@@ -408,29 +416,13 @@ function CasesPageInner() {
                 })()}
               </SelectContent>
             </Select>
-            <select
-              value={searchParams.get("purpose") || ""}
-              onChange={(e) => {
-                const v = e.target.value;
-                const p = new URLSearchParams(searchParams.toString());
-                if (v) p.set("purpose", v); else p.delete("purpose");
-                router.replace(`/cases?${p.toString()}`);
-              }}
-              className="w-[160px] h-9 text-sm border rounded-lg px-2 bg-white"
-            >
+            <select value={purposeFilter} onChange={(e) => setPurposeFilter(e.target.value)}
+              className="w-[160px] h-9 text-sm border rounded-lg px-2 bg-white">
               <option value="">Purpose</option>
               {["Pre-op planning","Intra-operative guide","Patient education","Device adaptation and modification","OSH device","Prosthesis and Orthosis","Patient device for activity of daily living","Patient device for training","Medical training / education","Research use","Others"].map(o => <option key={o} value={o}>{o}</option>)}
             </select>
-            <select
-              value={searchParams.get("technician") || ""}
-              onChange={(e) => {
-                const v = e.target.value;
-                const p = new URLSearchParams(searchParams.toString());
-                if (v) p.set("technician", v); else p.delete("technician");
-                router.replace(`/cases?${p.toString()}`);
-              }}
-              className="w-[140px] h-9 text-sm border rounded-lg px-2 bg-white"
-            >
+            <select value={techFilter} onChange={(e) => setTechFilter(e.target.value)}
+              className="w-[140px] h-9 text-sm border rounded-lg px-2 bg-white">
               <option value="">Technician</option>
               {["Madeleine","Tiffany","Other"].map(o => <option key={o} value={o}>{o}</option>)}
             </select>
