@@ -49,10 +49,18 @@ function CasesPageInner() {
   const [fyFilter, setFyFilter] = useState(searchParams.get("fy") || "");
   const [purposeFilter, setPurposeFilter] = useState(searchParams.get("purpose") || "");
   const [techFilter, setTechFilter] = useState(searchParams.get("technician") || "");
-  const [modelFilter, setModelFilter] = useState(searchParams.get("modelType") || "");
-  const [hospitalFilter, setHospitalFilter] = useState(searchParams.get("hospital") || "");
-  const [priorityFilter, setPriorityFilter] = useState(searchParams.get("priority") || "");
-  const [showMoreFilters, setShowMoreFilters] = useState(false);
+  // Dynamic filters: list of { field, value } pairs
+  const [activeFilters, setActiveFilters] = useState<{ field: string; value: string }[]>(() => {
+    const init: { field: string; value: string }[] = [];
+    searchParams.forEach((value, key) => {
+      if (!["search","department","category","status","fy","page","pageSize"].includes(key) && value) {
+        init.push({ field: key, value });
+      }
+    });
+    return init;
+  });
+  const [addField, setAddField] = useState("");
+  const [addValue, setAddValue] = useState("");
 
   // Dynamic filter options from settings
   const [filterOpts, setFilterOpts] = useState<Record<string, string[]>>({});
@@ -77,15 +85,6 @@ function CasesPageInner() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Extra filters from URL (purpose, technician, etc.)
-  const extraFilters = useMemo(() => {
-    const extras: { key: string; value: string }[] = [];
-    if (purposeFilter) extras.push({ key: "purpose", value: purposeFilter });
-    if (techFilter) extras.push({ key: "technician", value: techFilter });
-    if (modelFilter) extras.push({ key: "modelType", value: modelFilter });
-    if (hospitalFilter) extras.push({ key: "hospital", value: hospitalFilter });
-    if (priorityFilter) extras.push({ key: "priority", value: priorityFilter });
-    return extras;
-  }, [purposeFilter, techFilter, modelFilter, hospitalFilter, priorityFilter]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [expandedStat, setExpandedStat] = useState<string | null>(null);
 
@@ -102,32 +101,25 @@ function CasesPageInner() {
         params.set("dateFrom", `${startYear}-04-01`);
         params.set("dateTo", `${startYear + 1}-03-31`);
       }
-      if (purposeFilter) params.set("purpose", purposeFilter);
-      if (techFilter) params.set("technician", techFilter);
-      if (modelFilter) params.set("modelType", modelFilter);
-      if (hospitalFilter) params.set("hospital", hospitalFilter);
-      if (priorityFilter) params.set("priority", priorityFilter);
-      params.set("pageSize", "0"); // fetch all for client-side filtering
+      activeFilters.forEach(({ field, value }) => params.set(field, value));
+      params.set("pageSize", "0");
 
       const res = await fetch(`/api/cases?${params}`);
       const json = await res.json();
       if (json.success) setCases(json.data);
     } catch (e) { console.error(e); toast.error("Failed to load data"); }
     finally { setLoading(false); }
-  }, [search, deptFilter, catFilter, statusFilter, fyFilter, purposeFilter, techFilter, modelFilter, hospitalFilter, priorityFilter]);
+  }, [search, deptFilter, catFilter, statusFilter, fyFilter, activeFilters]);
 
-  // Sync purpose/tech filters to URL params (skip initial load)
+  // Sync filters to URL (skip initial load)
   const initRef = useRef(true);
   useEffect(() => {
     if (initRef.current) { initRef.current = false; return; }
     const p = new URLSearchParams(window.location.search);
-    if (purposeFilter) p.set("purpose", purposeFilter); else p.delete("purpose");
-    if (techFilter) p.set("technician", techFilter); else p.delete("technician");
-    if (modelFilter) p.set("modelType", modelFilter); else p.delete("modelType");
-    if (hospitalFilter) p.set("hospital", hospitalFilter); else p.delete("hospital");
-    if (priorityFilter) p.set("priority", priorityFilter); else p.delete("priority");
+    ["purpose","technician","modelType","hospital","priority"].forEach(k => p.delete(k));
+    activeFilters.forEach(({ field, value }) => p.set(field, value));
     router.replace(`/cases?${p.toString()}`, { scroll: false });
-  }, [purposeFilter, techFilter]);
+  }, [activeFilters]);
 
   useEffect(() => { fetchCases(); }, [fetchCases]);
 
@@ -382,20 +374,17 @@ function CasesPageInner() {
         </div>
       )}
 
-      {extraFilters.length > 0 && (
-        <div className="flex flex-wrap gap-2 px-4 py-2 bg-blue-50/50 rounded-xl border border-blue-100">
-          <span className="text-xs text-slate-400 pt-0.5">Active filters:</span>
-          {extraFilters.map(({ key, value }) => (
-            <Badge key={key} variant="secondary" className="gap-1 pl-2 pr-1 py-1 text-xs bg-white">
-              {key}: {value}
-              <button onClick={() => {
-                const p = new URLSearchParams(searchParams.toString());
-                p.delete(key);
-                router.replace(`/cases?${p.toString()}`);
-              }} className="ml-1 hover:text-red-500">✕</button>
+      {/* Active filter tags */}
+      {activeFilters.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 px-4 py-2 bg-blue-50/50 rounded-xl border border-blue-100">
+          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Filters</span>
+          {activeFilters.map((f, i) => (
+            <Badge key={i} variant="secondary" className="gap-1.5 pl-2.5 pr-1.5 py-1 text-xs bg-white shadow-sm">
+              <span className="text-slate-400">{f.field}:</span> {f.value}
+              <button onClick={() => setActiveFilters(prev => prev.filter((_, j) => j !== i))} className="ml-1 hover:text-red-500">✕</button>
             </Badge>
           ))}
-          <button onClick={() => router.replace("/cases")} className="text-xs text-blue-500 hover:text-blue-700 ml-1">Clear all</button>
+          <button onClick={() => setActiveFilters([])} className="text-[11px] text-red-400 hover:text-red-600 font-medium ml-1">Clear all</button>
         </div>
       )}
 
@@ -445,31 +434,28 @@ function CasesPageInner() {
                 })()}
               </SelectContent>
             </Select>
-            <Button variant="ghost" size="sm" className="h-9 gap-1 text-xs" onClick={() => setShowMoreFilters(!showMoreFilters)}>
-              {showMoreFilters ? "− Less" : "+ More filters"}
-            </Button>
+            {/* Add filter: field selector + value selector + add button */}
+            <Select value={addField} onValueChange={(v) => { setAddField(v || ""); setAddValue(""); }}>
+              <SelectTrigger className="w-[130px] h-9 text-xs"><SelectValue placeholder="+ Add filter" /></SelectTrigger>
+              <SelectContent>
+                {Object.entries(filterOpts).filter(([k]) => !["case_category","case_status","progress_step"].includes(k)).map(([k, opts]) => (
+                  <SelectItem key={k} value={k}>{k}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {addField && (
+              <Select value={addValue} onValueChange={(v) => { if (v) { setActiveFilters(prev => [...prev, { field: addField, value: v }]); setAddField(""); setAddValue(""); } }}>
+                <SelectTrigger className="w-[150px] h-9 text-xs"><SelectValue placeholder="Select value..." /></SelectTrigger>
+                <SelectContent>
+                  {(filterOpts[addField] || []).map(o => (
+                    <SelectItem key={o} value={o}>{o}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
         }
       />
-      {showMoreFilters && (
-        <div className="flex gap-2 flex-wrap px-4 pb-2">
-          {[
-            { key: "purpose", label: "Purpose", value: purposeFilter, set: setPurposeFilter, opts: filterOpts["purpose"] || [] },
-            { key: "technician", label: "Technician", value: techFilter, set: setTechFilter, opts: filterOpts["technician"] || [] },
-            { key: "modelType", label: "Model Type", value: modelFilter, set: setModelFilter, opts: filterOpts["modelType"] || [] },
-            { key: "hospital", label: "Hospital", value: hospitalFilter, set: setHospitalFilter, opts: filterOpts["hospital"] || [] },
-            { key: "priority", label: "Priority", value: priorityFilter, set: setPriorityFilter, opts: ["Routine","Urgent","High priority"] },
-          ].map(f => (
-            <Select key={f.key} value={f.value || "all"} onValueChange={(v) => f.set(v === "all" ? "" : v)}>
-              <SelectTrigger className="w-[150px] h-9 text-sm"><SelectValue placeholder={f.label} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All {f.label}</SelectItem>
-                {f.opts.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          ))}
-        </div>
-      )}
       <ConfirmDialog
         open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}
         title="Delete Case" description={`Delete "${deleteCaseNumber}"?`}
