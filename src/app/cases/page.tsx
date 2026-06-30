@@ -262,7 +262,7 @@ function CasesPageInner() {
         return (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {cards.map((s) => (
-              <Card key={s.key} className={cn("border-0 cursor-pointer hover:shadow-md transition-all", expandedCard === s.key ? "overflow-visible" : "overflow-hidden")}
+              <Card key={s.key} className={cn("border-0 cursor-pointer hover:shadow-md transition-all", expandedStat === s.key ? "overflow-visible" : "overflow-hidden")}
                 onClick={() => setExpandedStat(expandedStat === s.key ? null : s.key)}>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
@@ -291,7 +291,11 @@ function CasesPageInner() {
             </div>
             {(() => {
               const status = expandedStat === "Total" ? "" : expandedStat;
-              const filtered = status ? cases.filter((c: any) => c.currentStatus === status || (status === "Draft" && !c.currentStatus)) : cases;
+              const filtered = status ? cases.filter((c: any) => {
+                const s = (c.currentStatus || "").toLowerCase();
+                const t = status.toLowerCase();
+                return s === t || (t === "draft" && !c.currentStatus);
+              }) : cases;
               if (filtered.length === 0) return <p className="text-sm text-slate-400 py-4 text-center">No cases</p>;
               return (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2 max-h-64 overflow-y-auto">
