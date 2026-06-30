@@ -44,7 +44,6 @@ const TOOLTIP = {
 };
 
 const MIN_GAP = 44;
-const MAX_SHIFT = 16;
 
 export function DonutChart({ data, colors, total: propTotal, height = 520, composite = false, size = 100, labelMin = 0, showLabels = true, legendItems, onSelect, onOuterClick, onSubClick }: Props) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
@@ -77,23 +76,27 @@ export function DonutChart({ data, colors, total: propTotal, height = 520, compo
   const outerInner = Math.round(twoR * 0.64);
   const outerOuter = twoR;
 
-  // ── Label collision: find nearest free Y ──
+  // ── Label collision: closest free slot, bounded ──
   const occupied = new Set<number>();
   const shiftCache = useMemo(() => new Map<string, number>(), [flatData, outerData]);
+  const MAX_DIST = 6; // max shifts (6 * 22 = 132px max offset)
+  const STEP = 22;
   const getOffset = (key: string, baseY: number): number => {
     if (shiftCache.has(key)) return shiftCache.get(key)!;
-    // Try positions alternating up/down from base, small steps
-    const STEP = 22; // half MIN_GAP for finer placement
-    for (let d = 0; d <= MAX_SHIFT * 2; d++) {
-      const sign = d % 2 === 0 ? 1 : -1;
-      const dist = Math.floor(d / 2) * STEP;
-      const testY = Math.round((baseY + sign * dist) / STEP) * STEP;
-      if (!occupied.has(testY)) {
-        occupied.add(testY);
-        shiftCache.set(key, sign * Math.floor(d / 2));
-        return sign * Math.floor(d / 2);
+    const base = Math.round(baseY / STEP) * STEP;
+    // Try 0, +1, -1, +2, -2... up to MAX_DIST
+    for (let d = 0; d <= MAX_DIST; d++) {
+      for (const sign of [1, -1]) {
+        if (d === 0 && sign === -1) continue; // skip duplicate 0
+        const testY = base + sign * d * STEP;
+        if (!occupied.has(testY)) {
+          occupied.add(testY);
+          shiftCache.set(key, sign * d);
+          return sign * d;
+        }
       }
     }
+    // All slots taken within bounds — place at base anyway (acceptable overlap)
     shiftCache.set(key, 0);
     return 0;
   };
