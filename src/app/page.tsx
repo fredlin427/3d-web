@@ -167,7 +167,7 @@ export default function DashboardPage() {
 
   // Fetch recent cases + critical stock alerts
   useEffect(() => {
-    fetch("/api/cases?pageSize=50")
+    fetch("/api/cases?pageSize=0")
       .then((r) => r.json())
       .then((j) => { if (j.success) { setRecentCases(j.data.slice(0, 6)); setAllCases(j.data); } })
       .catch((e) => { console.error(e); toast.error("Failed to load"); });
