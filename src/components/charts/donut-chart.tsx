@@ -43,7 +43,7 @@ const TOOLTIP = {
   boxShadow: "0 4px 20px rgba(0,0,0,0.1)", fontSize: 13,
 };
 
-const MIN_GAP = 44;
+const MIN_GAP = 32;
 
 export function DonutChart({ data, colors, total: propTotal, height = 520, composite = false, size = 100, labelMin = 0, showLabels = true, legendItems, onSelect, onOuterClick, onSubClick }: Props) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
@@ -79,7 +79,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 520, compo
   // ── Label collision: closest free slot, bounded ──
   const occupied = new Set<number>();
   const shiftCache = useMemo(() => new Map<string, number>(), [flatData, outerData]);
-  const MAX_DIST = 6; // max shifts (6 * 22 = 132px max offset)
+  const MAX_DIST = 4; // max shifts (4 * 22 = 88px max offset)
   const STEP = 22;
   const getOffset = (key: string, baseY: number): number => {
     if (shiftCache.has(key)) return shiftCache.get(key)!;
