@@ -157,7 +157,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 520, compo
   return (
     <>
     <ResponsiveContainer width="100%" height={height + (composite ? 40 : 0)}>
-      <PieChart>
+      <PieChart margin={{ top: 40, right: 80, bottom: 40, left: 80 }}>
         {composite && outerData.length > 0 && (
           <Pie
             data={outerData} dataKey="value" nameKey="name" cx="50%" cy="48%"
