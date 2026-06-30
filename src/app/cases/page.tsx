@@ -53,7 +53,7 @@ function CasesPageInner() {
   const [activeFilters, setActiveFilters] = useState<{ field: string; value: string }[]>(() => {
     const init: { field: string; value: string }[] = [];
     searchParams.forEach((value, key) => {
-      if (!["search","department","category","status","fy","page","pageSize"].includes(key) && value) {
+      if (!["search","department","dept","category","cat","status","fy","page","pageSize"].includes(key) && value) {
         init.push({ field: key, value });
       }
     });
@@ -69,7 +69,8 @@ function CasesPageInner() {
       if (j.success) {
         const map: Record<string, string[]> = {};
         for (const item of j.data) {
-          if (item.isActive && item.type !== "progress_step" && !item.type.endsWith("_form_field")) {
+          const caseTypes = new Set(["department","hospital","case_category","case_status","model_type","ownership","printing_party","priority","purpose","rank","service_option","sterilization","technician"]);
+          if (item.isActive && caseTypes.has(item.type)) {
             if (!map[item.type]) map[item.type] = [];
             if (!map[item.type].includes(item.value)) map[item.type].push(item.value);
           }
