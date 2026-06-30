@@ -18,10 +18,11 @@ interface FocusCardProps {
   children?: SubItem[];
   colors?: string[];
   viewAllHref?: string;
+  breakdownHref?: (item: SubItem) => string;
   onClose: () => void;
 }
 
-export function FocusCard({ open, label, value, total, chartType = "donut", color = "#4f46e5", children, colors = [], viewAllHref, onClose }: FocusCardProps) {
+export function FocusCard({ open, label, value, total, chartType = "donut", color = "#4f46e5", children, colors = [], viewAllHref, breakdownHref, onClose }: FocusCardProps) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -111,13 +112,15 @@ export function FocusCard({ open, label, value, total, chartType = "donut", colo
               {[...children].sort((a, b) => b.value - a.value).slice(0, 8).map((child, i) => {
                 const childPct = value > 0 ? ((child.value / value) * 100).toFixed(1) : "0";
                 const c = colors[i % colors.length] || "#94a3b8";
+                const href = breakdownHref?.(child);
+                const Item = href ? Link : "div";
                 return (
-                  <div key={child.label} className="flex items-center gap-2.5">
+                  <Item key={child.label} href={href as any} className={cn("flex items-center gap-2.5", href && "hover:bg-slate-50 rounded px-1 -mx-1 py-0.5 transition-colors")}>
                     <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: c }} />
                     <span className="text-xs text-slate-700 flex-1 truncate">{child.label}</span>
                     <span className="text-xs font-semibold text-slate-700 tabular-nums">{child.value}</span>
                     <span className="text-[10px] text-slate-400 w-9 text-right tabular-nums">{childPct}%</span>
-                  </div>
+                  </Item>
                 );
               })}
             </div>

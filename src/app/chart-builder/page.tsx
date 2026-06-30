@@ -28,7 +28,7 @@ export default function ChartBuilderPage() {
   const [expandedFilter, setExpandedFilter] = useState<string | null>(null);
   const [showTable, setShowTable] = useState(true);
   const [tableMode, setTableMode] = useState<"hierarchical" | "pivot">("pivot");
-  const [groupTop, setGroupTop] = useState(6); // top 6, rest → Others
+  const [groupTop, setGroupTop] = useState(0); // show all
   const [childTop, setChildTop] = useState(6); // top 6 sub-items, rest → Others
   const [pieSize, setPieSize] = useState(150);
   const [labelMin, setLabelMin] = useState(0); // show all
@@ -299,6 +299,7 @@ export default function ChartBuilderPage() {
         color={focusIdx != null ? colors[focusIdx % colors.length] : colors[0]}
         children={focusItem?.children} colors={colors}
         viewAllHref={focusItem?.label ? `/cases?${xField}=${encodeURIComponent(focusItem.label)}` : undefined}
+        breakdownHref={stackBy ? (item: { label: string }) => `/cases?${xField}=${encodeURIComponent(focusItem?.label || "")}&${stackBy}=${encodeURIComponent(item.label)}` : undefined}
         onClose={() => { setFocusOpen(false); setFocusItem(null); setFocusIdx(null); }} />
     </div>
   );
