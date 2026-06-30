@@ -368,8 +368,8 @@ export function CaseForm({ defaultValues, isEditing, caseId }: CaseFormProps) {
         );
       }
       case "combobox": {
-        const opt = isPurposeField && selectedCategory && PURPOSES[selectedCategory]
-          ? PURPOSES[selectedCategory]
+        const opt = isPurposeField
+          ? (selectedCategory && PURPOSES[selectedCategory] ? PURPOSES[selectedCategory] : [...new Set(Object.values(PURPOSES).flat())])
           : (field.options ? (optionsMap[field.options] || BASE_OPTIONS[field.options] || []) : []);
         return (
           <div className="space-y-2" key={field.key}>
