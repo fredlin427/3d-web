@@ -449,25 +449,25 @@ function CasesPageInner() {
               {showMoreFilters ? "− Less" : "+ More filters"}
             </Button>
           </div>
-          {showMoreFilters && (
-            <div className="flex gap-2 flex-wrap">
-              {[
-                { key: "purpose", label: "Purpose", value: purposeFilter, set: setPurposeFilter, opts: filterOpts["purpose"] || [] },
-                { key: "technician", label: "Tech", value: techFilter, set: setTechFilter, opts: filterOpts["technician"] || [] },
-                { key: "modelType", label: "Model", value: modelFilter, set: setModelFilter, opts: filterOpts["modelType"] || [] },
-                { key: "hospital", label: "Hospital", value: hospitalFilter, set: setHospitalFilter, opts: filterOpts["hospital"] || [] },
-                { key: "priority", label: "Priority", value: priorityFilter, set: setPriorityFilter, opts: ["Routine","Urgent","High priority"] },
-              ].map(f => (
-                <select key={f.key} value={f.value} onChange={(e) => f.set(e.target.value)}
-                  className="w-[140px] h-9 text-sm border rounded-lg px-2 bg-white">
-                  <option value="">{f.label}</option>
-                  {f.opts.map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
-              ))}
-            </div>
-          )}
         }
       />
+      {showMoreFilters && (
+        <div className="flex gap-2 flex-wrap px-4 pb-2">
+          {[
+            { key: "purpose", label: "Purpose", value: purposeFilter, set: setPurposeFilter, opts: filterOpts["purpose"] || [] },
+            { key: "technician", label: "Tech", value: techFilter, set: setTechFilter, opts: filterOpts["technician"] || [] },
+            { key: "modelType", label: "Model", value: modelFilter, set: setModelFilter, opts: filterOpts["modelType"] || [] },
+            { key: "hospital", label: "Hospital", value: hospitalFilter, set: setHospitalFilter, opts: filterOpts["hospital"] || [] },
+            { key: "priority", label: "Priority", value: priorityFilter, set: setPriorityFilter, opts: ["Routine","Urgent","High priority"] },
+          ].map(f => (
+            <select key={f.key} value={f.value} onChange={(e) => f.set(e.target.value)}
+              className="w-[140px] h-9 text-sm border rounded-lg px-2 bg-white">
+              <option value="">{f.label}</option>
+              {f.opts.map(o => <option key={o} value={o}>{o}</option>)}
+            </select>
+          ))}
+        </div>
+      )}
       <ConfirmDialog
         open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}
         title="Delete Case" description={`Delete "${deleteCaseNumber}"?`}
