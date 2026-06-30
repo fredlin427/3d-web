@@ -42,7 +42,8 @@ export function BarChartView({ type, data, dataKeys, colors, labelKey = "label",
 
   const handleBarClick = (barData: any, barIndex: number, keyIndex: number) => {
     if (onSubClick) {
-      onSubClick({ name: String(barData[keyIndex] || barData[labelKey] || ""), value: Number(barData[dataKeys[keyIndex]]) || 0 });
+      const key = dataKeys[keyIndex];
+      onSubClick({ name: key, value: Number(barData[key]) || 0 });
     } else if (onClick) {
       onClick(barData);
     }
@@ -113,8 +114,8 @@ export function BarChartView({ type, data, dataKeys, colors, labelKey = "label",
               cursor="pointer"
             >
               {/* Dim other bars on hover */}
-              {isStacked && data.map((_, di) => {
-                const dimmed = hoverIdx !== null && hoverIdx !== ki;
+              {data.map((_, di) => {
+                const dimmed = hoverIdx !== null && (isStacked ? hoverIdx !== ki : false);
                 const fill = dimmed ? `${colors[ki % colors.length]}2E` : colors[ki % colors.length];
                 return <Cell key={di} fill={fill} />;
               })}
