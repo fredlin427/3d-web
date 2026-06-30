@@ -408,6 +408,32 @@ function CasesPageInner() {
                 })()}
               </SelectContent>
             </Select>
+            <select
+              value={searchParams.get("purpose") || ""}
+              onChange={(e) => {
+                const v = e.target.value;
+                const p = new URLSearchParams(searchParams.toString());
+                if (v) p.set("purpose", v); else p.delete("purpose");
+                router.replace(`/cases?${p.toString()}`);
+              }}
+              className="w-[160px] h-9 text-sm border rounded-lg px-2 bg-white"
+            >
+              <option value="">Purpose</option>
+              {["Pre-op planning","Intra-operative guide","Patient education","Device adaptation and modification","OSH device","Prosthesis and Orthosis","Patient device for activity of daily living","Patient device for training","Medical training / education","Research use","Others"].map(o => <option key={o} value={o}>{o}</option>)}
+            </select>
+            <select
+              value={searchParams.get("technician") || ""}
+              onChange={(e) => {
+                const v = e.target.value;
+                const p = new URLSearchParams(searchParams.toString());
+                if (v) p.set("technician", v); else p.delete("technician");
+                router.replace(`/cases?${p.toString()}`);
+              }}
+              className="w-[140px] h-9 text-sm border rounded-lg px-2 bg-white"
+            >
+              <option value="">Technician</option>
+              {["Madeleine","Tiffany","Other"].map(o => <option key={o} value={o}>{o}</option>)}
+            </select>
           </div>
         }
       />
