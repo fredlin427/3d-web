@@ -97,7 +97,7 @@ export default function ChartBuilderPage() {
     }).catch(console.error);
   }, []);
 
-  const handleExport = async () => { setExporting(true); await exportPNG("chart-builder-preview", `chart-${source}-${xField}`, !isPie && legendItems.length > 0 ? legendItems : undefined); setExporting(false); };
+  const handleExport = async () => { setExporting(true); await exportPNG("chart-builder-preview", `chart-${source}-${xField}`, !isPie && barLegends.length > 0 ? barLegends : undefined); setExporting(false); };
 
   const fields = SOURCE_FIELDS[source] || [];
   const title = `${FIELD_LABELS[xField] || xField} by ${SOURCES.find(s => s.key === source)?.label || source}`;
@@ -117,31 +117,40 @@ export default function ChartBuilderPage() {
     return flat.map((d, i) => ({ name: d.label, value: d.value, children: stackedData[i]?.children?.map(c => ({ label: c.label, value: c.value })) || [] }));
   }, [chartData, stackedData]);
 
-  // Legend items — for pie: group headers bold + sub-items shadeColor. For bar: series labels.
-  const legendItems = useMemo(() => {
+  // Pie legend: sub-items use shadeColor (matches outer ring)
+  const pieLegends = useMemo(() => {
     const items: { label: string; color: string; bold?: boolean; onClick?: () => void }[] = [];
     if (hasStacked) {
       stackedData.forEach((g, gi) => {
         const base = colors[gi % colors.length];
         items.push({ label: `${g.label}  ${g.value}`, color: base, bold: true, onClick: () => { setFocusIdx(gi); setFocusItem(g); setFocusOpen(true); } });
-        const kids = g.children.length || 1;
         g.children.forEach((c, ci) => {
-        // Use palette colors for bar charts (not shadeColor)
-        const barColor = isPie ? (() => {
           const num = parseInt(base.replace("#", ""), 16);
           let r = (num >> 16) & 0xFF, g2 = (num >> 8) & 0xFF, b = num & 0xFF;
-          const mix = Math.min(0.6, 0.15 + (ci / Math.max(1, kids - 1)) * 0.45);
+          const mix = Math.min(0.6, 0.15 + (ci / Math.max(1, (g.children.length || 1) - 1)) * 0.45);
           r = Math.round(r + (255 - r) * mix); g2 = Math.round(g2 + (255 - g2) * mix); b = Math.round(b + (255 - b) * mix);
-          return `#${((r << 16) | (g2 << 8) | b).toString(16).padStart(6, "0")}`;
-        })() : colors[(gi * 3 + ci) % colors.length];
-        items.push({ label: c.label, color: barColor, onClick: () => { setFocusIdx(gi); setFocusItem({ label: c.label, value: c.value, children: [] }); setFocusOpen(true); } });
-      });
+          items.push({ label: c.label, color: `#${((r << 16) | (g2 << 8) | b).toString(16).padStart(6, "0")}`, onClick: () => { setFocusIdx(gi); setFocusItem({ label: c.label, value: c.value, children: [] }); setFocusOpen(true); } });
+        });
       });
     } else if (chartData.length > 0) {
-      // Single pie: simple legend from chartData
-      chartData.forEach((d, i) => {
-        items.push({ label: `${d.label}  ${d.value}`, color: colors[i % colors.length], onClick: () => { setFocusIdx(i); setFocusItem({ label: d.label, value: d.value, children: [] }); setFocusOpen(true); } });
+      chartData.forEach((d, i) => items.push({ label: `${d.label}  ${d.value}`, color: colors[i % colors.length], onClick: () => { setFocusIdx(i); setFocusItem({ label: d.label, value: d.value, children: [] }); setFocusOpen(true); } }));
+    }
+    return items;
+  }, [hasStacked, stackedData, chartData, colors]);
+
+  // Bar legend: sub-items use distinct palette colors (matches bar colors)
+  const barLegends = useMemo(() => {
+    const items: { label: string; color: string; bold?: boolean; onClick?: () => void }[] = [];
+    if (hasStacked) {
+      stackedData.forEach((g, gi) => {
+        const base = colors[gi % colors.length];
+        items.push({ label: `${g.label}  ${g.value}`, color: base, bold: true, onClick: () => { setFocusIdx(gi); setFocusItem(g); setFocusOpen(true); } });
+        g.children.forEach((c, ci) => {
+          items.push({ label: c.label, color: colors[(gi * 3 + ci) % colors.length], onClick: () => { setFocusIdx(gi); setFocusItem({ label: c.label, value: c.value, children: [] }); setFocusOpen(true); } });
+        });
       });
+    } else if (chartData.length > 0) {
+      chartData.forEach((d, i) => items.push({ label: `${d.label}  ${d.value}`, color: colors[i % colors.length], onClick: () => { setFocusIdx(i); setFocusItem({ label: d.label, value: d.value, children: [] }); setFocusOpen(true); } }));
     }
     return items;
   }, [hasStacked, stackedData, chartData, colors]);
@@ -215,7 +224,7 @@ export default function ChartBuilderPage() {
                 {loading ? <div className="flex items-center justify-center" style={{ height: 500 }}><Loader2 className="h-8 w-8 text-primary animate-spin" /></div>
                 : isPie ? (
                   <DonutChart data={donutData} colors={colors} total={total} height={760} composite={hasStacked} size={pieSize} labelMin={labelMin} showLabels={showLabels}
-                    legendItems={legendItems.length > 0 ? legendItems : undefined}
+                    legendItems={pieLegends.length > 0 ? pieLegends : undefined}
                     onSelect={(slice, idx) => { setFocusIdx(idx); setFocusItem({ label: slice.name, value: slice.value, children: slice.children?.map(c => ({ label: c.label, value: c.value })) || [] }); setFocusOpen(true); }}
                     onOuterClick={hasStacked ? (parentIdx: number) => { const g = donutData[parentIdx]; if (g) { setFocusIdx(parentIdx); setFocusItem({ label: g.name, value: g.value, children: (g.children || []).map(c => ({ label: c.label, value: c.value })) }); setFocusOpen(true); } } : undefined}
                     onSubClick={hasStacked ? (sub: { label: string; value: number }, parentIdx: number) => { setFocusIdx(parentIdx); setFocusItem({ label: sub.label, value: sub.value, children: [] }); setFocusOpen(true); } : undefined} />
@@ -233,9 +242,9 @@ export default function ChartBuilderPage() {
 
 
           {/* Bar chart legend */}
-          {!isPie && legendItems.length > 0 && (
+          {!isPie && barLegends.length > 0 && (
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs px-2">
-              {legendItems.map((item, i) => (
+              {barLegends.map((item, i) => (
                 item.onClick ? (
                   <button key={i} onClick={item.onClick}
                     className={`flex items-center gap-1.5 hover:text-blue-600 transition-colors ${item.bold ? "font-bold text-slate-700 w-full mt-1" : "text-slate-500 ml-6"}`}>
