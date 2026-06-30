@@ -21,6 +21,7 @@ interface Props {
   legendItems?: { label: string; color: string; bold?: boolean; onClick?: () => void }[];
   onSelect?: (slice: DonutSlice, index: number) => void;
   onOuterClick?: (parentIdx: number) => void;
+  onSubClick?: (subItem: { label: string; value: number }, parentIdx: number) => void;
 }
 
 function shadeColor(hex: string, step: number, totalKids: number): string {
@@ -45,7 +46,7 @@ const TOOLTIP = {
 const MIN_GAP = 44;
 const MAX_SHIFT = 16;
 
-export function DonutChart({ data, colors, total: propTotal, height = 520, composite = false, size = 100, labelMin = 0, showLabels = true, legendItems, onSelect, onOuterClick }: Props) {
+export function DonutChart({ data, colors, total: propTotal, height = 520, composite = false, size = 100, labelMin = 0, showLabels = true, legendItems, onSelect, onOuterClick, onSubClick }: Props) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const displayIdx = activeIdx ?? hoverIdx;
@@ -160,7 +161,10 @@ export function DonutChart({ data, colors, total: propTotal, height = 520, compo
             innerRadius={outerInner} outerRadius={outerOuter} stroke="#fff" strokeWidth={1} paddingAngle={1}
             isAnimationActive={false}
             label={outerLabel} labelLine={false}
-            onClick={onOuterClick ? (d: any) => onOuterClick(d.parentIdx) : undefined}
+            onClick={(d: any) => {
+              if (onSubClick) onSubClick({ label: d.name, value: d.value }, d.parentIdx);
+              else if (onOuterClick) onOuterClick(d.parentIdx);
+            }}
             onMouseEnter={(_: any, index: number) => { const d = outerData[index]; if (d) setHoverIdx(d.parentIdx); }}
             onMouseLeave={() => { if (!activeIdx) setHoverIdx(null); }}
             style={{ cursor: "pointer", outline: "none" } as any}

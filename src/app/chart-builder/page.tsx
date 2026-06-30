@@ -214,7 +214,8 @@ export default function ChartBuilderPage() {
                   <DonutChart data={donutData} colors={colors} total={total} height={720} composite={hasStacked} size={pieSize} labelMin={labelMin} showLabels={showLabels}
                     legendItems={legendItems.length > 0 ? legendItems : undefined}
                     onSelect={(slice, idx) => { setFocusIdx(idx); setFocusItem({ label: slice.name, value: slice.value, children: slice.children?.map(c => ({ label: c.label, value: c.value })) || [] }); setFocusOpen(true); }}
-                    onOuterClick={hasStacked ? (parentIdx: number) => { const g = donutData[parentIdx]; if (g) { setFocusIdx(parentIdx); setFocusItem({ label: g.name, value: g.value, children: (g.children || []).map(c => ({ label: c.label, value: c.value })) }); setFocusOpen(true); } } : undefined} />
+                    onOuterClick={hasStacked ? (parentIdx: number) => { const g = donutData[parentIdx]; if (g) { setFocusIdx(parentIdx); setFocusItem({ label: g.name, value: g.value, children: (g.children || []).map(c => ({ label: c.label, value: c.value })) }); setFocusOpen(true); } } : undefined}
+                    onSubClick={hasStacked ? (sub: { label: string; value: number }, parentIdx: number) => { setFocusIdx(parentIdx); setFocusItem({ label: sub.label, value: sub.value, children: [] }); setFocusOpen(true); } : undefined} />
                 ) : (
                   <BarChartView type={chartType as "bar"|"barH"|"line"|"area"|"stacked"} data={barData} dataKeys={hasStacked ? barKeys : ["value"]} colors={colors} showLabels={showLabels}
                     onClick={(d: any) => {
