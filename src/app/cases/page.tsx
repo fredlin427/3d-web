@@ -49,6 +49,26 @@ function CasesPageInner() {
   const [fyFilter, setFyFilter] = useState(searchParams.get("fy") || "");
   const [purposeFilter, setPurposeFilter] = useState(searchParams.get("purpose") || "");
   const [techFilter, setTechFilter] = useState(searchParams.get("technician") || "");
+  const [modelFilter, setModelFilter] = useState(searchParams.get("modelType") || "");
+  const [hospitalFilter, setHospitalFilter] = useState(searchParams.get("hospital") || "");
+  const [priorityFilter, setPriorityFilter] = useState(searchParams.get("priority") || "");
+
+  // Dynamic filter options from settings
+  const [filterOpts, setFilterOpts] = useState<Record<string, string[]>>({});
+  useEffect(() => {
+    fetch("/api/settings").then(r => r.json()).then(j => {
+      if (j.success) {
+        const map: Record<string, string[]> = {};
+        for (const item of j.data) {
+          if (item.isActive && item.type !== "progress_step" && !item.type.endsWith("_form_field")) {
+            if (!map[item.type]) map[item.type] = [];
+            if (!map[item.type].includes(item.value)) map[item.type].push(item.value);
+          }
+        }
+        setFilterOpts(map);
+      }
+    }).catch(console.error);
+  }, []);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteCaseNumber, setDeleteCaseNumber] = useState("");
   const [importing, setImporting] = useState(false);
@@ -60,8 +80,11 @@ function CasesPageInner() {
     const extras: { key: string; value: string }[] = [];
     if (purposeFilter) extras.push({ key: "purpose", value: purposeFilter });
     if (techFilter) extras.push({ key: "technician", value: techFilter });
+    if (modelFilter) extras.push({ key: "modelType", value: modelFilter });
+    if (hospitalFilter) extras.push({ key: "hospital", value: hospitalFilter });
+    if (priorityFilter) extras.push({ key: "priority", value: priorityFilter });
     return extras;
-  }, [purposeFilter, techFilter]);
+  }, [purposeFilter, techFilter, modelFilter, hospitalFilter, priorityFilter]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [expandedStat, setExpandedStat] = useState<string | null>(null);
 
@@ -80,6 +103,9 @@ function CasesPageInner() {
       }
       if (purposeFilter) params.set("purpose", purposeFilter);
       if (techFilter) params.set("technician", techFilter);
+      if (modelFilter) params.set("modelType", modelFilter);
+      if (hospitalFilter) params.set("hospital", hospitalFilter);
+      if (priorityFilter) params.set("priority", priorityFilter);
       params.set("pageSize", "0"); // fetch all for client-side filtering
 
       const res = await fetch(`/api/cases?${params}`);
@@ -87,7 +113,7 @@ function CasesPageInner() {
       if (json.success) setCases(json.data);
     } catch (e) { console.error(e); toast.error("Failed to load data"); }
     finally { setLoading(false); }
-  }, [search, deptFilter, catFilter, statusFilter, fyFilter, purposeFilter, techFilter]);
+  }, [search, deptFilter, catFilter, statusFilter, fyFilter, purposeFilter, techFilter, modelFilter, hospitalFilter, priorityFilter]);
 
   // Sync purpose/tech filters to URL params (skip initial load)
   const initRef = useRef(true);
@@ -96,6 +122,9 @@ function CasesPageInner() {
     const p = new URLSearchParams(window.location.search);
     if (purposeFilter) p.set("purpose", purposeFilter); else p.delete("purpose");
     if (techFilter) p.set("technician", techFilter); else p.delete("technician");
+    if (modelFilter) p.set("modelType", modelFilter); else p.delete("modelType");
+    if (hospitalFilter) p.set("hospital", hospitalFilter); else p.delete("hospital");
+    if (priorityFilter) p.set("priority", priorityFilter); else p.delete("priority");
     router.replace(`/cases?${p.toString()}`, { scroll: false });
   }, [purposeFilter, techFilter]);
 
@@ -415,16 +444,19 @@ function CasesPageInner() {
                 })()}
               </SelectContent>
             </Select>
-            <select value={purposeFilter} onChange={(e) => setPurposeFilter(e.target.value)}
-              className="w-[160px] h-9 text-sm border rounded-lg px-2 bg-white">
-              <option value="">Purpose</option>
-              {["Pre-op planning","Intra-operative guide","Patient education","Device adaptation and modification","OSH device","Prosthesis and Orthosis","Patient device for activity of daily living","Patient device for training","Medical training / education","Research use","Others"].map(o => <option key={o} value={o}>{o}</option>)}
-            </select>
-            <select value={techFilter} onChange={(e) => setTechFilter(e.target.value)}
-              className="w-[140px] h-9 text-sm border rounded-lg px-2 bg-white">
-              <option value="">Technician</option>
-              {["Madeleine","Tiffany","Other"].map(o => <option key={o} value={o}>{o}</option>)}
-            </select>
+            {[
+              { key: "purpose", label: "Purpose", value: purposeFilter, set: setPurposeFilter, opts: filterOpts["purpose"] || [] },
+              { key: "technician", label: "Tech", value: techFilter, set: setTechFilter, opts: filterOpts["technician"] || [] },
+              { key: "modelType", label: "Model", value: modelFilter, set: setModelFilter, opts: filterOpts["modelType"] || [] },
+              { key: "hospital", label: "Hospital", value: hospitalFilter, set: setHospitalFilter, opts: filterOpts["hospital"] || [] },
+              { key: "priority", label: "Priority", value: priorityFilter, set: setPriorityFilter, opts: filterOpts["priority"] || ["Routine","Urgent","High priority"] },
+            ].map(f => f.opts.length > 0 ? (
+              <select key={f.key} value={f.value} onChange={(e) => f.set(e.target.value)}
+                className="w-[130px] h-9 text-sm border rounded-lg px-2 bg-white">
+                <option value="">{f.label}</option>
+                {f.opts.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+            ) : null)}
           </div>
         }
       />
