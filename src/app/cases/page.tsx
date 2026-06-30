@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -89,15 +89,14 @@ function CasesPageInner() {
     finally { setLoading(false); }
   }, [search, deptFilter, catFilter, statusFilter, fyFilter, purposeFilter, techFilter]);
 
-  // Sync purpose/tech filters to URL params
+  // Sync purpose/tech filters to URL params (skip initial load)
+  const initRef = useRef(true);
   useEffect(() => {
-    const p = new URLSearchParams(searchParams.toString());
+    if (initRef.current) { initRef.current = false; return; }
+    const p = new URLSearchParams(window.location.search);
     if (purposeFilter) p.set("purpose", purposeFilter); else p.delete("purpose");
     if (techFilter) p.set("technician", techFilter); else p.delete("technician");
-    const newUrl = `/cases?${p.toString()}`;
-    if (window.location.search !== `?${p.toString()}`) {
-      router.replace(newUrl);
-    }
+    router.replace(`/cases?${p.toString()}`, { scroll: false });
   }, [purposeFilter, techFilter]);
 
   useEffect(() => { fetchCases(); }, [fetchCases]);
