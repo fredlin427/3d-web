@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -52,6 +52,16 @@ function CasesPageInner() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // Extra filters from URL (purpose, technician, etc.)
+  const extraFilters = useMemo(() => {
+    const known = new Set(["search","department","dept","category","cat","status","fy","page","pageSize"]);
+    const extras: { key: string; value: string }[] = [];
+    searchParams.forEach((value, key) => {
+      if (!known.has(key) && value && !value.includes("Others")) extras.push({ key, value });
+    });
+    return extras;
+  }, [searchParams]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [expandedStat, setExpandedStat] = useState<string | null>(null);
 
@@ -384,6 +394,21 @@ function CasesPageInner() {
           </div>
         }
       />
+      {extraFilters.length > 0 && (
+        <div className="flex flex-wrap gap-2 px-1 pb-2 -mt-2">
+          {extraFilters.map(({ key, value }) => (
+            <Badge key={key} variant="secondary" className="gap-1 pl-2 pr-1 py-1 text-xs">
+              {key}: {value}
+              <button onClick={() => {
+                const p = new URLSearchParams(searchParams.toString());
+                p.delete(key);
+                router.replace(`/cases?${p.toString()}`);
+              }} className="ml-1 hover:text-red-500">✕</button>
+            </Badge>
+          ))}
+          <button onClick={() => router.replace("/cases")} className="text-xs text-red-400 hover:text-red-600">Clear all</button>
+        </div>
+      )}
 
       <ConfirmDialog
         open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}
