@@ -345,6 +345,23 @@ function CasesPageInner() {
         </div>
       )}
 
+      {extraFilters.length > 0 && (
+        <div className="flex flex-wrap gap-2 px-4 py-2 bg-blue-50/50 rounded-xl border border-blue-100">
+          <span className="text-xs text-slate-400 pt-0.5">Active filters:</span>
+          {extraFilters.map(({ key, value }) => (
+            <Badge key={key} variant="secondary" className="gap-1 pl-2 pr-1 py-1 text-xs bg-white">
+              {key}: {value}
+              <button onClick={() => {
+                const p = new URLSearchParams(searchParams.toString());
+                p.delete(key);
+                router.replace(`/cases?${p.toString()}`);
+              }} className="ml-1 hover:text-red-500">✕</button>
+            </Badge>
+          ))}
+          <button onClick={() => router.replace("/cases")} className="text-xs text-blue-500 hover:text-blue-700 ml-1">Clear all</button>
+        </div>
+      )}
+
       <DataTable
         data={cases} columns={columns} keyField="id"
         searchValue={search} onSearchChange={setSearch}
@@ -394,22 +411,6 @@ function CasesPageInner() {
           </div>
         }
       />
-      {extraFilters.length > 0 && (
-        <div className="flex flex-wrap gap-2 px-1 pb-2 -mt-2">
-          {extraFilters.map(({ key, value }) => (
-            <Badge key={key} variant="secondary" className="gap-1 pl-2 pr-1 py-1 text-xs">
-              {key}: {value}
-              <button onClick={() => {
-                const p = new URLSearchParams(searchParams.toString());
-                p.delete(key);
-                router.replace(`/cases?${p.toString()}`);
-              }} className="ml-1 hover:text-red-500">✕</button>
-            </Badge>
-          ))}
-          <button onClick={() => router.replace("/cases")} className="text-xs text-red-400 hover:text-red-600">Clear all</button>
-        </div>
-      )}
-
       <ConfirmDialog
         open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}
         title="Delete Case" description={`Delete "${deleteCaseNumber}"?`}
