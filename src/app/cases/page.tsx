@@ -52,6 +52,7 @@ function CasesPageInner() {
   const [modelFilter, setModelFilter] = useState(searchParams.get("modelType") || "");
   const [hospitalFilter, setHospitalFilter] = useState(searchParams.get("hospital") || "");
   const [priorityFilter, setPriorityFilter] = useState(searchParams.get("priority") || "");
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
 
   // Dynamic filter options from settings
   const [filterOpts, setFilterOpts] = useState<Record<string, string[]>>({});
@@ -444,20 +445,27 @@ function CasesPageInner() {
                 })()}
               </SelectContent>
             </Select>
-            {[
-              { key: "purpose", label: "Purpose", value: purposeFilter, set: setPurposeFilter, opts: filterOpts["purpose"] || [] },
-              { key: "technician", label: "Tech", value: techFilter, set: setTechFilter, opts: filterOpts["technician"] || [] },
-              { key: "modelType", label: "Model", value: modelFilter, set: setModelFilter, opts: filterOpts["modelType"] || [] },
-              { key: "hospital", label: "Hospital", value: hospitalFilter, set: setHospitalFilter, opts: filterOpts["hospital"] || [] },
-              { key: "priority", label: "Priority", value: priorityFilter, set: setPriorityFilter, opts: filterOpts["priority"] || ["Routine","Urgent","High priority"] },
-            ].map(f => f.opts.length > 0 ? (
-              <select key={f.key} value={f.value} onChange={(e) => f.set(e.target.value)}
-                className="w-[130px] h-9 text-sm border rounded-lg px-2 bg-white">
-                <option value="">{f.label}</option>
-                {f.opts.map(o => <option key={o} value={o}>{o}</option>)}
-              </select>
-            ) : null)}
+            <Button variant="ghost" size="sm" className="h-9 gap-1 text-xs" onClick={() => setShowMoreFilters(!showMoreFilters)}>
+              {showMoreFilters ? "− Less" : "+ More filters"}
+            </Button>
           </div>
+          {showMoreFilters && (
+            <div className="flex gap-2 flex-wrap">
+              {[
+                { key: "purpose", label: "Purpose", value: purposeFilter, set: setPurposeFilter, opts: filterOpts["purpose"] || [] },
+                { key: "technician", label: "Tech", value: techFilter, set: setTechFilter, opts: filterOpts["technician"] || [] },
+                { key: "modelType", label: "Model", value: modelFilter, set: setModelFilter, opts: filterOpts["modelType"] || [] },
+                { key: "hospital", label: "Hospital", value: hospitalFilter, set: setHospitalFilter, opts: filterOpts["hospital"] || [] },
+                { key: "priority", label: "Priority", value: priorityFilter, set: setPriorityFilter, opts: ["Routine","Urgent","High priority"] },
+              ].map(f => (
+                <select key={f.key} value={f.value} onChange={(e) => f.set(e.target.value)}
+                  className="w-[140px] h-9 text-sm border rounded-lg px-2 bg-white">
+                  <option value="">{f.label}</option>
+                  {f.opts.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              ))}
+            </div>
+          )}
         }
       />
       <ConfirmDialog
