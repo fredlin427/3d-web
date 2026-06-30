@@ -66,8 +66,8 @@ export function BarChartView({ type, data, dataKeys, colors, labelKey = "label",
             </>
           ) : (
             <>
-              <XAxis dataKey={labelKey} tick={{ fontSize: 12, fill: "#475569" }} axisLine={false} tickLine={false}
-                angle={many ? -35 : 0} textAnchor={many ? "end" : "middle"} height={many ? 90 : 60} tick={{ fontSize: 13, fontWeight: 500, fill: "#334155" }} />
+              <XAxis dataKey={labelKey} tick={{ fontSize: 13, fontWeight: 500, fill: "#334155" }} axisLine={false} tickLine={false}
+                angle={many ? -35 : 0} textAnchor={many ? "end" : "middle"} height={many ? 90 : 60} />
               <YAxis tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} />
             </>
           )}

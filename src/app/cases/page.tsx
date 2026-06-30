@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,7 @@ interface CaseItem {
   _count: { progressSteps: number; materialUsage: number };
 }
 
-export default function CasesPage() {
+function CasesPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [cases, setCases] = useState<CaseItem[]>([]);
@@ -382,5 +382,13 @@ export default function CasesPage() {
         confirmLabel="Delete" variant="destructive" onConfirm={handleDelete}
       />
     </div>
+  );
+}
+
+export default function CasesPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><p className="text-slate-400">Loading...</p></div>}>
+      <CasesPageInner />
+    </Suspense>
   );
 }

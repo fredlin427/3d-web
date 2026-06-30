@@ -38,12 +38,12 @@ export const PURPOSES: Record<string, string[]> = {
     "Pre-op planning",
     "Intra-operative guide",
     "Patient education",
-  ],
-  Rehabilitation: [
     "Device adaptation and modification",
     "OSH device",
     "Prosthesis and Orthosis",
     "Others",
+  ],
+  Rehabilitation: [
     "Patient device for activity of daily living",
     "Patient device for training",
     "Device adaptation and modification",
@@ -57,7 +57,8 @@ export const PURPOSES: Record<string, string[]> = {
 
 export const MODEL_TYPES = [
   "Anatomical Model",
-  "Device/Tools",
+  "Device / Tool",
+  "Anatomical + Device",
 ] as const;
 
 export const OWNERSHIP_TYPES = [
@@ -75,6 +76,13 @@ export const SERVICE_OPTIONS = [
   "Segmentation, Printing",
   "Design, Printing",
   "Segmentation, Design, Printing",
+  "Design & Printing",
+  "Printing Only",
+  "Segmentation & Printing",
+  "Segmentation, Design & Printing",
+  "3D Scanning",
+  "3D scanning and printing",
+  "Others",
 ] as const;
 
 export const STERILIZATION_OPTIONS = ["Yes", "No"] as const;
