@@ -299,7 +299,7 @@ export default function ChartBuilderPage() {
         chartType={chartType === "donut" || chartType === "pie" ? chartType : "bar"}
         color={focusIdx != null ? colors[focusIdx % colors.length] : colors[0]}
         children={focusItem?.children} colors={colors}
-        viewAllHref={focusItem?.label ? (
+        viewAllHref={focusItem?.label && !focusItem.label.startsWith("Others") ? (
           focusItem.children && focusItem.children.length > 0
             ? `/cases?${xField}=${encodeURIComponent(focusItem.label)}`
             : stackBy ? `/cases?${stackBy}=${encodeURIComponent(focusItem.label)}` : undefined
