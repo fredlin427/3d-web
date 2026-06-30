@@ -76,8 +76,9 @@ export async function generateMaterialId(data: Record<string, unknown>): Promise
   const result = buildPrefix(data);
   if (!result || !cat) return null;
 
+  // Global counter per category (not per prefix)
   const materials = await prisma.material.findMany({
-    where: { category: cat, materialId: { startsWith: result.prefix } },
+    where: { category: cat, materialId: { not: null } },
     select: { materialId: true },
     orderBy: { materialId: "desc" },
   });
