@@ -19,10 +19,14 @@ interface Props {
   onSubClick?: (item: { name: string; value: number }) => void;
 }
 
-const tooltipStyle = {
-  borderRadius: 14, border: "none",
-  background: "rgba(255,255,255,0.95)", backdropFilter: "blur(16px)",
-  boxShadow: "0 8px 32px rgba(0,0,0,0.08)", fontSize: 13, padding: "10px 14px",
+const S = {
+  tooltip: {
+    borderRadius: 14, border: "none",
+    background: "rgba(255,255,255,0.95)", backdropFilter: "blur(16px)",
+    boxShadow: "0 8px 32px rgba(0,0,0,0.08)", fontSize: 13, padding: "10px 14px",
+  },
+  tickX: { fontSize: 13, fontWeight: 500 as const, fill: "#334155" },
+  tickY: { fontSize: 12, fill: "#64748b" },
 };
 
 export function BarChartView({ type, data, dataKeys, colors, labelKey = "label", height = 440, showLabels = true, onClick, onSubClick }: Props) {
@@ -42,36 +46,32 @@ export function BarChartView({ type, data, dataKeys, colors, labelKey = "label",
 
   const handleBarClick = (barData: any, barIndex: number, keyIndex: number) => {
     if (onSubClick) {
-      const key = dataKeys[keyIndex];
-      onSubClick({ name: key, value: Number(barData[key]) || 0 });
+      onSubClick({ name: dataKeys[keyIndex], value: Number(barData[dataKeys[keyIndex]]) || 0 });
     } else if (onClick) {
       onClick(barData);
     }
   };
 
-  // Shared chart grid/axes
-  const tickX = { fontSize: 13, fontWeight: 500 as const, fill: "#334155" };
-  const tickY = { fontSize: 12, fill: "#64748b" };
-  const xEl = <XAxis dataKey={labelKey} tick={tickX} axisLine={false} tickLine={false}
+  const tooltipContent = ({ active, payload }: any) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div style={S.tooltip}>
+        {payload.map((p: any, i: number) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+            <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, backgroundColor: p.color }} />
+            <strong style={{ color: "#1e293b" }}>{p.name}</strong>
+            <span style={{ color: "#64748b" }}>{p.value}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const tip = <Tooltip contentStyle={S.tooltip} cursor={{ fill: "#f8f9fc" }} content={tooltipContent} />;
+  const xEl = <XAxis dataKey={labelKey} tick={S.tickX} axisLine={false} tickLine={false}
     angle={many ? -35 : 0} textAnchor={many ? "end" : "middle"} height={many ? 90 : 60} />;
-  const yEl = <YAxis tick={tickY} axisLine={false} tickLine={false} />;
+  const yEl = <YAxis tick={S.tickY} axisLine={false} tickLine={false} />;
   const grid = <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" strokeWidth={0.5} vertical={false} />;
-  const tip = <Tooltip
-    contentStyle={tooltipStyle}
-    cursor={{ fill: "#f8f9fc" }}
-    content={({ active, payload }: any) => {
-      if (!active || !payload?.length) return null;
-      // Show only the hovered item, not the group total
-      const first = payload[0];
-      return (
-        <div style={tooltipStyle}>
-          <strong style={{ color: "#1e293b" }}>{first.name}</strong>
-          <br />
-          <span style={{ color: "#64748b" }}>{first.value} items</span>
-        </div>
-      );
-    }}
-  />;
 
   if (isLine) return (
     <ResponsiveContainer width="100%" height={height}>
@@ -101,7 +101,6 @@ export function BarChartView({ type, data, dataKeys, colors, labelKey = "label",
     </ResponsiveContainer>
   );
 
-  // Bar / BarH / Stacked
   const barSize = isH
     ? Math.max(16, Math.min(32, 400 / Math.max(data.length, 1)))
     : Math.max(12, Math.min(48, 700 / Math.max(data.length * (dataKeys.length + 1), 1)));
@@ -110,12 +109,10 @@ export function BarChartView({ type, data, dataKeys, colors, labelKey = "label",
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} layout={isH ? "vertical" : "horizontal"} barSize={barSize} onMouseLeave={() => setHoverIdx(null)}>
         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" strokeWidth={0.5} vertical={!isH} horizontal={!!isH} />
-        {isH ? (
-          <>
-            <XAxis type="number" tick={tickY} axisLine={false} tickLine={false} />
-            <YAxis type="category" dataKey={labelKey} width={140} tick={{ fontSize: 12, fontWeight: 500, fill: "#334155" }} axisLine={false} tickLine={false} />
-          </>
-        ) : (<> {xEl} {yEl} </>)}
+        {isH ? (<>
+          <XAxis type="number" tick={S.tickY} axisLine={false} tickLine={false} />
+          <YAxis type="category" dataKey={labelKey} width={140} tick={{ fontSize: 12, fontWeight: 500, fill: "#334155" }} axisLine={false} tickLine={false} />
+        </>) : (<>{xEl}{yEl}</>)}
         {tip}
         {dataKeys.map((key, ki) => {
           const isLast = isStacked && ki === dataKeys.length - 1;
@@ -128,11 +125,9 @@ export function BarChartView({ type, data, dataKeys, colors, labelKey = "label",
               onMouseEnter={() => setHoverIdx(ki)}
               cursor="pointer"
             >
-              {/* Dim other bars on hover */}
               {data.map((_, di) => {
                 const dimmed = hoverIdx !== null && (isStacked ? hoverIdx !== ki : false);
-                const fill = dimmed ? `${colors[ki % colors.length]}2E` : colors[ki % colors.length];
-                return <Cell key={di} fill={fill} />;
+                return <Cell key={di} fill={dimmed ? `${colors[ki % colors.length]}2E` : colors[ki % colors.length]} />;
               })}
               {!isStacked && dataKeys.length === 1 && data.length <= 12 && (
                 <LabelList dataKey={dataKeys[0]} position={isH ? "right" : "top"} style={{ fontSize: 12, fontWeight: 700, fill: "#475569" }} />
