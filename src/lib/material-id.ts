@@ -41,11 +41,16 @@ function buildPrefix(data: Record<string, unknown>): { prefix: string; exact: bo
 
   if (cat === "SLA Resins") {
     const matType = (data.materialType as string) || "";
-    const code = SLA_CODES[name] || matType || "RESIN";
-    const version = (data.version as string) || (data.compatiblePrinter as string) || "";
+    // Lookup by exact name, then by name without version suffix (e.g., "Grey Resin V4"→"Grey Resin")
+    const nameBase = name.replace(/\s*V\d+$/i, "").trim();
+    const code = SLA_CODES[name] || SLA_CODES[nameBase] || matType || "RESIN";
+    // Extract version from name: "Grey Resin V4"→"V4", "Flexible 80A Resin"→"80A" (skip if already in code)
+    const verMatch = name.match(/\b(V\d+|\d+K|\d+A|\d+)\b/i);
+    const version = verMatch ? verMatch[1] : "";
     const year = extractYear(data);
-    const verPart = version ? `-${version}` : "";
-    return { prefix: `${code}${verPart}-${year}`, exact: !!version };
+    const hasVersionInCode = version && code.toUpperCase().endsWith(version.toUpperCase());
+    const verPart = (version && !hasVersionInCode) ? `-${version}` : "";
+    return { prefix: `${code}${verPart}-${year}`, exact: true };
   }
 
   if (cat === "Resin Tanks") {
