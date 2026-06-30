@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -71,9 +72,32 @@ export default function MaterialsPage() {
   const { mutate: globalMutate } = useSWRConfig();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  // Unified filters
+  const [matFilters, setMatFilters] = useState<{ field: string; value: string }[]>([]);
+  const [matAddField, setMatAddField] = useState("");
+  const [matAddValue, setMatAddValue] = useState("");
+  const [matFilterOpts, setMatFilterOpts] = useState<Record<string, string[]>>({});
+  useEffect(() => {
+    fetch("/api/settings").then(r => r.json()).then(j => {
+      if (j.success) {
+        const map: Record<string, string[]> = {};
+        const matTypes = new Set(["material_category","material_status","material_unit","brand","supplier","storageLocation","colour","materialType"]);
+        for (const item of j.data) {
+          if (item.isActive && matTypes.has(item.type)) {
+            if (!map[item.type]) map[item.type] = [];
+            if (!map[item.type].includes(item.value)) map[item.type].push(item.value);
+          }
+        }
+        setMatFilterOpts(map);
+      }
+    }).catch(console.error);
+  }, []);
 
   // SWR: current category for table display
-  const swrKey = apiUrl("/api/materials", { category: activeCat, ...(search && { search }) });
+  const filterParams: Record<string, string> = { category: activeCat };
+  if (search) filterParams.search = search;
+  matFilters.forEach(f => { filterParams[f.field] = f.value; });
+  const swrKey = apiUrl("/api/materials", filterParams);
   const { data: swrData, isLoading, mutate } = useAPI<{ success: boolean; data: MaterialItem[] }>(swrKey);
   const materials = swrData?.success ? swrData.data : [];
   const loading = isLoading;
@@ -325,6 +349,34 @@ export default function MaterialsPage() {
           </button>
         </div>
       )}
+
+      <div className="flex flex-wrap items-center gap-2 px-4 py-2 bg-white rounded-2xl border border-slate-200 shadow-sm">
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1">Filter</span>
+        <Select value={matAddField} onValueChange={(v) => { setMatAddField(v || ""); setMatAddValue(""); }}>
+          <SelectTrigger className="w-[120px] h-8 text-xs border-slate-200"><SelectValue placeholder="Field..." /></SelectTrigger>
+          <SelectContent>
+            {Object.keys(matFilterOpts).map(k => <SelectItem key={k} value={k}>{k}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        {matAddField && (
+          <Select value={matAddValue} onValueChange={(v) => { if (v) { setMatFilters(prev => [...prev, { field: matAddField, value: v }]); setMatAddField(""); setMatAddValue(""); } }}>
+            <SelectTrigger className="w-[140px] h-8 text-xs border-slate-200"><SelectValue placeholder="Value..." /></SelectTrigger>
+            <SelectContent>
+              {(matFilterOpts[matAddField] || []).map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
+        {matFilters.map((f, i) => (
+          <span key={i} className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full text-xs font-medium bg-blue-50 border border-blue-100">
+            <span className="text-[10px] text-blue-400 uppercase">{f.field}:</span>
+            <span className="text-slate-700">{f.value}</span>
+            <button onClick={() => setMatFilters(prev => prev.filter((_, j) => j !== i))} className="ml-0.5 w-4 h-4 rounded-full hover:bg-red-100 hover:text-red-500 flex items-center justify-center text-slate-300 transition-colors">×</button>
+          </span>
+        ))}
+        {matFilters.length > 0 && (
+          <button onClick={() => setMatFilters([])} className="text-[11px] text-slate-400 hover:text-red-500 font-medium ml-1 transition-colors">Clear</button>
+        )}
+      </div>
 
       <DataTable
         data={materials} columns={columns} keyField="id"
