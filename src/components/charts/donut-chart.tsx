@@ -76,22 +76,25 @@ export function DonutChart({ data, colors, total: propTotal, height = 520, compo
   const outerInner = Math.round(twoR * 0.64);
   const outerOuter = twoR;
 
-  // ── Label collision: iterative resolver ──
-  const occupiedY = useMemo(() => new Map<string, number>(), [flatData, outerData]);
-  const occupiedFinal = new Set<number>();
+  // ── Label collision: find nearest free Y ──
+  const occupied = new Set<number>();
+  const shiftCache = useMemo(() => new Map<string, number>(), [flatData, outerData]);
   const getOffset = (key: string, baseY: number): number => {
-    if (occupiedY.has(key)) return occupiedY.get(key)!;
-    const slot0 = Math.round(baseY / MIN_GAP) * MIN_GAP;
-    for (let s = 0; s <= MAX_SHIFT; s++) {
-      const testY = slot0 + s * MIN_GAP;
-      if (!occupiedFinal.has(testY)) {
-        occupiedFinal.add(testY);
-        occupiedY.set(key, s);
-        return s;
+    if (shiftCache.has(key)) return shiftCache.get(key)!;
+    // Try positions alternating up/down from base, small steps
+    const STEP = 22; // half MIN_GAP for finer placement
+    for (let d = 0; d <= MAX_SHIFT * 2; d++) {
+      const sign = d % 2 === 0 ? 1 : -1;
+      const dist = Math.floor(d / 2) * STEP;
+      const testY = Math.round((baseY + sign * dist) / STEP) * STEP;
+      if (!occupied.has(testY)) {
+        occupied.add(testY);
+        shiftCache.set(key, sign * Math.floor(d / 2));
+        return sign * Math.floor(d / 2);
       }
     }
-    occupiedY.set(key, MAX_SHIFT);
-    return MAX_SHIFT;
+    shiftCache.set(key, 0);
+    return 0;
   };
 
   if (!showLabels) {
