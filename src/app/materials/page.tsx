@@ -58,7 +58,7 @@ function StockBar({ used, remain, total, unit }: { used: number; remain: number;
 export default function MaterialsPage() {
   const router = useRouter();
   const [search, setSearch] = useState("");
-  const [activeCat, setActiveCat] = useState("FDM Filaments");
+  const [activeCat, setActiveCat] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteName, setDeleteName] = useState("");
   const [importing, setImporting] = useState(false);
