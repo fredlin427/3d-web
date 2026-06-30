@@ -31,6 +31,11 @@ export async function GET(request: NextRequest) {
     if (category) where.category = category;
     if (status) where.currentStatus = status;
     if (priority) where.priority = priority;
+    // Accept any field as filter (for chart builder drill-down links)
+    const knownKeys = new Set(["search","department","category","status","priority","dateFrom","dateTo","page","pageSize"]);
+    searchParams.forEach((value, key) => {
+      if (!knownKeys.has(key) && value) where[key] = value;
+    });
     if (dateFrom || dateTo) {
       where.applicationDate = {};
       if (dateFrom) (where.applicationDate as Record<string, unknown>).gte = new Date(dateFrom);

@@ -68,6 +68,11 @@ function CasesPageInner() {
         params.set("dateFrom", `${startYear}-04-01`);
         params.set("dateTo", `${startYear + 1}-03-31`);
       }
+      // Pass through any extra URL params (e.g., purpose, technician from chart drill-down)
+      const knownKeys = new Set(["search","department","category","status","fyFilter","dateFrom","dateTo","pageSize"]);
+      searchParams.forEach((value, key) => {
+        if (!knownKeys.has(key) && value) params.set(key, value);
+      });
       params.set("pageSize", "0"); // fetch all for client-side filtering
 
       const res = await fetch(`/api/cases?${params}`);
