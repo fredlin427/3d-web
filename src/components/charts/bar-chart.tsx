@@ -56,7 +56,22 @@ export function BarChartView({ type, data, dataKeys, colors, labelKey = "label",
     angle={many ? -35 : 0} textAnchor={many ? "end" : "middle"} height={many ? 90 : 60} />;
   const yEl = <YAxis tick={tickY} axisLine={false} tickLine={false} />;
   const grid = <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" strokeWidth={0.5} vertical={false} />;
-  const tip = <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "#f8f9fc" }} />;
+  const tip = <Tooltip
+    contentStyle={tooltipStyle}
+    cursor={{ fill: "#f8f9fc" }}
+    content={({ active, payload }: any) => {
+      if (!active || !payload?.length) return null;
+      // Show only the hovered item, not the group total
+      const first = payload[0];
+      return (
+        <div style={tooltipStyle}>
+          <strong style={{ color: "#1e293b" }}>{first.name}</strong>
+          <br />
+          <span style={{ color: "#64748b" }}>{first.value} items</span>
+        </div>
+      );
+    }}
+  />;
 
   if (isLine) return (
     <ResponsiveContainer width="100%" height={height}>
