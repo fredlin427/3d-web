@@ -259,7 +259,8 @@ export default function DashboardPage() {
             key={s.key}
             onClick={() => setExpandedStat(expandedStat === s.key ? null : s.key)}
             className={cn(
-              "border-0 border hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer",
+              "border-0 border hover:shadow-md transition-all duration-200 cursor-pointer",
+              expandedStat === s.key ? "overflow-visible" : "overflow-hidden",
               (s as any).highlight && "ring-2 ring-amber-200 bg-gradient-to-b from-amber-50/30 to-white",
               expandedStat === s.key && "ring-2 ring-blue-400 shadow-md"
             )}

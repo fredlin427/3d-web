@@ -262,7 +262,7 @@ function CasesPageInner() {
         return (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {cards.map((s) => (
-              <Card key={s.key} className="border-0 cursor-pointer hover:shadow-md transition-all overflow-hidden"
+              <Card key={s.key} className={cn("border-0 cursor-pointer hover:shadow-md transition-all", expandedCard === s.key ? "overflow-visible" : "overflow-hidden")}
                 onClick={() => setExpandedStat(expandedStat === s.key ? null : s.key)}>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
