@@ -374,20 +374,37 @@ function CasesPageInner() {
         </div>
       )}
 
-      {/* Active filter tags */}
-      {activeFilters.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-100/50">
-          <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mr-1">Active</span>
-          {activeFilters.map((f, i) => (
-            <span key={i} className="inline-flex items-center gap-1.5 pl-2.5 pr-2 py-1 rounded-full text-xs font-medium bg-white border border-slate-200 shadow-sm">
-              <span className="text-[10px] text-slate-400 uppercase">{f.field}</span>
-              <span className="text-slate-700">{f.value}</span>
-              <button onClick={() => setActiveFilters(prev => prev.filter((_, j) => j !== i))} className="ml-0.5 w-4 h-4 rounded-full hover:bg-red-50 hover:text-red-500 flex items-center justify-center text-slate-300 transition-colors">×</button>
-            </span>
-          ))}
-          <button onClick={() => setActiveFilters([])} className="text-[11px] text-slate-400 hover:text-red-500 font-medium ml-1 transition-colors">Clear all</button>
-        </div>
-      )}
+      <div className="flex flex-wrap items-center gap-2 px-4 py-2 bg-white rounded-2xl border border-slate-200 shadow-sm">
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1">Filter</span>
+        <Select value={addField} onValueChange={(v) => { setAddField(v || ""); setAddValue(""); }}>
+          <SelectTrigger className="w-[120px] h-8 text-xs border-slate-200"><SelectValue placeholder="Field..." /></SelectTrigger>
+          <SelectContent>
+            {Object.entries(filterOpts).filter(([k]) => !["case_category","case_status","progress_step"].includes(k)).map(([k]) => (
+              <SelectItem key={k} value={k}>{k}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {addField && (
+          <>
+            <Select value={addValue} onValueChange={(v) => { if (v) { setActiveFilters(prev => [...prev, { field: addField, value: v }]); setAddField(""); setAddValue(""); } }}>
+              <SelectTrigger className="w-[140px] h-8 text-xs border-slate-200"><SelectValue placeholder="Value..." /></SelectTrigger>
+              <SelectContent>
+                {(filterOpts[addField] || []).map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </>
+        )}
+        {activeFilters.map((f, i) => (
+          <span key={i} className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full text-xs font-medium bg-blue-50 border border-blue-100">
+            <span className="text-[10px] text-blue-400 uppercase">{f.field}:</span>
+            <span className="text-slate-700">{f.value}</span>
+            <button onClick={() => setActiveFilters(prev => prev.filter((_, j) => j !== i))} className="ml-0.5 w-4 h-4 rounded-full hover:bg-red-100 hover:text-red-500 flex items-center justify-center text-slate-300 transition-colors">×</button>
+          </span>
+        ))}
+        {activeFilters.length > 0 && (
+          <button onClick={() => setActiveFilters([])} className="text-[11px] text-slate-400 hover:text-red-500 font-medium ml-1 transition-colors">Clear</button>
+        )}
+      </div>
 
       <DataTable
         data={cases} columns={columns} keyField="id"
@@ -435,29 +452,6 @@ function CasesPageInner() {
                 })()}
               </SelectContent>
             </Select>
-            {/* Add filter */}
-            <div className="flex items-center gap-1.5 bg-slate-50 rounded-lg px-1.5 py-1">
-              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider pl-1">Filter</span>
-              <Select value={addField} onValueChange={(v) => { setAddField(v || ""); setAddValue(""); }}>
-                <SelectTrigger className="w-[130px] h-8 text-xs border-0 bg-white shadow-sm"><SelectValue placeholder="Select field..." /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(filterOpts).filter(([k]) => !["case_category","case_status","progress_step"].includes(k)).map(([k]) => (
-                    <SelectItem key={k} value={k}>{k}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {addField && (
-                <>
-                  <span className="text-slate-300 text-xs">→</span>
-                  <Select value={addValue} onValueChange={(v) => { if (v) { setActiveFilters(prev => [...prev, { field: addField, value: v }]); setAddField(""); setAddValue(""); } }}>
-                    <SelectTrigger className="w-[150px] h-8 text-xs border-0 bg-white shadow-sm"><SelectValue placeholder="Select value..." /></SelectTrigger>
-                    <SelectContent>
-                      {(filterOpts[addField] || []).map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </>
-              )}
-            </div>
           </div>
         }
       />
