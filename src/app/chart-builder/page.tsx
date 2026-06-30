@@ -28,8 +28,8 @@ export default function ChartBuilderPage() {
   const [expandedFilter, setExpandedFilter] = useState<string | null>(null);
   const [showTable, setShowTable] = useState(true);
   const [tableMode, setTableMode] = useState<"hierarchical" | "pivot">("pivot");
-  const [groupTop, setGroupTop] = useState(0); // show all
-  const [childTop, setChildTop] = useState(0); // show all
+  const [groupTop, setGroupTop] = useState(6); // top 6, rest → Others
+  const [childTop, setChildTop] = useState(6); // top 6 sub-items, rest → Others
   const [pieSize, setPieSize] = useState(150);
   const [labelMin, setLabelMin] = useState(0); // show all
   const [showLabels, setShowLabels] = useState(true);
