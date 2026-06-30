@@ -77,20 +77,20 @@ export function DonutChart({ data, colors, total: propTotal, height = 520, compo
   const outerOuter = twoR;
 
   // ── Label collision: iterative resolver ──
-  const occupied = useMemo(() => new Map<string, number>(), [flatData, outerData]);
-  const getOffset = (key: string, y: number): number => {
-    if (occupied.has(key)) return occupied.get(key)!;
-    // Find first free Y slot starting from y
-    const slot0 = Math.round(y / MIN_GAP) * MIN_GAP;
+  const occupiedY = useMemo(() => new Map<string, number>(), [flatData, outerData]);
+  const occupiedFinal = new Set<number>();
+  const getOffset = (key: string, baseY: number): number => {
+    if (occupiedY.has(key)) return occupiedY.get(key)!;
+    const slot0 = Math.round(baseY / MIN_GAP) * MIN_GAP;
     for (let s = 0; s <= MAX_SHIFT; s++) {
       const testY = slot0 + s * MIN_GAP;
-      let collides = false;
-      occupied.forEach((oy) => {
-        if (Math.abs(testY - oy) < MIN_GAP) collides = true;
-      });
-      if (!collides) { occupied.set(key, s); return s; }
+      if (!occupiedFinal.has(testY)) {
+        occupiedFinal.add(testY);
+        occupiedY.set(key, s);
+        return s;
+      }
     }
-    occupied.set(key, MAX_SHIFT);
+    occupiedY.set(key, MAX_SHIFT);
     return MAX_SHIFT;
   };
 
