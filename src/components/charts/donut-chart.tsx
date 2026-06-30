@@ -168,7 +168,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 520, compo
               if (onSubClick) onSubClick({ label: d.name, value: d.value }, d.parentIdx);
               else if (onOuterClick) onOuterClick(d.parentIdx);
             }}
-            onMouseEnter={(_: any, index: number) => { const d = outerData[index]; if (d) setHoverIdx(d.parentIdx); }}
+            onMouseEnter={(_: any, index: number) => setHoverIdx(index + 1000)}
             onMouseLeave={() => { if (!activeIdx) setHoverIdx(null); }}
             style={{ cursor: "pointer", outline: "none" } as any}
           >
@@ -176,7 +176,9 @@ export function DonutChart({ data, colors, total: propTotal, height = 520, compo
               const base = colors[d.parentIdx % colors.length];
               const kids = data[d.parentIdx]?.children?.length || 1;
               const idx = data[d.parentIdx]?.children?.findIndex(c => c.label === d.name) ?? 0;
-              const dimmed = displayIdx !== null && d.parentIdx !== displayIdx;
+              const isOuterHover = displayIdx !== null && displayIdx >= 1000;
+              const subIdx = isOuterHover ? displayIdx - 1000 : -1;
+              const dimmed = displayIdx !== null && (isOuterHover ? i !== subIdx : d.parentIdx !== displayIdx);
               return <Cell key={i} fill={shadeColor(base, idx, kids)} opacity={dimmed ? 0.15 : 1} />;
             })}
           </Pie>
@@ -195,7 +197,7 @@ export function DonutChart({ data, colors, total: propTotal, height = 520, compo
           style={{ cursor: "pointer", outline: "none" } as any}
         >
           {flatData.map((_, i) => (
-            <Cell key={i} fill={colors[i % colors.length]} opacity={displayIdx === null ? 1 : displayIdx === i ? 1 : 0.18} />
+            <Cell key={i} fill={colors[i % colors.length]} opacity={displayIdx === null ? 1 : displayIdx >= 1000 ? (outerData.length > 0 && outerData[displayIdx - 1000]?.parentIdx === i ? 1 : 0.18) : displayIdx === i ? 1 : 0.18} />
           ))}
         </Pie>
 
