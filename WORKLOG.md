@@ -1,5 +1,38 @@
 # QEH 3D Printing Office — Work Log
 
+## 2026-06-30 — Deploy Prep, Filter System, Bar Polish
+
+### Deployment
+- Linux portable package: `package.sh` builds `qeh-3d-print-linux.tar.gz` (116MB, bundled Node.js)
+- Windows portable: `qeh-3d-print-portable.zip` (74MB)
+- Standalone apply form: `apply-standalone.html` (pure HTML, no dependencies)
+- Both packages tested on Ubuntu — works without installed Node.js
+
+### Case/Materials Filters
+- Unified filter bar on both pages: field selector + value selector → add as tag
+- Dynamic filter options from Settings API, case/materials-specific field lists
+- Multiple filters stackable, URL-synced for sharing
+- Filter tags show as removable pills above table
+
+### Material ID System
+- Rewrote to match Excel formulas exactly
+- SLA: code table (27 entries) + version from name
+- Tank: code table (5 entries)
+- FDM: brand code from bracket extraction
+- IPA: auto from name
+- Global per-category counter (not per-prefix)
+
+### Chart Builder
+- BarChartView: hover dim, sub-item click → FocusCard, individual tooltip per bar
+- Separate pieLegends + barLegends (no more color cross-contamination)
+- Pie label collision finally working (iterative, bounded)
+- All 4 chart types × 2 data sources feature parity verified
+
+### Constants
+- PURPOSES per category (Clinical Use / Rehabilitation / Training-Education)
+- MODEL_TYPES: Device / Tool, Anatomical Model, Anatomical + Device
+- SERVICE_OPTIONS: added Design & Printing, Printing Only, Segmentation & Printing
+
 ## 2026-06-29 — Chart Polish & Label System (35+ commits)
 
 ### Chart Builder Finalized

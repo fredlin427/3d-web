@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QEH 3D Printing — Application Form</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; background: #f1f5f9; display: flex; justify-content: center; padding: 40px 20px; }
+form { background: #fff; border-radius: 16px; padding: 32px; max-width: 600px; width: 100%; box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
+h2 { font-size: 20px; margin-bottom: 24px; color: #0f172a; }
+label { display: block; font-size: 13px; font-weight: 600; color: #334155; margin-top: 16px; margin-bottom: 4px; }
+input, select, textarea { width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 14px; transition: border .2s; }
+input:focus, select:focus, textarea:focus { border-color: #4f46e5; outline: none; }
+button { margin-top: 24px; width: 100%; padding: 12px; background: #4f46e5; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
+button:hover { background: #4338ca; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.success { background: #ecfdf5; color: #065f46; padding: 16px; border-radius: 12px; margin-bottom: 16px; text-align: center; font-weight: 600; display: none; }
+</style>
+</head>
+<body>
+<form id="apply-form">
+  <h2>QEH 3D Printing Application</h2>
+  <div class="success" id="success">✓ Submitted! Your case number: <strong id="case-no"></strong></div>
+
+  <div class="row">
+    <div><label>Applicant Name *</label><input name="applicantName" required></div>
+    <div><label>Department *</label><select name="department" required>
+      <option value="">Select...</option>
+      <option>SURG</option><option>ORT</option><option>MED</option><option>ONC</option><option>NEUR</option><option>PAED</option><option>ENT</option><option>Other</option>
+    </select></div>
+  </div>
+
+  <div class="row">
+    <div><label>Category *</label><select name="category" required>
+      <option value="">Select...</option>
+      <option>Clinical Use</option><option>Rehabilitation</option><option>Training/ Education</option>
+    </select></div>
+    <div><label>Purpose *</label><select name="purpose" required>
+      <option value="">Select...</option>
+      <option>Pre-op planning</option><option>Intra-operative guide</option><option>Patient education</option><option>Device adaptation and modification</option><option>Patient device for activity of daily living</option><option>Patient device for training</option><option>Prosthesis and Orthosis</option><option>OSH device</option><option>Medical training / education</option><option>Research use</option><option>Others</option>
+    </select></div>
+  </div>
+
+  <label>Project Title *</label>
+  <input name="projectTitle" required>
+
+  <label>Contact</label>
+  <input name="contact">
+
+  <label>Description / Specification</label>
+  <textarea name="specification" rows="2"></textarea>
+
+  <label>Remarks</label>
+  <textarea name="remarks" rows="2"></textarea>
+
+  <!-- CHANGE THIS TO YOUR SERVER IP -->
+  <p style="font-size:11px;color:#94a3b8;margin-top:8px;">API: <code id="api-url">http://localhost:3000/api/apply</code></p>
+  <button type="submit">Submit Application</button>
+</form>
+
+<script>
+// ===== CHANGE THIS TO YOUR SERVER IP =====
+const API = "http://localhost:3000/api/apply";
+// =========================================
+document.getElementById("api-url").textContent = API;
+
+document.getElementById("apply-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const data = Object.fromEntries(fd.entries());
+  data.hospital = "QEH";
+  data.quantity = "1";
+  data.totalComponents = "1";
+
+  try {
+    const res = await fetch(API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    const json = await res.json();
+    if (json.success) {
+      document.getElementById("success").style.display = "block";
+      document.getElementById("case-no").textContent = json.data.caseNumber;
+      e.target.reset();
+    } else {
+      alert("Error: " + (json.error || "Submission failed"));
+    }
+  } catch (err) {
+    alert("Connection failed. Is the server running?");
+  }
+});
+</script>
+</body>
+</html>
