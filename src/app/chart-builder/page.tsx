@@ -45,6 +45,7 @@ export default function ChartBuilderPage() {
   const [focusOpen, setFocusOpen] = useState(false);
   const [focusItem, setFocusItem] = useState<StackedRow | null>(null);
   const [focusIdx, setFocusIdx] = useState<number | null>(null);
+  const [focusParent, setFocusParent] = useState<string>(""); // parent group name for sub-item clicks
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -227,14 +228,14 @@ export default function ChartBuilderPage() {
                     legendItems={pieLegends.length > 0 ? pieLegends : undefined}
                     onSelect={(slice, idx) => { setFocusIdx(idx); setFocusItem({ label: slice.name, value: slice.value, children: slice.children?.map(c => ({ label: c.label, value: c.value })) || [] }); setFocusOpen(true); }}
                     onOuterClick={hasStacked ? (parentIdx: number) => { const g = donutData[parentIdx]; if (g) { setFocusIdx(parentIdx); setFocusItem({ label: g.name, value: g.value, children: (g.children || []).map(c => ({ label: c.label, value: c.value })) }); setFocusOpen(true); } } : undefined}
-                    onSubClick={hasStacked ? (sub: { label: string; value: number }, parentIdx: number) => { setFocusIdx(parentIdx); setFocusItem({ label: sub.label, value: sub.value, children: [] }); setFocusOpen(true); } : undefined} />
+                    onSubClick={hasStacked ? (sub: { label: string; value: number }, parentIdx: number) => { setFocusIdx(parentIdx); setFocusParent(donutData[parentIdx]?.name || ""); setFocusItem({ label: sub.label, value: sub.value, children: [] }); setFocusOpen(true); } : undefined} />
                 ) : (
                   <BarChartView type={chartType as "bar"|"barH"|"line"|"area"|"stacked"} data={barData} dataKeys={hasStacked ? barKeys : ["value"]} colors={colors} showLabels={showLabels}
                     onClick={(d: any) => {
                       if (hasStacked) { const g = stackedData.find(s => s.label === d.label); if (g) { setFocusIdx(stackedData.indexOf(g)); setFocusItem(g); setFocusOpen(true); } }
                       else { const idx = chartData.findIndex(c => c.label === d.label); if (idx >= 0) { setFocusIdx(idx); setFocusItem({ label: chartData[idx].label, value: chartData[idx].value, children: [] }); setFocusOpen(true); } }
                     }}
-                    onSubClick={hasStacked ? (sub: { name: string; value: number }) => { const ki = barKeys.indexOf(sub.name); setFocusIdx(ki >= 0 ? ki : 0); setFocusItem({ label: sub.name, value: sub.value, children: [] }); setFocusOpen(true); } : undefined} />
+                    onSubClick={hasStacked ? (sub: { name: string; value: number }) => { const ki = barKeys.indexOf(sub.name); setFocusIdx(ki >= 0 ? ki : 0); setFocusParent(""); setFocusItem({ label: sub.name, value: sub.value, children: [] }); setFocusOpen(true); } : undefined} />
                 )}
               </ChartFullscreen>
             </CardContent>
@@ -315,11 +316,13 @@ export default function ChartBuilderPage() {
         viewAllHref={focusItem?.label && !focusItem.label.startsWith("Others") ? (
           focusItem.children && focusItem.children.length > 0
             ? `/${source === "materials" ? "materials" : "cases"}?${xField}=${encodeURIComponent(focusItem.label)}`
+            : stackBy && focusParent
+            ? `/${source === "materials" ? "materials" : "cases"}?${xField}=${encodeURIComponent(focusParent)}&${stackBy}=${encodeURIComponent(focusItem.label)}`
             : stackBy ? `/${source === "materials" ? "materials" : "cases"}?${stackBy}=${encodeURIComponent(focusItem.label)}`
             : `/${source === "materials" ? "materials" : "cases"}?${xField}=${encodeURIComponent(focusItem.label)}`
         ) : undefined}
         breakdownHref={stackBy ? (item: { label: string }) => `/${source === "materials" ? "materials" : "cases"}?${xField}=${encodeURIComponent(focusItem?.label || "")}&${stackBy}=${encodeURIComponent(item.label)}` : undefined}
-        onClose={() => { setFocusOpen(false); setFocusItem(null); setFocusIdx(null); }} />
+        onClose={() => { setFocusOpen(false); setFocusItem(null); setFocusIdx(null); setFocusParent(""); }} />
     </div>
   );
 }
