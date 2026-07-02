@@ -315,7 +315,8 @@ export default function ChartBuilderPage() {
         viewAllHref={focusItem?.label && !focusItem.label.startsWith("Others") ? (
           focusItem.children && focusItem.children.length > 0
             ? `/cases?${xField}=${encodeURIComponent(focusItem.label)}`
-            : stackBy ? `/cases?${stackBy}=${encodeURIComponent(focusItem.label)}` : undefined
+            : stackBy ? `/cases?${stackBy}=${encodeURIComponent(focusItem.label)}`
+            : `/cases?${xField}=${encodeURIComponent(focusItem.label)}`
         ) : undefined}
         breakdownHref={stackBy ? (item: { label: string }) => `/cases?${xField}=${encodeURIComponent(focusItem?.label || "")}&${stackBy}=${encodeURIComponent(item.label)}` : undefined}
         onClose={() => { setFocusOpen(false); setFocusItem(null); setFocusIdx(null); }} />
