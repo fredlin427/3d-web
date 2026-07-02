@@ -314,11 +314,11 @@ export default function ChartBuilderPage() {
         children={focusItem?.children} colors={colors}
         viewAllHref={focusItem?.label && !focusItem.label.startsWith("Others") ? (
           focusItem.children && focusItem.children.length > 0
-            ? `/cases?${xField}=${encodeURIComponent(focusItem.label)}`
-            : stackBy ? `/cases?${stackBy}=${encodeURIComponent(focusItem.label)}`
-            : `/cases?${xField}=${encodeURIComponent(focusItem.label)}`
+            ? `/${source === "materials" ? "materials" : "cases"}?${xField}=${encodeURIComponent(focusItem.label)}`
+            : stackBy ? `/${source === "materials" ? "materials" : "cases"}?${stackBy}=${encodeURIComponent(focusItem.label)}`
+            : `/${source === "materials" ? "materials" : "cases"}?${xField}=${encodeURIComponent(focusItem.label)}`
         ) : undefined}
-        breakdownHref={stackBy ? (item: { label: string }) => `/cases?${xField}=${encodeURIComponent(focusItem?.label || "")}&${stackBy}=${encodeURIComponent(item.label)}` : undefined}
+        breakdownHref={stackBy ? (item: { label: string }) => `/${source === "materials" ? "materials" : "cases"}?${xField}=${encodeURIComponent(focusItem?.label || "")}&${stackBy}=${encodeURIComponent(item.label)}` : undefined}
         onClose={() => { setFocusOpen(false); setFocusItem(null); setFocusIdx(null); }} />
     </div>
   );

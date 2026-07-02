@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, Column } from "@/components/shared/data-table";
@@ -72,8 +72,14 @@ export default function MaterialsPage() {
   const { mutate: globalMutate } = useSWRConfig();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
-  // Unified filters
-  const [matFilters, setMatFilters] = useState<{ field: string; value: string }[]>([]);
+  const sp = useSearchParams();
+  // Unified filters — init from URL params
+  const [matFilters, setMatFilters] = useState<{ field: string; value: string }[]>(() => {
+    const init: { field: string; value: string }[] = [];
+    const known = new Set(["category","search","page","pageSize"]);
+    sp.forEach((value, key) => { if (!known.has(key) && value) init.push({ field: key, value }); });
+    return init;
+  });
   const [matAddField, setMatAddField] = useState("");
   const [matAddValue, setMatAddValue] = useState("");
   const [matFilterOpts, setMatFilterOpts] = useState<Record<string, string[]>>({});
