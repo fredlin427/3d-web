@@ -3,7 +3,7 @@
 import { useState } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, AreaChart, Area, LabelList, Cell,
+  LineChart, Line, AreaChart, Area, LabelList,
 } from "recharts";
 import { BarChart3 } from "lucide-react";
 
