@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -56,7 +56,7 @@ function StockBar({ used, remain, total, unit }: { used: number; remain: number;
   );
 }
 
-export default function MaterialsPage() {
+function MaterialsPageInner() {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [activeCat, setActiveCat] = useState("");
@@ -418,5 +418,13 @@ export default function MaterialsPage() {
         title="Delete Material" description={`Delete "${deleteName}"?`}
         confirmLabel="Delete" variant="destructive" onConfirm={handleDelete} />
     </div>
+  );
+}
+
+export default function MaterialsPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><p className="text-slate-400">Loading...</p></div>}>
+      <MaterialsPageInner />
+    </Suspense>
   );
 }
