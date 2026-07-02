@@ -309,7 +309,7 @@ export default function ChartBuilderPage() {
       </div>
 
       <FocusCard key={focusOpen ? focusItem?.label || "f" : "c"} open={focusOpen}
-        label={focusItem?.label || ""} value={focusItem?.value || 0} total={total}
+        label={focusParent ? `${focusParent} → ${focusItem?.label || ""}` : (focusItem?.label || "")} value={focusItem?.value || 0} total={total}
         chartType={chartType === "donut" || chartType === "pie" ? chartType : "bar"}
         color={focusIdx != null ? colors[focusIdx % colors.length] : colors[0]}
         children={focusItem?.children} colors={colors}
