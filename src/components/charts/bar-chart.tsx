@@ -16,7 +16,7 @@ interface Props {
   height?: number;
   showLabels?: boolean;
   onClick?: (item: any) => void;
-  onSubClick?: (item: { name: string; value: number }) => void;
+  onSubClick?: (item: { name: string; value: number; group: string }) => void;
 }
 
 const S = {
@@ -46,7 +46,7 @@ export function BarChartView({ type, data, dataKeys, colors, labelKey = "label",
 
   const handleBarClick = (barData: any, barIndex: number, keyIndex: number) => {
     if (onSubClick) {
-      onSubClick({ name: dataKeys[keyIndex], value: Number(barData[dataKeys[keyIndex]]) || 0 });
+      onSubClick({ name: dataKeys[keyIndex], value: Number(barData[dataKeys[keyIndex]]) || 0, group: String(barData[labelKey] || "") });
     } else if (onClick) {
       onClick(barData);
     }

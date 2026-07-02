@@ -235,7 +235,7 @@ export default function ChartBuilderPage() {
                       if (hasStacked) { const g = stackedData.find(s => s.label === d.label); if (g) { setFocusIdx(stackedData.indexOf(g)); setFocusItem(g); setFocusOpen(true); } }
                       else { const idx = chartData.findIndex(c => c.label === d.label); if (idx >= 0) { setFocusIdx(idx); setFocusItem({ label: chartData[idx].label, value: chartData[idx].value, children: [] }); setFocusOpen(true); } }
                     }}
-                    onSubClick={hasStacked ? (sub: { name: string; value: number }) => { const ki = barKeys.indexOf(sub.name); setFocusIdx(ki >= 0 ? ki : 0); setFocusParent(""); setFocusItem({ label: sub.name, value: sub.value, children: [] }); setFocusOpen(true); } : undefined} />
+                    onSubClick={hasStacked ? (sub: { name: string; value: number; group: string }) => { const ki = barKeys.indexOf(sub.name); setFocusIdx(ki >= 0 ? ki : 0); setFocusParent(sub.group || ""); setFocusItem({ label: sub.name, value: sub.value, children: [] }); setFocusOpen(true); } : undefined} />
                 )}
               </ChartFullscreen>
             </CardContent>
