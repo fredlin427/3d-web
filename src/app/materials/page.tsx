@@ -84,15 +84,16 @@ function MaterialsPageInner() {
   const [matAddValue, setMatAddValue] = useState("");
   const [matFilterOpts, setMatFilterOpts] = useState<Record<string, string[]>>({});
   useEffect(() => {
-    // Load from settings
+    // Load from settings — map settings types to API field names
+    const typeMap: Record<string, string> = { material_category: "category", material_status: "status", material_unit: "unit" };
     fetch("/api/settings").then(r => r.json()).then(j => {
       if (j.success) {
         const map: Record<string, string[]> = {};
-        const matTypes = new Set(["material_category","material_status","material_unit","brand","supplier","storageLocation","colour","materialType"]);
         for (const item of j.data) {
-          if (item.isActive && matTypes.has(item.type)) {
-            if (!map[item.type]) map[item.type] = [];
-            if (!map[item.type].includes(item.value)) map[item.type].push(item.value);
+          const field = typeMap[item.type] || item.type;
+          if (item.isActive && field !== item.type && !item.type.endsWith("_form_field")) {
+            if (!map[field]) map[field] = [];
+            if (!map[field].includes(item.value)) map[field].push(item.value);
           }
         }
         setMatFilterOpts(map);
