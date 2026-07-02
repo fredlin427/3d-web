@@ -54,15 +54,18 @@ export function BarChartView({ type, data, dataKeys, colors, labelKey = "label",
 
   const tooltipContent = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null;
+    // Show only the hovered bar (last in payload = top of stack, or matched by hoverIdx)
+    const target = payload.length > 1 && hoverIdx !== null
+      ? payload.find((p: any, i: number) => i === hoverIdx) || payload[payload.length - 1]
+      : payload[payload.length - 1];
+    if (!target) return null;
     return (
       <div style={S.tooltip}>
-        {payload.map((p: any, i: number) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
-            <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, backgroundColor: p.color }} />
-            <strong style={{ color: "#1e293b" }}>{p.name}</strong>
-            <span style={{ color: "#64748b" }}>{p.value}</span>
-          </div>
-        ))}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+          <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, backgroundColor: target.color }} />
+          <strong style={{ color: "#1e293b" }}>{target.name}</strong>
+          <span style={{ color: "#64748b" }}>{target.value}</span>
+        </div>
       </div>
     );
   };
