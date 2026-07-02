@@ -125,7 +125,7 @@ export function BarChartView({ type, data, dataKeys, colors, labelKey = "label",
               onMouseEnter={() => setHoverIdx(ki)}
               onMouseLeave={() => setHoverIdx(null)}
               cursor="pointer"
-              opacity={isStacked && hoverIdx !== null && hoverIdx !== ki ? 0.3 : 1}
+              opacity={isStacked && hoverIdx !== null && hoverIdx !== ki ? 0.18 : 1}
             >
               {!isStacked && dataKeys.length === 1 && data.length <= 12 && (
                 <LabelList dataKey={dataKeys[0]} position={isH ? "right" : "top"} style={{ fontSize: 12, fontWeight: 700, fill: "#475569" }} />
