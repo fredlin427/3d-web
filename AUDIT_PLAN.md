@@ -1,139 +1,101 @@
-# QEH 3D Print Hub — Production Readiness Audit Plan
+# QEH 3D Print Hub — Comprehensive Audit & Cleanup Plan
 
-## Overview
-Comprehensive audit covering bugs, security, performance, and cleanup.
-Goal: production-ready, safe to deploy for daily use.
+## P0 — Critical (Bug Fixes)
 
----
+### 1. API Response Handling (widespread)
+Many places call `fetch()` then `toast.success("Done")` without checking `res.ok` or `json.success`. Users see success messages even when the API failed.
+- **Files**: materials/page.tsx:137, apply-manage/page.tsx:72,84,98, form-field-editor.tsx:54, stock-take/page.tsx:36,74, page.tsx:188
+- **Fix**: Check response status before showing success. Add `console.error` to all bare `.catch()`
 
-## 🔴 P0 — Critical (Must Fix Before Production)
+### 2. Silent Error Swallowing
+Multiple files use `.catch(() => {})` — empty catch blocks that hide errors from users and developers.
+- **Files**: case-form.tsx:114,133,149, material-form.tsx:137,156,172, apply-manage/page.tsx:115,133,362, apply/page.tsx:105,127
+- **Fix**: Add `console.error(e)` + `toast.error("Failed to load")` to all empty catch blocks
 
-### 1. Data Loss: start.bat runs seed on every boot
-- **Root cause:** Old `start.bat` line 44: `prisma db push --accept-data-loss` + line 51: `prisma db seed` (seed deletes all data via deleteMany)
-- **Fix:** ✅ Already fixed — now backs up before DB ops, uses safe `db push`, only seeds empty DB
-- **Files:** `start.bat`
-
-### 2. Apply form has zero input validation
-- **File:** `src/app/api/apply/route.ts:8`
-- **Issue:** `const body = await request.json()` with no Zod schema. Any field can be injected.
-- **Fix:** Add `validateBody(request, applyFormSchema)` or reuse `caseFormSchema`
-
-### 3. File upload missing content validation
-- **File:** `src/app/api/upload/route.ts:12-26`
-- **Issue:** Only checks MIME type (spoofable). No magic byte check, no filename sanitization.
-- **Fix:** Check file magic bytes, sanitize filename (remove path traversal chars)
-
-### 4. No database indexes on FK columns
-- **File:** `prisma/schema.prisma`
-- **Missing indexes:**
-  - `CaseProgressStep.caseId`
-  - `CaseMaterialUsage.caseId`, `CaseMaterialUsage.materialId`
-  - `StockTransaction.materialId`, `StockTransaction.relatedCaseId`
-  - `AuditLog.entityId`, `AuditLog.entityType`, `AuditLog.createdAt`
-- **Fix:** Add `@@index` declarations to all FK columns that appear in WHERE clauses
-
-### 5. Cases list fetches ALL records by default
-- **File:** `src/app/api/cases/route.ts:18` — `pageSize=0` returns everything
-- **File:** `src/app/cases/page.tsx:71` — no pageSize in request
-- **Fix:** Default pageSize to 50, fix client to send pageSize
+### 3. State Update on Unmounted Components
+7 files fetch data in useEffect without AbortController or cleanup, risking memory leaks.
+- **Files**: materials/page.tsx, cases/page.tsx, page.tsx, apply/page.tsx, reports/page.tsx, apply-manage/page.tsx
+- **Fix**: Add AbortController or `cancelled` flag pattern
 
 ---
 
-## 🟠 P1 — High Priority
+## P1 — High (Dead Code & Dependencies)
 
-### 6. Dashboard N+1: fetches all material usage records
-- **File:** `src/app/api/dashboard/route.ts:145-163`
-- **Issue:** `findMany` on all CaseMaterialUsage to compute category aggregation. Use `groupBy` instead.
+### 4. Delete Dead Files
+| File | Reason |
+|------|--------|
+| `src/lib/use-field-editor.ts` | Never imported — ~200 lines |
+| `src/types/index.ts` | Never imported — ~50 lines |
+| `src/components/charts/chart-legend.tsx` | Never imported (inline in chart-builder) — ~20 lines |
+| `src/components/ui/dialog.tsx` | Entire component never used (project uses ConfirmDialog) |
 
-### 7. Chart data unbounded queries
-- **File:** `src/app/api/chart-data/route.ts:175,203`
-- **Issue:** `take: 5000` — no limit on stacked queries. Already fixed with groupTop/childTop.
+### 5. Remove Unused npm Packages
+| Package | Reason |
+|---------|--------|
+| `papaparse` | Never imported — uses xlsx instead |
+| `html-to-image` | Never imported — uses html2canvas instead |
 
-### 8. Cases endpoint fetches progressSteps then discards them
-- **File:** `src/app/api/cases/route.ts:41-58`
-- **Issue:** Includes progressSteps to compute progressStats, then strips them. Wasted I/O.
-- **Fix:** Compute progress stats in the query or use raw SQL count.
-
-### 9. Settings duplicate entries possible
-- **File:** `prisma/schema.prisma` (Setting model)
-- **Issue:** No unique constraint on `(type, value)`. Can create duplicate settings.
-- **Fix:** Add `@@unique([type, value])`
-
-### 10. BatchNumber not indexed, used in lookups
-- **File:** `prisma/schema.prisma:89`, `src/app/api/stock-take/import/route.ts:75`
-- **Fix:** Add `@@index([batchNumber])` on Material model
+### 6. Remove Unused Imports
+- `PieChart, Pie, Cell, LabelList` from recharts in `page.tsx` (delegated to DonutChart)
+- `Filter` from lucide-react in `activity-log/page.tsx`
+- `EyeOff` from lucide-react in `reports/page.tsx`
 
 ---
 
-## 🟡 P2 — Medium Priority (Bugs & Improvements)
+## P2 — Medium (Feature Gaps & UX)
 
-### 11. Broken Tailwind class (sort icon invisible)
-- **File:** `src/components/reports/preview-table.tsx:121`
-- **Issue:** `group-hover:opacity-100` used without parent `group` class. Sort arrow permanently invisible.
-- **Fix:** Add `group` class to parent `<th>`
+### 7. Cases Page Missing Features
+- **No Export button** — Materials and Stock Take have one
+- **No "New" button with `bg-primary`** — currently uses `bg-teal-600` (inconsistent)
+- Add cases export XLSX button
 
-### 12. useEffect stale dependencies
-- **File:** `src/components/materials/material-form.tsx:220` — `allSettings` used but not in deps
-- **File:** `src/app/reports/page.tsx:156` — `fetchReport` not in deps
+### 8. Apply Form Validation
+- Only 2 of ~30 fields validated
+- No inline error states (toast only)
+- No required field indicators (asterisks)
+- Fix: Add proper validation to all required fields
 
-### 13. DOM queries instead of React refs
-- **File:** `src/app/apply-manage/page.tsx:412` — `document.getElementById`
-- **File:** `src/components/settings/master-data-table.tsx:37` — `document.querySelector`
-- **Fix:** Use `useRef` instead
+### 9. Materials Page Error State
+- SWR `error` returned but never rendered in UI
+- On API failure, shows "No material records" instead of error message
+- Fix: Check `error` from SWR and show error state
 
-### 14. Missing aria-labels on icon-only buttons
-- **Files:** Sidebar collapse, pagination buttons, table action menus
-- **Fix:** Add `aria-label` to all icon-only buttons
+### 10. Accessibility (aria-labels)
+- 15+ icon-only buttons missing `aria-label` across DataTable, sidebar, search, dropdowns
+- Fix: Add `aria-label` to all icon-only interactive elements
 
-### 15. Duplicate chart color definitions
-- **File:** `src/app/page.tsx:21` (CHART_COLORS) duplicates `src/lib/chart-colors.ts`
-- **File:** `src/app/chart-builder/page.tsx:26-51` — inline palettes
-- **Fix:** Consolidate into `src/lib/chart-colors.ts`
-
-### 16. Large inline IIFEs causing re-renders
-- **Files:** `page.tsx:287`, `cases/page.tsx:290`, `materials/page.tsx:263`
-- **Issue:** 50-115 line IIFEs inside JSX re-evaluate on every render
-- **Fix:** Extract into named components
+### 11. Stat Card Color Consistency
+- Dashboard, Cases, Materials use different hardcoded hex colors for same concepts
+- Fix: Define shared stat card color config
 
 ---
 
-## 🔵 P3 — Low Priority (Polish)
+## P3 — Low (Polish)
 
-### 17. Activity Log: add entityType/action filters for all operations
-- Status: ✅ Already comprehensive — Settings, Upload, Import, Apply all covered
+### 12. Loading States
+- Activity Log uses non-standard pulse animation instead of `LoadingState`
+- Chart Builder uses inline `Loader2` instead of `LoadingState`
+- Apply Manage has no initial loading state
 
-### 18. Loading states missing
-- **Issue:** No `loading.tsx` files for route segments
-- **Fix:** Add `loading.tsx` to major route groups
+### 13. Index Keys in Lists
+- 5+ places use array index as React `key` on mutable lists
+- Fix: Use unique stable keys (e.g., `f.field + f.value`)
 
-### 19. Unused files / dead code
-- **File:** `src/components/charts/progress-stepper.tsx` — created but replaced by inline progress bar
-- Scan for: unused imports, unused components, dead code paths
+### 14. Duplicate Code Consolidation
+- ~600 lines of triplicated field-editing logic across case-form, material-form, apply-manage
+- `shadeColor()` duplicated in donut-chart.tsx and chart-config.ts
 
-### 20. CORS wildcard `*` in middleware
-- **File:** `src/middleware.ts:8`
-- **Note:** Intentional for intranet use (apply form from qeh.home POSTs to internal PC)
-- **Recommendation:** Restrict to known intranet origins if possible
-
-### 21. Hardcoded database path
-- **File:** `src/lib/prisma.ts:10` — `url: "file:./dev.db"` hardcoded
-- **Fix:** Use `process.env.DATABASE_URL` with fallback
-
-### 22. `as any` type casts in chart-data route
-- **File:** `src/app/api/chart-data/route.ts` (multiple lines)
-- **Fix:** Use proper Prisma types instead of `as any`
+### 15. Stock Take Page Missing
+- No stat cards, no filter bar, no bulk actions, no error/empty distinction
 
 ---
 
-## 📊 Summary
+## Summary
 
 | Priority | Count | Items |
 |----------|-------|-------|
-| P0 Critical | 5 | Validation, indexes, pagination, upload security |
-| P1 High | 5 | Performance queries, constraints, indexes |
-| P2 Medium | 6 | UI bugs, React patterns, accessibility |
-| P3 Low | 5 | Polish, types, dead code |
-
----
-
-*Last updated: 2026-06-26. Plan subject to updates from ongoing audits.*
+| P0 (Critical) | 3 | API response checks, silent errors, unmounted state |
+| P1 (High) | 3 | Dead files, unused packages, unused imports |
+| P2 (Medium) | 5 | Cases export, apply validation, materials error, aria-labels, colors |
+| P3 (Low) | 4 | Loading, keys, duplicates, stock-take |
+| **Total** | **15** | |
