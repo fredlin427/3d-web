@@ -1,5 +1,32 @@
 # QEH 3D Printing Office — Work Log
 
+## 2026-07-02 — Audit, Bug Fixes, Polish
+
+### Comprehensive Audit
+- 3-agent parallel audit: dead code, bugs, UI consistency
+- 15 items identified P0-P3 across all files
+- AUDIT_PLAN.md created with findings
+
+### P0 Critical Fixes
+- API response checks: materials, cases, stock-take delete/handleImport
+- Silent catch blocks: 20+ `catch {}` → `catch(e) { console.error(e); ... }`
+- Fixes across progress-timeline, material-usage-table, stock-take
+
+### P1 Cleanup
+- Deleted dead files: use-field-editor.ts, types/index.ts, chart-legend.tsx, dialog.tsx
+- Removed unused npm: papaparse, html-to-image, @types/papaparse
+
+### Chart Fixes
+- Bar chart: hover dim works for grouped bars, tooltip shows single bar data
+- FocusCard: bar sub-item shows parent→child label, dual-filter links
+- FocusCard single chart links now use xField as fallback
+- Materials chart links go to /materials not /cases
+- Pie legend + bar legend separated (no color cross-contamination)
+- Material ID system: SLA code table, Tank code table, global per-category counter
+
+### Upcoming (P2-P3)
+- Cases export button, apply form validation, materials error state, aria-labels, unused imports, stat card colors
+
 ## 2026-06-30 — Deploy Prep, Filter System, Bar Polish
 
 ### Deployment
