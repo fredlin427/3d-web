@@ -27,6 +27,11 @@ export async function GET(request: NextRequest) {
     }
     if (category) where.category = category;
     if (status) where.status = status;
+    // Accept any field as filter (for chart builder drill-down)
+    const knownKeys = new Set(["search","category","status","lowStock","expiring","page","pageSize"]);
+    searchParams.forEach((value, key) => {
+      if (!knownKeys.has(key) && value) where[key] = value;
+    });
 
     if (lowStock === "true") {
       where.status = "Low stock";
