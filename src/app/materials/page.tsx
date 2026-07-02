@@ -78,6 +78,7 @@ export default function MaterialsPage() {
   const [matAddValue, setMatAddValue] = useState("");
   const [matFilterOpts, setMatFilterOpts] = useState<Record<string, string[]>>({});
   useEffect(() => {
+    // Load from settings
     fetch("/api/settings").then(r => r.json()).then(j => {
       if (j.success) {
         const map: Record<string, string[]> = {};
@@ -89,6 +90,23 @@ export default function MaterialsPage() {
           }
         }
         setMatFilterOpts(map);
+      }
+    }).catch(console.error);
+    // Also load distinct values from actual materials data
+    fetch("/api/materials").then(r => r.json()).then(j => {
+      if (j.success) {
+        const fields = ["brand","supplier","storageLocation","colour","materialType"];
+        const map: Record<string, string[]> = {};
+        for (const m of j.data) {
+          for (const f of fields) {
+            const v = m[f];
+            if (v) {
+              if (!map[f]) map[f] = [];
+              if (!map[f].includes(v)) map[f].push(v);
+            }
+          }
+        }
+        setMatFilterOpts(prev => ({ ...prev, ...map }));
       }
     }).catch(console.error);
   }, []);
