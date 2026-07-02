@@ -123,12 +123,10 @@ export function BarChartView({ type, data, dataKeys, colors, labelKey = "label",
               isAnimationActive animationDuration={400} animationEasing="ease-in-out"
               onClick={(d: any) => handleBarClick(d, 0, ki)}
               onMouseEnter={() => setHoverIdx(ki)}
+              onMouseLeave={() => setHoverIdx(null)}
               cursor="pointer"
+              opacity={isStacked && hoverIdx !== null && hoverIdx !== ki ? 0.3 : 1}
             >
-              {data.map((_, di) => {
-                const dimmed = hoverIdx !== null && (isStacked ? hoverIdx !== ki : false);
-                return <Cell key={di} fill={dimmed ? `${colors[ki % colors.length]}2E` : colors[ki % colors.length]} />;
-              })}
               {!isStacked && dataKeys.length === 1 && data.length <= 12 && (
                 <LabelList dataKey={dataKeys[0]} position={isH ? "right" : "top"} style={{ fontSize: 12, fontWeight: 700, fill: "#475569" }} />
               )}
