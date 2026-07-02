@@ -134,9 +134,10 @@ function MaterialsPageInner() {
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
-      await fetch(`/api/materials/${deleteId}`, { method: "DELETE" });
+      const res = await fetch(`/api/materials/${deleteId}`, { method: "DELETE" });
+      if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Delete failed"); }
       toast.success("Deleted"); setDeleteId(null); mutate();
-    } catch { toast.error("Failed"); }
+    } catch (e) { console.error(e); toast.error("Failed to delete"); }
   };
 
   const handleExport = () => {
@@ -155,7 +156,7 @@ function MaterialsPageInner() {
         if (json.success) { setImportResult(json.data); toast.success(`${json.data.updatedItems} updated`); mutate(); }
         else toast.error(json.error || "Import failed");
       })
-      .catch(() => toast.error("Failed to import file"))
+      .catch((e) => { console.error(e); toast.error("Failed to import file"); })
       .finally(() => setImporting(false));
   };
 

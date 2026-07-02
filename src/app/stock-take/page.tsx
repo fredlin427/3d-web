@@ -33,7 +33,7 @@ export default function StockTakePage() {
     fetch(`/api/materials?${params}`)
       .then((r) => r.json())
       .then((j) => { if (j.success) setMaterials(j.data); })
-      .catch(() => toast.error("Failed to load"))
+      .catch((e) => { console.error(e); toast.error("Failed to load"); })
       .finally(() => setLoading(false));
   };
 
@@ -71,7 +71,7 @@ export default function StockTakePage() {
         const json = await res.json();
         if (json.success) { setResult(json.data); toast.success(`${json.data.updatedItems} items updated`); fetchMaterials(); }
         else toast.error(json.error || "Import failed");
-      } catch { toast.error("Failed to parse CSV"); }
+      } catch (e) { console.error(e); toast.error("Failed to parse CSV"); }
       finally { setImporting(false); }
     };
     reader.readAsText(file);

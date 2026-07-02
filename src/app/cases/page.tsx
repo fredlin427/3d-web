@@ -133,7 +133,7 @@ function CasesPageInner() {
       });
       if (res.ok) { toast.success("Case duplicated"); fetchCases(); }
       else toast.error("Failed to duplicate case");
-    } catch { toast.error("Failed to duplicate case"); }
+    } catch (e) { console.error(e); toast.error("Failed to duplicate case"); }
   };
 
   const handleDelete = async () => {
@@ -142,7 +142,7 @@ function CasesPageInner() {
       const res = await fetch(`/api/cases/${deleteId}`, { method: "DELETE" });
       if (res.ok) { toast.success("Case deleted"); setDeleteId(null); fetchCases(); }
       else toast.error("Failed to delete case");
-    } catch { toast.error("Failed to delete case"); }
+    } catch (e) { console.error(e); toast.error("Failed to delete case"); }
   };
 
   const stepColors: Record<string, string> = {

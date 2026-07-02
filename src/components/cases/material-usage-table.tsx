@@ -96,7 +96,7 @@ export function MaterialUsageTable({ caseId, usageRecords, onRefresh }: Material
       } else {
         toast.error(json.error || "Failed to record usage");
       }
-    } catch {
+    } catch (e) { console.error(e);
       toast.error("Failed to record usage");
     } finally {
       setSaving(false);
@@ -113,7 +113,7 @@ export function MaterialUsageTable({ caseId, usageRecords, onRefresh }: Material
       } else {
         toast.error("Failed to delete record");
       }
-    } catch {
+    } catch (e) { console.error(e);
       toast.error("Failed to delete record");
     }
   };

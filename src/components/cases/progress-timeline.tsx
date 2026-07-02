@@ -84,7 +84,7 @@ export function ProgressTimeline({ caseId, steps, onRefresh }: ProgressTimelineP
       } else {
         toast.error("Failed to add step");
       }
-    } catch {
+    } catch (e) { console.error(e);
       toast.error("Failed to add step");
     } finally {
       setSaving(false);
@@ -122,7 +122,7 @@ export function ProgressTimeline({ caseId, steps, onRefresh }: ProgressTimelineP
       } else {
         toast.error("Failed to update step");
       }
-    } catch {
+    } catch (e) { console.error(e);
       toast.error("Failed to update step");
     } finally {
       setSaving(false);
@@ -139,7 +139,7 @@ export function ProgressTimeline({ caseId, steps, onRefresh }: ProgressTimelineP
       } else {
         toast.error("Failed to delete step");
       }
-    } catch {
+    } catch (e) { console.error(e);
       toast.error("Failed to delete step");
     }
   };
@@ -159,7 +159,7 @@ export function ProgressTimeline({ caseId, steps, onRefresh }: ProgressTimelineP
         toast.success(`"${step.stepName}" marked as completed`);
         onRefresh();
       }
-    } catch {
+    } catch (e) { console.error(e);
       toast.error("Failed to update step");
     }
   };
