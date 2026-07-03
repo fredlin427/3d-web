@@ -76,7 +76,7 @@ function MaterialsPageInner() {
   // Unified filters — init from URL params
   const [matFilters, setMatFilters] = useState<{ field: string; value: string }[]>(() => {
     const init: { field: string; value: string }[] = [];
-    const known = new Set(["category","search","page","pageSize"]);
+    const known = new Set(["category","search","dateFrom","dateTo","page","pageSize"]);
     sp.forEach((value, key) => { if (!known.has(key) && value) init.push({ field: key, value }); });
     return init;
   });
@@ -122,6 +122,9 @@ function MaterialsPageInner() {
   const filterParams: Record<string, string> = { category: activeCat };
   if (search) filterParams.search = search;
   matFilters.forEach(f => { filterParams[f.field] = f.value; });
+  // Pass date params from URL (from chart drill-down)
+  const urlDateFrom = sp.get("dateFrom"); if (urlDateFrom) filterParams.dateFrom = urlDateFrom;
+  const urlDateTo = sp.get("dateTo"); if (urlDateTo) filterParams.dateTo = urlDateTo;
   const swrKey = apiUrl("/api/materials", filterParams);
   const { data: swrData, isLoading, error, mutate } = useAPI<{ success: boolean; data: MaterialItem[] }>(swrKey);
   const materials = swrData?.success ? swrData.data : [];

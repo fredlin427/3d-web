@@ -13,6 +13,8 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status") || "";
     const lowStock = searchParams.get("lowStock") || "";
     const expiring = searchParams.get("expiring") || "";
+    const dateFrom = searchParams.get("dateFrom") || "";
+    const dateTo = searchParams.get("dateTo") || "";
     const page = parseInt(searchParams.get("page") || "1", 10);
     const pageSize = parseInt(searchParams.get("pageSize") || "0", 10); // 0 = all
 
@@ -27,8 +29,13 @@ export async function GET(request: NextRequest) {
     }
     if (category) where.category = category;
     if (status) where.status = status;
+    if (dateFrom || dateTo) {
+      where.purchaseDate = {};
+      if (dateFrom) (where.purchaseDate as any).gte = new Date(dateFrom);
+      if (dateTo) { const d = new Date(dateTo); d.setHours(23,59,59,999); (where.purchaseDate as any).lte = d; }
+    }
     // Accept any field as filter (for chart builder drill-down)
-    const knownKeys = new Set(["search","category","status","lowStock","expiring","page","pageSize"]);
+    const knownKeys = new Set(["search","category","status","lowStock","expiring","dateFrom","dateTo","page","pageSize"]);
     searchParams.forEach((value, key) => {
       if (!knownKeys.has(key) && value) where[key] = value;
     });
