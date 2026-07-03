@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { FolderOpen, Clock, CheckCircle2, AlertTriangle, Package, TrendingDown, Download, ImageIcon, ArrowRight, Camera, Presentation, X, Database, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { DEPARTMENT_LABELS } from "@/lib/constants";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LabelList } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from "recharts";
 import { DEPARTMENTS, CATEGORIES } from "@/lib/constants";
 import { ChartFullscreen } from "@/components/charts/chart-fullscreen";
 import { FocusCard } from "@/components/charts/focus-card";

@@ -123,9 +123,10 @@ function MaterialsPageInner() {
   if (search) filterParams.search = search;
   matFilters.forEach(f => { filterParams[f.field] = f.value; });
   const swrKey = apiUrl("/api/materials", filterParams);
-  const { data: swrData, isLoading, mutate } = useAPI<{ success: boolean; data: MaterialItem[] }>(swrKey);
+  const { data: swrData, isLoading, error, mutate } = useAPI<{ success: boolean; data: MaterialItem[] }>(swrKey);
   const materials = swrData?.success ? swrData.data : [];
   const loading = isLoading;
+  if (error) console.error("Materials fetch error:", error);
 
   // Separate fetch for ALL materials counts (no category filter)
   const { data: allData } = useAPI<{ success: boolean; data: MaterialItem[] }>("/api/materials");
@@ -408,8 +409,8 @@ function MaterialsPageInner() {
         data={materials} columns={columns} keyField="id"
         searchValue={search} onSearchChange={setSearch}
         searchPlaceholder="Search by name, batch, brand..."
-        isLoading={loading}
-        emptyTitle={`No ${activeCat || "material"} records`}
+        isLoading={loading && !error}
+        emptyTitle={error ? "Failed to load materials" : `No ${activeCat || "material"} records`}
         pageSize={25}
         density="compact"
         selectable={{ selected: selectedIds, onChange: setSelectedIds }}

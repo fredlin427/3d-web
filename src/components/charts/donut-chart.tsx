@@ -24,15 +24,7 @@ interface Props {
   onSubClick?: (subItem: { label: string; value: number }, parentIdx: number) => void;
 }
 
-function shadeColor(hex: string, step: number, totalKids: number): string {
-  const num = parseInt(hex.replace("#", ""), 16);
-  let r = (num >> 16) & 0xFF, g = (num >> 8) & 0xFF, b = num & 0xFF;
-  const mix = Math.min(0.4, step / (totalKids + 2));
-  r = Math.round(r + (255 - r) * mix);
-  g = Math.round(g + (255 - g) * mix);
-  b = Math.round(b + (255 - b) * mix);
-  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
-}
+import { shadeColor } from "@/lib/chart-config";
 
 function trunc(s: string, max = 10): string {
   return s.length > max ? s.slice(0, max) + "…" : s;

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Search, ChevronLeft, ChevronRight, Activity, Filter, X } from "lucide-react";
+import { Clock, Search, ChevronLeft, ChevronRight, Activity, X } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 const ENTITY_COLORS: Record<string, string> = {

@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { DataTable, Column } from "@/components/shared/data-table";
-import { Plus, MoreHorizontal, Eye, Pencil, Copy, Trash2, Upload, Loader2, CheckCircle2, FolderOpen, Clock } from "lucide-react";
+import { Plus, MoreHorizontal, Eye, Pencil, Copy, Trash2, Upload, Loader2, CheckCircle2, FolderOpen, Clock, Download } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { formatDate, getStatusBadgeVariant, cn } from "@/lib/utils";
@@ -251,7 +251,8 @@ function CasesPageInner() {
               }}
             />
           </label>
-          <Link href="/cases/new"><Button className="bg-teal-600 hover:bg-teal-700"><Plus className="mr-2 h-4 w-4" />New Case</Button></Link>
+          <Button variant="outline" size="sm" className="h-9 gap-1.5 text-xs" onClick={async () => { const X = await import("xlsx"); const rows = cases.map((c: any) => ({ "Case#": c.caseNumber, Date: formatDate(c.applicationDate), Dept: c.department, Category: c.category, Applicant: c.applicantName, Project: c.projectTitle, Status: c.currentStatus })); const ws = X.utils.json_to_sheet(rows); const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, "Cases"); X.writeFile(wb, "cases-export.xlsx"); toast.success("Exported"); }}><Download className="h-3.5 w-3.5" />Export</Button>
+          <Link href="/cases/new"><Button className="bg-primary hover:bg-primary/90"><Plus className="mr-2 h-4 w-4" />New Case</Button></Link>
         </div>
       </div>
 
