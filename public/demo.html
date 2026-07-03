@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Printing Office — Queen Elizabeth Hospital</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system,"Segoe UI",Arial,sans-serif; color: #1e293b; background: #f8fafc; }
+
+/* Hero */
+.hero { background: linear-gradient(135deg, #0d1b2a, #1a3a5c); color: #fff; padding: 80px 20px; text-align: center; }
+.hero h1 { font-size: 36px; font-weight: 800; letter-spacing: -0.5px; }
+.hero p { font-size: 16px; color: #94a3b8; margin-top: 8px; max-width: 500px; margin-left: auto; margin-right: auto; }
+
+/* Services */
+.services { max-width: 960px; margin: -40px auto 0; padding: 0 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+.service { background: #fff; border-radius: 16px; padding: 28px 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); text-align: center; }
+.service .icon { font-size: 36px; margin-bottom: 12px; }
+.service h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.service p { font-size: 12px; color: #64748b; }
+
+/* CTA */
+.cta { text-align: center; padding: 60px 20px; }
+.cta h2 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+.cta p { color: #64748b; margin-bottom: 24px; }
+.btn { display: inline-block; padding: 14px 32px; background: #0077c8; color: #fff; font-size: 16px; font-weight: 700; border-radius: 12px; text-decoration: none; transition: all .2s; box-shadow: 0 4px 12px rgba(0,119,200,.3); }
+.btn:hover { background: #005fa3; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,119,200,.4); }
+
+/* Info */
+.info { max-width: 700px; margin: 0 auto 60px; padding: 0 20px; text-align: center; }
+.info h2 { font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+.info p { color: #64748b; font-size: 14px; line-height: 1.7; }
+.info .contact { margin-top: 24px; padding: 20px; background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.06); text-align: left; display: inline-block; }
+.info .contact strong { display: block; margin-bottom: 8px; }
+
+/* Footer */
+.footer { text-align: center; padding: 32px 20px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>🏥 QEH 3D Printing Office</h1>
+  <p>Providing 3D printing services for surgical planning, rehabilitation devices, and medical training across all departments.</p>
+</div>
+
+<div class="services">
+  <div class="service"><div class="icon">🦴</div><h3>Surgical Planning</h3><p>Pre-op anatomical models</p></div>
+  <div class="service"><div class="icon">🦾</div><h3>Rehabilitation</h3><p>Prosthesis & orthosis devices</p></div>
+  <div class="service"><div class="icon">🎓</div><h3>Medical Training</h3><p>Educational 3D models</p></div>
+  <div class="service"><div class="icon">🔬</div><h3>Research</h3><p>Device adaptation & testing</p></div>
+</div>
+
+<div class="cta">
+  <h2>Submit a 3D Printing Request</h2>
+  <p>Fill in the application form to start your case. Our team will review and process your request.</p>
+  <a href="/apply" class="btn">📝 Apply Now →</a>
+</div>
+
+<div class="info">
+  <h2>About Us</h2>
+  <p>
+    The 3D Printing Office provides hospital-wide additive manufacturing services, including anatomical modelling for pre-operative planning, custom rehabilitation devices, and medical education tools. We work with all clinical departments and operate Formlabs SLA printers and FDM systems.
+  </p>
+  <div class="contact">
+    <strong>📍 3DP Office, QEH Main Block</strong>
+    <span style="color:#64748b;font-size:13px;">📞 Staff: Madeleine / Tiffany<br>⏰ Office Hours: Mon–Fri 9:00–17:00<br>📧 Internal: 3DP Office (HA Email)</span>
+  </div>
+</div>
+
+<div class="footer">
+  Queen Elizabeth Hospital · Hospital Authority · Internal Use Only
+</div>
+
+</body>
+</html>
