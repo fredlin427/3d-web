@@ -107,6 +107,22 @@ export default function ChartBuilderPage() {
         setFilterOptions(map);
       }
     }).catch(console.error);
+    // Also load distinct values from materials data for fields not in settings
+    fetch("/api/materials").then(r => r.json()).then(j => {
+      if (j.success) {
+        const fields = ["brand","materialType","colour","supplier","storageLocation"];
+        setFilterOptions(prev => {
+          const next = { ...prev };
+          for (const m of j.data) {
+            for (const f of fields) {
+              const v = m[f];
+              if (v) { if (!next[f]) next[f] = []; if (!next[f].includes(v)) next[f].push(v); }
+            }
+          }
+          return next;
+        });
+      }
+    }).catch(console.error);
   }, []);
 
   const handleExport = async () => { setExporting(true); await exportPNG("chart-builder-preview", `chart-${source}-${xField}`, !isPie && barLegends.length > 0 ? barLegends : undefined); setExporting(false); };
