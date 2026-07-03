@@ -106,7 +106,7 @@ export default function ChartBuilderPage() {
   // Build filter query string for FocusCard links
   const filterQuery = useMemo(() => {
     const parts: string[] = [];
-    if (fy) { const sy = 2000 + parseInt(fy.slice(0, 2)); parts.push(`dateFrom=${sy}-04-01`); parts.push(`dateTo=${sy + 1}-03-31`); }
+    if (fy) parts.push(`fy=${fy}`);
     else { if (dateFrom) parts.push(`dateFrom=${dateFrom}`); if (dateTo) parts.push(`dateTo=${dateTo}`); }
     for (const [f, v] of Object.entries(activeFilters)) { if (v.length > 0) parts.push(`${f}=${encodeURIComponent(v.join(","))}`); }
     return parts.length > 0 ? `&${parts.join("&")}` : "";
