@@ -132,7 +132,9 @@ export default function ApplyPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.applicantName) { toast.error("Please fill in Applicant name"); return; }
-    if (!form.purposeCategory) { toast.error("Please select a purpose category"); return; }
+    if (!form.department) { toast.error("Please select a department"); return; }
+    if (!form.purposeCategory) { toast.error("Please select a category"); return; }
+    if (!form.projectTitle) { toast.error("Please fill in Project title"); return; }
 
     setSubmitting(true);
     try {

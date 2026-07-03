@@ -394,7 +394,7 @@ function MaterialsPageInner() {
           </Select>
         )}
         {matFilters.map((f, i) => (
-          <span key={i} className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full text-xs font-medium bg-blue-50 border border-blue-100">
+          <span key={`${f.field}-${f.value}`} className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full text-xs font-medium bg-blue-50 border border-blue-100">
             <span className="text-[10px] text-blue-400 uppercase">{f.field}:</span>
             <span className="text-slate-700">{f.value}</span>
             <button onClick={() => setMatFilters(prev => prev.filter((_, j) => j !== i))} className="ml-0.5 w-4 h-4 rounded-full hover:bg-red-100 hover:text-red-500 flex items-center justify-center text-slate-300 transition-colors">×</button>
