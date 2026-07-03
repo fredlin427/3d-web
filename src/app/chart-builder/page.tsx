@@ -58,11 +58,11 @@ export default function ChartBuilderPage() {
   }, [source]);
 
   const fetchData = useCallback(async () => {
-    // Skip fetch if xField doesn't match source (e.g., during source switch)
-    const validFields = SOURCE_FIELDS[source] || [];
-    if (!validFields.includes(xField) && !validFields.some(f => f.endsWith(`.${xField}`))) { setLoading(false); return; }
     setLoading(true);
     try {
+      // Skip if xField doesn't match source
+      const validFields = SOURCE_FIELDS[source] || [];
+      if (!validFields.includes(xField) && !validFields.some(f => f.endsWith(`.${xField}`))) { setLoading(false); return; }
       const p = new URLSearchParams();
       p.set("source", source); p.set("x", xField); p.set("y", "count"); p.set("limit", "50");
       p.set("groupTop", String(groupTop));
@@ -79,7 +79,7 @@ export default function ChartBuilderPage() {
         else { setChartData(json.data.rows); setStackedData([]); }
         setTotal(json.data.total);
       } else toast.error(json.error || "Failed");
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error(e); toast.error("Failed to fetch chart data"); }
     finally { setLoading(false); }
   }, [source, xField, stackBy, dateFrom, dateTo, fy, activeFilters, groupTop, childTop]);
 
