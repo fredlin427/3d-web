@@ -103,6 +103,15 @@ export default function ChartBuilderPage() {
 
   const handleExport = async () => { setExporting(true); await exportPNG("chart-builder-preview", `chart-${source}-${xField}`, !isPie && barLegends.length > 0 ? barLegends : undefined); setExporting(false); };
 
+  // Build filter query string for FocusCard links
+  const filterQuery = useMemo(() => {
+    const parts: string[] = [];
+    if (fy) { const sy = 2000 + parseInt(fy.slice(0, 2)); parts.push(`dateFrom=${sy}-04-01`); parts.push(`dateTo=${sy + 1}-03-31`); }
+    else { if (dateFrom) parts.push(`dateFrom=${dateFrom}`); if (dateTo) parts.push(`dateTo=${dateTo}`); }
+    for (const [f, v] of Object.entries(activeFilters)) { if (v.length > 0) parts.push(`${f}=${encodeURIComponent(v.join(","))}`); }
+    return parts.length > 0 ? `&${parts.join("&")}` : "";
+  }, [fy, dateFrom, dateTo, activeFilters]);
+
   const fields = SOURCE_FIELDS[source] || [];
   const title = `${FIELD_LABELS[xField] || xField} by ${SOURCES.find(s => s.key === source)?.label || source}`;
   const hasStacked = stackedData.length > 0;
@@ -318,13 +327,13 @@ export default function ChartBuilderPage() {
         children={focusItem?.children} colors={colors}
         viewAllHref={focusItem?.label && !focusItem.label.startsWith("Others") ? (
           focusItem.children && focusItem.children.length > 0
-            ? `/${source === "materials" ? "materials" : "cases"}?${xField}=${encodeURIComponent(focusItem.label)}`
+            ? `/${source === "materials" ? "materials" : "cases"}?${xField}=${encodeURIComponent(focusItem.label)}${filterQuery}`
             : stackBy && focusParent
-            ? `/${source === "materials" ? "materials" : "cases"}?${xField}=${encodeURIComponent(focusParent)}&${stackBy}=${encodeURIComponent(focusItem.label)}`
-            : stackBy ? `/${source === "materials" ? "materials" : "cases"}?${stackBy}=${encodeURIComponent(focusItem.label)}`
-            : `/${source === "materials" ? "materials" : "cases"}?${xField}=${encodeURIComponent(focusItem.label)}`
+            ? `/${source === "materials" ? "materials" : "cases"}?${xField}=${encodeURIComponent(focusParent)}&${stackBy}=${encodeURIComponent(focusItem.label)}${filterQuery}`
+            : stackBy ? `/${source === "materials" ? "materials" : "cases"}?${stackBy}=${encodeURIComponent(focusItem.label)}${filterQuery}`
+            : `/${source === "materials" ? "materials" : "cases"}?${xField}=${encodeURIComponent(focusItem.label)}${filterQuery}`
         ) : undefined}
-        breakdownHref={stackBy ? (item: { label: string }) => `/${source === "materials" ? "materials" : "cases"}?${xField}=${encodeURIComponent(focusItem?.label || "")}&${stackBy}=${encodeURIComponent(item.label)}` : undefined}
+        breakdownHref={stackBy ? (item: { label: string }) => `/${source === "materials" ? "materials" : "cases"}?${xField}=${encodeURIComponent(focusItem?.label || "")}&${stackBy}=${encodeURIComponent(item.label)}${filterQuery}` : undefined}
         onClose={() => { setFocusOpen(false); setFocusItem(null); setFocusIdx(null); setFocusParent(""); }} />
     </div>
   );
