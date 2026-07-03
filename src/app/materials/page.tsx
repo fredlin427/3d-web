@@ -309,7 +309,12 @@ function MaterialsPageInner() {
         <Card className="border-0 shadow-sm ring-1 ring-blue-100">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-semibold text-slate-700">{expandedMatStat}</CardTitle>
-            <button onClick={() => setExpandedMatStat(null)} className="text-xs text-slate-400 hover:text-slate-600">✕</button>
+            <div className="flex items-center gap-3">
+              {expandedMatStat !== "Total" && expandedMatStat !== "Total Remain" && expandedMatStat !== "Expiring Soon" && (
+                <Link href={`/materials?status=${encodeURIComponent(expandedMatStat)}`} className="text-xs text-blue-500 hover:text-blue-700 font-medium">View all →</Link>
+              )}
+              <button onClick={() => setExpandedMatStat(null)} className="text-xs text-slate-400 hover:text-slate-600">✕</button>
+            </div>
           </CardHeader>
           <CardContent>
             {(() => {

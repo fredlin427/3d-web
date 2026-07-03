@@ -289,7 +289,17 @@ export default function DashboardPage() {
             <CardTitle className="text-sm font-semibold text-slate-700">
               {statDefs.find(s => s.key === expandedStat)?.title || "Details"}
             </CardTitle>
-            <button onClick={() => setExpandedStat(null)} className="text-xs text-slate-400 hover:text-slate-600">✕ Close</button>
+            <div className="flex items-center gap-3">
+              {["casesInProgress","completedCases"].includes(expandedStat) && (
+                <Link href={`/cases?status=${expandedStat === "casesInProgress" ? "In+progress" : "Completed"}`} className="text-xs text-blue-500 hover:text-blue-700 font-medium">View all →</Link>
+              )}
+              {expandedStat === "casesThisMonth" && <Link href="/cases" className="text-xs text-blue-500 hover:text-blue-700 font-medium">View all →</Link>}
+              {expandedStat === "totalCases" && <Link href="/cases" className="text-xs text-blue-500 hover:text-blue-700 font-medium">View all →</Link>}
+              {["lowStockItems","expiringMaterials","materialsOpened"].includes(expandedStat) && (
+                <Link href={`/materials?status=${expandedStat === "lowStockItems" ? "Low+stock" : expandedStat === "expiringMaterials" ? "Expired" : "Opened"}`} className="text-xs text-blue-500 hover:text-blue-700 font-medium">View all →</Link>
+              )}
+              <button onClick={() => setExpandedStat(null)} className="text-xs text-slate-400 hover:text-slate-600">✕ Close</button>
+            </div>
           </CardHeader>
           <CardContent>
             {(() => {

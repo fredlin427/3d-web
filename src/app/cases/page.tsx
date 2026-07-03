@@ -333,7 +333,10 @@ function CasesPageInner() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-semibold text-slate-700">{expandedStat} Cases</span>
-              <button onClick={() => setExpandedStat(null)} className="text-xs text-slate-400 hover:text-slate-600">✕</button>
+              <div className="flex items-center gap-3">
+                {expandedStat !== "Total" && <Link href={`/cases?status=${encodeURIComponent(expandedStat)}`} className="text-xs text-blue-500 hover:text-blue-700 font-medium">View all →</Link>}
+                <button onClick={() => setExpandedStat(null)} className="text-xs text-slate-400 hover:text-slate-600">✕</button>
+              </div>
             </div>
             {(() => {
               const status = expandedStat === "Total" ? "" : expandedStat;
