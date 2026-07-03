@@ -92,17 +92,23 @@ export default function ChartBuilderPage() {
     fetch("/api/settings").then(r => r.json()).then(j => {
       if (j.success) {
         const map: Record<string, string[]> = {};
-        // Map settings types to chart-data field names
-        const typeMap: Record<string, string> = {
-          material_category: "category", material_status: "status", material_unit: "unit",
-          case_category: "category",
-        };
+        const caseTypes = new Set(["department","hospital","case_category","purpose","technician","priority"]);
+        const matTypes = new Set(["material_category","material_status","material_unit"]);
         for (const item of j.data) {
-          if (item.isActive && !item.type.endsWith("_form_field") && item.type !== "progress_step") {
-            const key = typeMap[item.type] || item.type;
-            if (!map[key]) map[key] = [];
-            if (!map[key].includes(item.value)) map[key].push(item.value);
-          }
+          if (!item.isActive || item.type.endsWith("_form_field") || item.type === "progress_step") continue;
+          // Only include type if it matches current source
+          const isCaseType = caseTypes.has(item.type);
+          const isMatType = matTypes.has(item.type);
+          if (source === "cases" && !isCaseType && item.type !== "category") continue;
+          if (source === "materials" && !isMatType && item.type !== "category") continue;
+          // Use raw field name for case types, mapped name for material types
+          const key = item.type === "material_category" ? "category"
+            : item.type === "material_status" ? "status"
+            : item.type === "material_unit" ? "unit"
+            : item.type === "case_category" ? "category"
+            : item.type;
+          if (!map[key]) map[key] = [];
+          if (!map[key].includes(item.value)) map[key].push(item.value);
         }
         setFilterOptions(map);
       }
