@@ -92,10 +92,16 @@ export default function ChartBuilderPage() {
     fetch("/api/settings").then(r => r.json()).then(j => {
       if (j.success) {
         const map: Record<string, string[]> = {};
+        // Map settings types to chart-data field names
+        const typeMap: Record<string, string> = {
+          material_category: "category", material_status: "status", material_unit: "unit",
+          case_category: "category",
+        };
         for (const item of j.data) {
           if (item.isActive && !item.type.endsWith("_form_field") && item.type !== "progress_step") {
-            if (!map[item.type]) map[item.type] = [];
-            if (!map[item.type].includes(item.value)) map[item.type].push(item.value);
+            const key = typeMap[item.type] || item.type;
+            if (!map[key]) map[key] = [];
+            if (!map[key].includes(item.value)) map[key].push(item.value);
           }
         }
         setFilterOptions(map);
@@ -207,7 +213,12 @@ export default function ChartBuilderPage() {
                 </Select>
               </div>
               {!fy && (<div><label className="text-[10px] font-semibold text-slate-400 uppercase">Custom Date Range</label><div className="space-y-1 mt-0.5"><input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); if (fy) setFy(""); }} disabled={!!fy} className="w-full h-8 text-xs border rounded-md px-2 py-1 bg-white disabled:opacity-40 disabled:cursor-not-allowed" /><input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); if (fy) setFy(""); }} disabled={!!fy} className="w-full h-8 text-xs border rounded-md px-2 py-1 bg-white disabled:opacity-40 disabled:cursor-not-allowed" /></div></div>)}
-              {["category","hospital","department","purpose","technician"].map(key => {
+              {(source === "materials"
+                ? ["category","brand","materialType","status","colour","supplier","storageLocation"]
+                : source === "usage"
+                ? ["unit","staffName","printerOrTank"]
+                : ["category","hospital","department","purpose","technician"]
+              ).map(key => {
                 const opts = filterOptions[key] || [];
                 if (opts.length === 0) return null;
                 const sel = activeFilters[key] || [];
