@@ -60,9 +60,11 @@ export default function ChartBuilderPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // Skip if xField doesn't match source
+      // Skip if xField or stackBy doesn't match source (race condition during source switch)
       const validFields = SOURCE_FIELDS[source] || [];
-      if (!validFields.includes(xField) && !validFields.some(f => f.endsWith(`.${xField}`))) { setLoading(false); return; }
+      const xValid = validFields.includes(xField) || validFields.some(f => f.endsWith(`.${xField}`));
+      const sValid = !stackBy || validFields.includes(stackBy) || validFields.some(f => f.endsWith(`.${stackBy}`));
+      if (!xValid || !sValid) { setLoading(false); return; }
       const p = new URLSearchParams();
       p.set("source", source); p.set("x", xField); p.set("y", "count"); p.set("limit", "50");
       p.set("groupTop", String(groupTop));
