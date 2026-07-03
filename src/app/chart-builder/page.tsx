@@ -58,6 +58,9 @@ export default function ChartBuilderPage() {
   }, [source]);
 
   const fetchData = useCallback(async () => {
+    // Skip fetch if xField doesn't match source (e.g., during source switch)
+    const validFields = SOURCE_FIELDS[source] || [];
+    if (!validFields.includes(xField) && !validFields.some(f => f.endsWith(`.${xField}`))) { setLoading(false); return; }
     setLoading(true);
     try {
       const p = new URLSearchParams();
