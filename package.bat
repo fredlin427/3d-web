@@ -51,12 +51,12 @@ echo echo   QEH 3D Printing Office - Portable Server
 echo echo ============================================
 echo echo.
 echo echo Starting server...
-echo echo Open in browser: http://localhost:3000
+echo echo Open in browser: http://localhost:8080
 echo echo Press Ctrl+C to stop
 echo echo ============================================
 echo echo.
 echo.
-echo set PORT=3000
+echo set PORT=8080
 echo set HOST=0.0.0.0
 echo "%%~dp0node.exe" "%%~dp0server.js"
 echo pause

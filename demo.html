@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QEH 3D Printing Hub — Demo</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; background: linear-gradient(135deg, #0d1b2a 0%, #1a3a5c 50%, #0d1b2a 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; color: #fff; }
+.container { text-align: center; padding: 40px; max-width: 700px; }
+.logo { font-size: 48px; margin-bottom: 16px; }
+h1 { font-size: 32px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.5px; }
+.subtitle { font-size: 16px; color: #94a3b8; margin-bottom: 40px; }
+.cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 40px; }
+.card { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 28px 20px; text-decoration: none; color: #fff; transition: all 0.2s; backdrop-filter: blur(12px); }
+.card:hover { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.25); transform: translateY(-2px); }
+.card.primary { background: rgba(0,119,200,0.3); border-color: rgba(0,119,200,0.5); }
+.card-icon { font-size: 32px; margin-bottom: 12px; }
+.card h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.card p { font-size: 12px; color: #94a3b8; }
+.footer { font-size: 11px; color: #64748b; }
+.footer a { color: #00a9ce; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo">🏥</div>
+  <h1>QEH 3D Printing Hub</h1>
+  <p class="subtitle">Hospital Authority — 3D Printing Office Management System</p>
+
+  <div class="cards">
+    <a href="/apply" class="card primary">
+      <div class="card-icon">📝</div>
+      <h3>Submit Application</h3>
+      <p>3D Printing Service Request Form</p>
+    </a>
+    <a href="/apply-standalone.html" class="card primary" style="border-style: dashed;">
+      <div class="card-icon">🌐</div>
+      <h3>Apply (Standalone)</h3>
+      <p>Static HTML — no server needed</p>
+    </a>
+    <a href="/dashboard" class="card">
+      <div class="card-icon">📊</div>
+      <h3>Dashboard</h3>
+      <p>Overview & statistics</p>
+    </a>
+    <a href="/cases" class="card">
+      <div class="card-icon">📁</div>
+      <h3>Cases</h3>
+      <p>Manage 3D printing cases</p>
+    </a>
+    <a href="/materials" class="card">
+      <div class="card-icon">📦</div>
+      <h3>Materials</h3>
+      <p>Inventory & stock management</p>
+    </a>
+    <a href="/chart-builder" class="card">
+      <div class="card-icon">📈</div>
+      <h3>Chart Builder</h3>
+      <p>Custom charts & analytics</p>
+    </a>
+  </div>
+
+  <p class="footer">
+    QEH 3D Printing Office · <span id="server-info">loading...</span><br>
+    <a href="#" onclick="document.getElementById('server-info').textContent = location.href; return false;">🔗 Copy demo URL</a>
+  </p>
+</div>
+<script>
+document.getElementById('server-info').textContent = location.origin;
+// Fix relative links if opened as file
+if (location.protocol === 'file:') {
+  document.querySelectorAll('a[href^="/"]').forEach(a => {
+    a.href = a.href.replace('file:///', 'http://localhost:8080/');
+  });
+}
+</script>
+</body>
+</html>

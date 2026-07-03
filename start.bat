@@ -90,8 +90,8 @@ set LAN_IP=%LAN_IP: =%
 
 echo ============================================
 echo   SERVER READY
-echo   Local:   http://localhost:3000
-if not "%LAN_IP%"=="" echo   Network: http://%LAN_IP%:3000
+echo   Local:   http://localhost:8080
+if not "%LAN_IP%"=="" echo   Network: http://%LAN_IP%:8080
 echo ============================================
 echo.
 echo   Press Ctrl+C to stop

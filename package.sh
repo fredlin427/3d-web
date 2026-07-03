@@ -47,11 +47,11 @@ echo "  QEH 3D Printing Office - Linux Server"
 echo "============================================"
 echo ""
 echo "Starting server..."
-echo "Open in browser: http://localhost:3000"
+echo "Open in browser: http://localhost:8080"
 echo "Press Ctrl+C to stop"
 echo "============================================"
 echo ""
-export PORT=3000
+export PORT=8080
 export HOST=0.0.0.0
 exec "$(dirname "$0")/bin/node" "$(dirname "$0")/server.js"
 EOF
