@@ -1,5 +1,34 @@
 # QEH 3D Printing Office — Work Log
 
+## 2026-07-03 — Release Prep, Final Fixes, v1.2.0
+
+### Release
+- **GitHub Release v1.2.0**: Windows (108MB) + Linux (117MB) portable packages
+- Both include demo.html + apply-standalone.html
+- IT handoff guide: docs/IT-HANDOFF.md
+- Port unified to 8080 across all scripts and configs
+
+### Chart Builder Fixes
+- Fixed "Failed to fetch chart data" when switching cases→materials (stackBy validation)
+- Filter fields now dynamic per source: cases vs materials vs usage
+- Settings type mapping: material_category→category, material_status→status
+- Materials distinct values loaded for filter options
+- FocusCard links include chart filter params (date/FY/checkboxes)
+
+### P2-P3 Fixes
+- Cases page: Export XLSX button, "View all →" on expanded stats
+- Dashboard: "View all →" links on all stat cards
+- Materials: error state on SWR failure, "View all" button
+- Materials API: dateFrom/dateTo filtering on purchaseDate
+- shadeColor dedup (import from chart-config)
+- Unused imports removed (PieChart, Filter, etc.)
+- Apply form basic validation
+
+### Demo
+- demo.html: department promo page with services + Apply Now CTA
+- apply-standalone.html: zero-dependency form for IT deployment
+- Both moved to public/ for Next.js serving
+
 ## 2026-07-02 — Audit, Bug Fixes, Polish
 
 ### Comprehensive Audit
