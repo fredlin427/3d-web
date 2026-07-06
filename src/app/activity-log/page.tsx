@@ -173,7 +173,7 @@ export default function ActivityLogPage() {
         <CardContent className="p-0">
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <Activity className="h-8 w-8 text-slate-200 animate-pulse" />
+              <div className="flex flex-col items-center gap-3"><div className="h-8 w-8 rounded-full border-2 border-slate-200 border-t-blue-500 animate-spin" /><p className="text-sm text-slate-400">Loading...</p></div>
             </div>
           ) : logs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-slate-400">
