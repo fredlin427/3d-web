@@ -55,7 +55,7 @@ body { font-family: -apple-system,"Segoe UI",Arial,sans-serif; color: #1e293b; b
 <div class="cta">
   <h2>Submit a 3D Printing Request</h2>
   <p>Fill in the application form to start your case. Our team will review and process your request.</p>
-  <a href="/apply" class="btn">📝 Apply Now →</a>
+  <a id="apply-btn" href="/apply" class="btn">📝 Apply Now →</a>
 </div>
 
 <div class="info">
@@ -72,6 +72,19 @@ body { font-family: -apple-system,"Segoe UI",Arial,sans-serif; color: #1e293b; b
 <div class="footer">
   Queen Elizabeth Hospital · Hospital Authority · Internal Use Only
 </div>
+
+<script>
+// === Server URL configuration ===
+var STORAGE_KEY = "qeh3d-server";
+var params = new URLSearchParams(window.location.search);
+var queryApi = params.get("api");
+if (queryApi) {
+  localStorage.setItem(STORAGE_KEY, queryApi.replace(/\/?$/, ""));
+  window.history.replaceState({}, document.title, window.location.pathname);
+}
+var SERVER = localStorage.getItem(STORAGE_KEY) || "http://localhost:8080";
+document.getElementById("apply-btn").href = SERVER + "/apply";
+</script>
 
 </body>
 </html>

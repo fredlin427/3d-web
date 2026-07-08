@@ -50,14 +50,17 @@ echo echo ============================================
 echo echo   QEH 3D Printing Office - Portable Server
 echo echo ============================================
 echo echo.
-echo echo Starting server...
-echo echo Open in browser: http://localhost:8080
-echo echo Press Ctrl+C to stop
-echo echo ============================================
-echo echo.
-echo.
+echo for /f "tokens=2 delims=:" %%%%a in ^('ipconfig ^| findstr /c:"IPv4 Address"'^) do set LAN_IP=%%%%a
+echo set LAN_IP=%%LAN_IP: =%%
 echo set PORT=8080
 echo set HOST=0.0.0.0
+echo.
+echo echo   Local:   http://localhost:8080
+echo if not "%%LAN_IP%%"=="" echo   Network: http://%%LAN_IP%%:8080
+echo echo.
+echo echo   Press Ctrl+C to stop
+echo echo ============================================
+echo echo.
 echo "%%~dp0node.exe" "%%~dp0server.js"
 echo pause
 ) > "deploy-package\start.bat"

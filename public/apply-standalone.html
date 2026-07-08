@@ -12,16 +12,51 @@ h2 { font-size: 20px; margin-bottom: 24px; color: #0f172a; }
 label { display: block; font-size: 13px; font-weight: 600; color: #334155; margin-top: 16px; margin-bottom: 4px; }
 input, select, textarea { width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 14px; transition: border .2s; }
 input:focus, select:focus, textarea:focus { border-color: #4f46e5; outline: none; }
-button { margin-top: 24px; width: 100%; padding: 12px; background: #4f46e5; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
-button:hover { background: #4338ca; }
+button[type="submit"] { margin-top: 24px; width: 100%; padding: 12px; background: #4f46e5; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
+button[type="submit"]:hover { background: #4338ca; }
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .success { background: #ecfdf5; color: #065f46; padding: 16px; border-radius: 12px; margin-bottom: 16px; text-align: center; font-weight: 600; display: none; }
+
+/* Server config bar */
+#server-bar { display: flex; align-items: center; justify-content: space-between; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 12px; margin-bottom: 16px; font-size: 12px; }
+#server-bar .status { display: flex; align-items: center; gap: 6px; color: #64748b; }
+#server-bar .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; flex-shrink: 0; }
+#server-bar .dot.off { background: #ef4444; }
+#server-bar code { font-size: 11px; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; }
+#gear-btn { background: none; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 14px; line-height: 1; }
+#gear-btn:hover { background: #e2e8f0; }
+
+/* Config panel */
+#config-panel { display: none; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+#config-panel label { margin-top: 0; font-size: 12px; color: #92400e; }
+#config-panel .input-row { display: flex; gap: 8px; margin-top: 6px; }
+#config-panel input { flex: 1; padding: 8px 10px; font-size: 13px; }
+#config-panel button { margin-top: 0; width: auto; padding: 8px 16px; font-size: 13px; white-space: nowrap; background: #d97706; }
+#config-panel button:hover { background: #b45309; }
+#config-panel .hint { font-size: 11px; color: #a16207; margin-top: 6px; }
 </style>
 </head>
 <body>
 <form id="apply-form">
   <h2>QEH 3D Printing Application</h2>
-  <div class="success" id="success">✓ Submitted! Your case number: <strong id="case-no"></strong></div>
+
+  <!-- Server status bar -->
+  <div id="server-bar">
+    <span class="status"><span class="dot" id="status-dot"></span>Server: <code id="api-url">--</code></span>
+    <button type="button" id="gear-btn" title="Configure server address">&#9881;</button>
+  </div>
+
+  <!-- Config panel (hidden by default) -->
+  <div id="config-panel">
+    <label>Server Address</label>
+    <div class="input-row">
+      <input type="text" id="server-input" placeholder="http://10.0.0.100:8080">
+      <button type="button" id="save-btn">Save</button>
+    </div>
+    <div class="hint">Enter the IP:port of the QEH 3D Print server. Saved in this browser.</div>
+  </div>
+
+  <div class="success" id="success">&#10003; Submitted! Your case number: <strong id="case-no"></strong></div>
 
   <div class="row">
     <div><label>Applicant Name *</label><input name="applicantName" required></div>
@@ -54,32 +89,96 @@ button:hover { background: #4338ca; }
   <label>Remarks</label>
   <textarea name="remarks" rows="2"></textarea>
 
-  <!-- CHANGE THIS TO YOUR SERVER IP -->
-  <p style="font-size:11px;color:#94a3b8;margin-top:8px;">API: <code id="api-url">http://localhost:8080/api/apply</code></p>
   <button type="submit">Submit Application</button>
 </form>
 
 <script>
-// ===== CHANGE THIS TO YOUR SERVER IP =====
-const API = "http://localhost:8080/api/apply";
-// =========================================
-document.getElementById("api-url").textContent = API;
+// ============================================================
+// Server address configuration
+// Priority: ?api= query param > localStorage > default localhost
+// ============================================================
+const STORAGE_KEY = "qeh3d-server-api";
+const DEFAULT_API = "http://localhost:8080/api/apply";
 
-document.getElementById("apply-form").addEventListener("submit", async (e) => {
+function getSavedApi() {
+  return localStorage.getItem(STORAGE_KEY);
+}
+function saveApi(url) {
+  localStorage.setItem(STORAGE_KEY, url);
+}
+
+// Check query param first (for IT pre-configuration via URL)
+const params = new URLSearchParams(window.location.search);
+const queryApi = params.get("api");
+if (queryApi) {
+  // Normalize: add /api/apply if user just gave IP:port
+  const normalized = queryApi.includes("/api/") ? queryApi : queryApi.replace(/\/?$/, "/api/apply");
+  saveApi(normalized);
+  // Clean URL
+  window.history.replaceState({}, document.title, window.location.pathname);
+}
+
+// Resolve final API URL
+var API = getSavedApi() || DEFAULT_API;
+
+// UI elements
+var apiUrlEl = document.getElementById("api-url");
+var statusDot = document.getElementById("status-dot");
+var configPanel = document.getElementById("config-panel");
+var gearBtn = document.getElementById("gear-btn");
+var serverInput = document.getElementById("server-input");
+var saveBtn = document.getElementById("save-btn");
+
+function updateUI() {
+  apiUrlEl.textContent = API;
+  serverInput.value = API;
+  // Use green dot only if NOT default (i.e., actually configured)
+  var isConfigured = getSavedApi() !== null;
+  statusDot.className = "dot" + (isConfigured ? "" : " off");
+}
+
+// Toggle config panel
+gearBtn.addEventListener("click", function() {
+  configPanel.style.display = configPanel.style.display === "block" ? "none" : "block";
+  serverInput.value = API;
+});
+
+// Save new server address
+saveBtn.addEventListener("click", function() {
+  var raw = serverInput.value.trim();
+  if (!raw) return;
+  var normalized = raw.includes("/api/") ? raw : raw.replace(/\/?$/, "/api/apply");
+  saveApi(normalized);
+  API = normalized;
+  configPanel.style.display = "none";
+  updateUI();
+});
+
+// Allow Enter key to save
+serverInput.addEventListener("keydown", function(e) {
+  if (e.key === "Enter") { e.preventDefault(); saveBtn.click(); }
+});
+
+updateUI();
+
+// ============================================================
+// Form submission
+// ============================================================
+document.getElementById("apply-form").addEventListener("submit", async function(e) {
   e.preventDefault();
-  const fd = new FormData(e.target);
-  const data = Object.fromEntries(fd.entries());
+  var fd = new FormData(e.target);
+  var data = Object.fromEntries(fd.entries());
   data.hospital = "QEH";
   data.quantity = "1";
   data.totalComponents = "1";
 
   try {
-    const res = await fetch(API, {
+    var res = await fetch(API, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    const json = await res.json();
+    var json = await res.json();
     if (json.success) {
       document.getElementById("success").style.display = "block";
       document.getElementById("case-no").textContent = json.data.caseNumber;
@@ -88,7 +187,7 @@ document.getElementById("apply-form").addEventListener("submit", async (e) => {
       alert("Error: " + (json.error || "Submission failed"));
     }
   } catch (err) {
-    alert("Connection failed. Is the server running?");
+    alert("Connection failed. Is the server running at " + API + "?");
   }
 });
 </script>

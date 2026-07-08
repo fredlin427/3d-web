@@ -42,17 +42,19 @@ echo "[3/5] Creating start.sh..."
 cat > deploy-package-linux/start.sh << 'EOF'
 #!/bin/bash
 cd "$(dirname "$0")"
+export PORT=8080
+export HOST=0.0.0.0
+IP=$(hostname -I 2>/dev/null | awk '{print $1}')
 echo "============================================"
 echo "  QEH 3D Printing Office - Linux Server"
 echo "============================================"
 echo ""
-echo "Starting server..."
-echo "Open in browser: http://localhost:8080"
-echo "Press Ctrl+C to stop"
+echo "  Local:   http://localhost:8080"
+[ -n "$IP" ] && echo "  Network: http://$IP:8080"
+echo ""
+echo "  Press Ctrl+C to stop"
 echo "============================================"
 echo ""
-export PORT=8080
-export HOST=0.0.0.0
 exec "$(dirname "$0")/bin/node" "$(dirname "$0")/server.js"
 EOF
 chmod +x deploy-package-linux/start.sh
