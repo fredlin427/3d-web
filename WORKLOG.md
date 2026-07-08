@@ -1,5 +1,29 @@
 # QEH 3D Printing Office — Work Log
 
+## 2026-07-08 — IT Deployment Fixes, v1.2.1
+
+### Portable Start Scripts
+- **IP auto-detection**: Both Windows `start.bat` and Linux `start.sh` now show LAN IP on startup
+- Windows: `ipconfig | findstr "IPv4 Address"`
+- Linux: `hostname -I | awk`
+- Falls back gracefully if no network detected (shows only localhost)
+
+### IT Deployment Architecture Fix
+- **demo.html**: "Apply Now" button now dynamically links to `http://<IP>:8080/apply` (the full V5 form)
+- **demo.html**: Supports `?api=http://IP:8080` query param → auto-saves to localStorage
+- **apply-standalone.html**: Complete rewrite — configurable server address via `?api=` + localStorage + manual gear icon config
+- Architecture: IT server hosts static HTML → "Apply Now" links to portable server's full `/apply`
+
+### Session Crash Recovery
+- Session `c9bd8858` crashed after 28 days (64MB, 1.05M tokens > 1.04M limit)
+- No code lost — all changes were committed before crash
+- Preventive: use `/compact` before 500K tokens, scope sessions per feature
+
+### Release
+- **GitHub Release v1.2.1**: Updated packages with IP detection + IT deployment fixes
+- Windows: `qeh-3d-print-portable.zip` (98 MB)
+- Linux: `qeh-3d-print-linux.tar.gz` (119 MB)
+
 ## 2026-07-03 — Release Prep, Final Fixes, v1.2.0
 
 ### Release
