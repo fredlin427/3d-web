@@ -85,13 +85,16 @@ echo.
 echo [4/4] Starting server...
 echo.
 
+for /f "tokens=*" %%h in ('hostname') do set PC_HOST=%%h
 for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /c:"IPv4 Address"') do set LAN_IP=%%a
 set LAN_IP=%LAN_IP: =%
 
 echo ============================================
-echo   SERVER READY
-echo   Local:   http://localhost:8080
-if not "%LAN_IP%"=="" echo   Network: http://%LAN_IP%:8080
+echo   QEH 3D Print Server Ready
+echo.
+echo   Hostname: http://%PC_HOST%:8080
+echo   Local:    http://localhost:8080
+if not "%LAN_IP%"=="" echo   IP:       http://%LAN_IP%:8080
 echo ============================================
 echo.
 echo   Press Ctrl+C to stop

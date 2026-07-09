@@ -44,13 +44,17 @@ cat > deploy-package-linux/start.sh << 'EOF'
 cd "$(dirname "$0")"
 export PORT=8080
 export HOST=0.0.0.0
+HOSTNAME=$(hostname 2>/dev/null)
 IP=$(hostname -I 2>/dev/null | awk '{print $1}')
 echo "============================================"
-echo "  QEH 3D Printing Office - Linux Server"
-echo "============================================"
+echo "  QEH 3D Print Server Ready"
 echo ""
-echo "  Local:   http://localhost:8080"
-[ -n "$IP" ] && echo "  Network: http://$IP:8080"
+echo "  Hostname: http://${HOSTNAME}:8080"
+echo "  Local:    http://localhost:8080"
+[ -n "$IP" ] && echo "  IP:       http://${IP}:8080"
+echo ""
+echo "  Share with colleagues:"
+echo "  >> http://${HOSTNAME}:8080/apply <<"
 echo ""
 echo "  Press Ctrl+C to stop"
 echo "============================================"

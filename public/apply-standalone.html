@@ -95,33 +95,36 @@ button[type="submit"]:hover { background: #4338ca; }
 <script>
 // ============================================================
 // Server address configuration
-// Priority: ?api= query param > localStorage > default localhost
+// Priority: ?host= > ?api= > localStorage > default localhost
 // ============================================================
-const STORAGE_KEY = "qeh3d-server-api";
-const DEFAULT_API = "http://localhost:8080/api/apply";
+var STORAGE_HOST = "qeh3d-host";
+var STORAGE_IP   = "qeh3d-ip";
+var PORT = "8080";
 
-function getSavedApi() {
-  return localStorage.getItem(STORAGE_KEY);
+var params = new URLSearchParams(window.location.search);
+var qHost = params.get("host");
+var qApi  = params.get("api");
+
+// Save hostname from ?host=
+if (qHost) { localStorage.setItem(STORAGE_HOST, qHost); }
+// Save IP from ?api=
+if (qApi) {
+  var ip = qApi.replace(/^https?:\/\//,"").replace(/:\d+$/,"").replace(/\/.*$/,"");
+  localStorage.setItem(STORAGE_IP, ip);
 }
-function saveApi(url) {
-  localStorage.setItem(STORAGE_KEY, url);
-}
+if (qHost || qApi) { window.history.replaceState({}, document.title, window.location.pathname); }
 
-// Check query param first (for IT pre-configuration via URL)
-const params = new URLSearchParams(window.location.search);
-const queryApi = params.get("api");
-if (queryApi) {
-  // Normalize: add /api/apply if user just gave IP:port
-  const normalized = queryApi.includes("/api/") ? queryApi : queryApi.replace(/\/?$/, "/api/apply");
-  saveApi(normalized);
-  // Clean URL
-  window.history.replaceState({}, document.title, window.location.pathname);
-}
+function buildUrl(addr) { return "http://" + addr + ":" + PORT; }
 
-// Resolve final API URL
-var API = getSavedApi() || DEFAULT_API;
+var savedHost = localStorage.getItem(STORAGE_HOST);
+var savedIp   = localStorage.getItem(STORAGE_IP);
 
-// UI elements
+// hostname > IP > localhost
+var API = savedHost ? buildUrl(savedHost) + "/api/apply"
+       : savedIp   ? buildUrl(savedIp)   + "/api/apply"
+       : "http://localhost:8080/api/apply";
+
+// UI
 var apiUrlEl = document.getElementById("api-url");
 var statusDot = document.getElementById("status-dot");
 var configPanel = document.getElementById("config-panel");
@@ -132,29 +135,36 @@ var saveBtn = document.getElementById("save-btn");
 function updateUI() {
   apiUrlEl.textContent = API;
   serverInput.value = API;
-  // Use green dot only if NOT default (i.e., actually configured)
-  var isConfigured = getSavedApi() !== null;
+  var isConfigured = savedHost || savedIp;
   statusDot.className = "dot" + (isConfigured ? "" : " off");
 }
 
-// Toggle config panel
 gearBtn.addEventListener("click", function() {
   configPanel.style.display = configPanel.style.display === "block" ? "none" : "block";
   serverInput.value = API;
 });
 
-// Save new server address
 saveBtn.addEventListener("click", function() {
   var raw = serverInput.value.trim();
   if (!raw) return;
-  var normalized = raw.includes("/api/") ? raw : raw.replace(/\/?$/, "/api/apply");
-  saveApi(normalized);
-  API = normalized;
+  // If user entered a hostname (no http, no slash), use it as host
+  if (/^[a-zA-Z0-9\-]+$/.test(raw)) {
+    localStorage.setItem(STORAGE_HOST, raw);
+    localStorage.removeItem(STORAGE_IP);
+  } else {
+    var ip = raw.replace(/^https?:\/\//,"").replace(/:\d+$/,"").replace(/\/.*$/,"");
+    localStorage.setItem(STORAGE_IP, ip);
+    localStorage.removeItem(STORAGE_HOST);
+  }
+  savedHost = localStorage.getItem(STORAGE_HOST);
+  savedIp   = localStorage.getItem(STORAGE_IP);
+  API = savedHost ? buildUrl(savedHost) + "/api/apply"
+      : savedIp   ? buildUrl(savedIp)   + "/api/apply"
+      : "http://localhost:8080/api/apply";
   configPanel.style.display = "none";
   updateUI();
 });
 
-// Allow Enter key to save
 serverInput.addEventListener("keydown", function(e) {
   if (e.key === "Enter") { e.preventDefault(); saveBtn.click(); }
 });

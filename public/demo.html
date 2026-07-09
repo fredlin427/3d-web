@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D Printing Office — Queen Elizabeth Hospital</title>
+<title>3D Printing Office - Queen Elizabeth Hospital</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family: -apple-system,"Segoe UI",Arial,sans-serif; color: #1e293b; background: #f8fafc; }
@@ -23,9 +23,18 @@ body { font-family: -apple-system,"Segoe UI",Arial,sans-serif; color: #1e293b; b
 /* CTA */
 .cta { text-align: center; padding: 60px 20px; }
 .cta h2 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
-.cta p { color: #64748b; margin-bottom: 24px; }
+.cta p { color: #64748b; margin-bottom: 8px; }
 .btn { display: inline-block; padding: 14px 32px; background: #0077c8; color: #fff; font-size: 16px; font-weight: 700; border-radius: 12px; text-decoration: none; transition: all .2s; box-shadow: 0 4px 12px rgba(0,119,200,.3); }
 .btn:hover { background: #005fa3; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,119,200,.4); }
+
+/* Server bar */
+.server-bar { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: #64748b; background: #f1f5f9; padding: 6px 14px; border-radius: 20px; margin-bottom: 20px; }
+.server-bar .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; flex-shrink: 0; animation: pulse 2s infinite; }
+.server-bar .dot.off { background: #ef4444; animation: none; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+.sub-links { margin-top: 16px; display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+.sub-links a { font-size: 13px; color: #0077c8; text-decoration: none; font-weight: 600; padding: 6px 14px; background: #f0f7ff; border-radius: 8px; }
+.sub-links a:hover { background: #dbeafe; }
 
 /* Info */
 .info { max-width: 700px; margin: 0 auto 60px; padding: 0 20px; text-align: center; }
@@ -41,21 +50,29 @@ body { font-family: -apple-system,"Segoe UI",Arial,sans-serif; color: #1e293b; b
 <body>
 
 <div class="hero">
-  <h1>🏥 QEH 3D Printing Office</h1>
+  <h1>QEH 3D Printing Office</h1>
   <p>Providing 3D printing services for surgical planning, rehabilitation devices, and medical training across all departments.</p>
 </div>
 
 <div class="services">
-  <div class="service"><div class="icon">🦴</div><h3>Surgical Planning</h3><p>Pre-op anatomical models</p></div>
-  <div class="service"><div class="icon">🦾</div><h3>Rehabilitation</h3><p>Prosthesis & orthosis devices</p></div>
-  <div class="service"><div class="icon">🎓</div><h3>Medical Training</h3><p>Educational 3D models</p></div>
-  <div class="service"><div class="icon">🔬</div><h3>Research</h3><p>Device adaptation & testing</p></div>
+  <div class="service"><div class="icon">Bone</div><h3>Surgical Planning</h3><p>Pre-op anatomical models</p></div>
+  <div class="service"><div class="icon">Arm</div><h3>Rehabilitation</h3><p>Prosthesis & orthosis devices</p></div>
+  <div class="service"><div class="icon">School</div><h3>Medical Training</h3><p>Educational 3D models</p></div>
+  <div class="service"><div class="icon">Lab</div><h3>Research</h3><p>Device adaptation & testing</p></div>
 </div>
 
 <div class="cta">
   <h2>Submit a 3D Printing Request</h2>
   <p>Fill in the application form to start your case. Our team will review and process your request.</p>
-  <a id="apply-btn" href="/apply" class="btn">📝 Apply Now →</a>
+  <div class="server-bar">
+    <span class="dot" id="status-dot"></span>
+    <span id="server-label">Checking server...</span>
+  </div>
+  <a id="apply-btn" href="/apply" class="btn">Apply Now</a>
+  <div class="sub-links">
+    <a id="cases-link" href="/cases">Cases</a>
+    <a id="dash-link" href="/">Dashboard</a>
+  </div>
 </div>
 
 <div class="info">
@@ -64,26 +81,99 @@ body { font-family: -apple-system,"Segoe UI",Arial,sans-serif; color: #1e293b; b
     The 3D Printing Office provides hospital-wide additive manufacturing services, including anatomical modelling for pre-operative planning, custom rehabilitation devices, and medical education tools. We work with all clinical departments and operate Formlabs SLA printers and FDM systems.
   </p>
   <div class="contact">
-    <strong>📍 3DP Office, QEH Main Block</strong>
-    <span style="color:#64748b;font-size:13px;">📞 Staff: Madeleine / Tiffany<br>⏰ Office Hours: Mon–Fri 9:00–17:00<br>📧 Internal: 3DP Office (HA Email)</span>
+    <strong>3DP Office, QEH Main Block</strong>
+    <span style="color:#64748b;font-size:13px;">Staff: Madeleine / Tiffany<br>Office Hours: Mon-Fri 9:00-17:00<br>Internal: 3DP Office (HA Email)</span>
   </div>
 </div>
 
 <div class="footer">
-  Queen Elizabeth Hospital · Hospital Authority · Internal Use Only
+  Queen Elizabeth Hospital - Hospital Authority - Internal Use Only
 </div>
 
 <script>
-// === Server URL configuration ===
-var STORAGE_KEY = "qeh3d-server";
-var params = new URLSearchParams(window.location.search);
-var queryApi = params.get("api");
-if (queryApi) {
-  localStorage.setItem(STORAGE_KEY, queryApi.replace(/\/?$/, ""));
-  window.history.replaceState({}, document.title, window.location.pathname);
-}
-var SERVER = localStorage.getItem(STORAGE_KEY) || "http://localhost:8080";
-document.getElementById("apply-btn").href = SERVER + "/apply";
+(function() {
+  var STORAGE_HOST = "qeh3d-host";
+  var STORAGE_IP   = "qeh3d-ip";
+  var PORT = "8080";
+  var params = new URLSearchParams(window.location.search);
+
+  // Read query params
+  var qHost = params.get("host");
+  var qApi  = params.get("api");
+
+  // Save hostname from ?host=
+  if (qHost) { localStorage.setItem(STORAGE_HOST, qHost); }
+  // Save IP from ?api= (e.g. http://10.x.x.x:8080 -> 10.x.x.x)
+  if (qApi) {
+    var ip = qApi.replace(/^https?:\/\//,"").replace(/:\d+$/,"").replace(/\/.*$/,"");
+    localStorage.setItem(STORAGE_IP, ip);
+  }
+  // Clean URL
+  if (qHost || qApi) { window.history.replaceState({}, document.title, window.location.pathname); }
+
+  var savedHost = localStorage.getItem(STORAGE_HOST);
+  var savedIp   = localStorage.getItem(STORAGE_IP);
+
+  // Build server URL: hostname > IP > localhost
+  function buildUrl(addr) { return "http://" + addr + ":" + PORT; }
+
+  var primaryUrl   = savedHost ? buildUrl(savedHost) : (savedIp ? buildUrl(savedIp) : buildUrl("localhost"));
+  var fallbackUrl  = savedIp ? buildUrl(savedIp) : buildUrl("localhost");
+  var primaryLabel = savedHost ? savedHost + ":" + PORT : (savedIp ? savedIp + ":" + PORT : "localhost:" + PORT);
+
+  var applyBtn  = document.getElementById("apply-btn");
+  var casesLink = document.getElementById("cases-link");
+  var dashLink  = document.getElementById("dash-link");
+  var statusDot = document.getElementById("status-dot");
+  var serverLabel = document.getElementById("server-label");
+
+  function setLinks(url) {
+    applyBtn.href  = url + "/apply";
+    casesLink.href = url + "/cases";
+    dashLink.href  = url + "/";
+  }
+
+  function setStatus(ok, label) {
+    statusDot.className = "dot" + (ok ? "" : " off");
+    serverLabel.textContent = label;
+  }
+
+  // Try primary first, fall back
+  function checkServer(url, onResult) {
+    var xhr = new XMLHttpRequest();
+    var done = false;
+    xhr.open("HEAD", url + "/api/dashboard", true);
+    xhr.timeout = 5000;
+    xhr.onload = function() { if (!done) { done = true; onResult(true); } };
+    xhr.onerror = function() { if (!done) { done = true; onResult(false); } };
+    xhr.ontimeout = function() { if (!done) { done = true; onResult(false); } };
+    xhr.send();
+  }
+
+  setLinks(primaryUrl);
+  setStatus(false, "Checking " + primaryLabel + "...");
+
+  checkServer(primaryUrl, function(ok) {
+    if (ok) {
+      setStatus(true, primaryLabel + " connected");
+      setLinks(primaryUrl);
+    } else if (primaryUrl !== fallbackUrl) {
+      // Try fallback
+      var fbLabel = savedIp ? savedIp + ":" + PORT : "localhost:" + PORT;
+      setStatus(false, "Trying " + fbLabel + "...");
+      checkServer(fallbackUrl, function(ok2) {
+        if (ok2) {
+          setStatus(true, fbLabel + " connected");
+          setLinks(fallbackUrl);
+        } else {
+          setStatus(false, "Server unreachable");
+        }
+      });
+    } else {
+      setStatus(false, "Server unreachable");
+    }
+  });
+})();
 </script>
 
 </body>

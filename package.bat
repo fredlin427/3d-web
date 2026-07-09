@@ -46,17 +46,21 @@ echo @echo off
 echo title QEH 3D Printing Office
 echo cd /d "%%~dp0"
 echo.
-echo echo ============================================
-echo echo   QEH 3D Printing Office - Portable Server
-echo echo ============================================
-echo echo.
+echo for /f "tokens=*" %%%%h in ^('hostname'^) do set PC_HOST=%%%%h
 echo for /f "tokens=2 delims=:" %%%%a in ^('ipconfig ^| findstr /c:"IPv4 Address"'^) do set LAN_IP=%%%%a
 echo set LAN_IP=%%LAN_IP: =%%
 echo set PORT=8080
 echo set HOST=0.0.0.0
 echo.
-echo echo   Local:   http://localhost:8080
-echo if not "%%LAN_IP%%"=="" echo   Network: http://%%LAN_IP%%:8080
+echo echo ============================================
+echo echo   QEH 3D Print Server Ready
+echo echo.
+echo echo   Hostname: http://%%PC_HOST%%:8080
+echo echo   Local:    http://localhost:8080
+echo if not "%%LAN_IP%%"=="" echo   IP:       http://%%LAN_IP%%:8080
+echo echo.
+echo echo   Share with colleagues:
+echo echo   ^>^> http://%%PC_HOST%%:8080/apply ^<^<
 echo echo.
 echo echo   Press Ctrl+C to stop
 echo echo ============================================
